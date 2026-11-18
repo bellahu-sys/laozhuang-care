@@ -138,6 +138,7 @@
       </select>
     </label>
     <button class="btn btn-print" onclick="window.print()">列印月底結算表 (PDF)</button>
+    <span id="dbStatusMsg" style="font-size:0.88rem; color:#166534; font-weight:bold;"></span>
   </div>
 
   <div class="grid-2 no-print">
@@ -148,7 +149,7 @@
         <label>餐費收入 (元)：<input type="text" id="incomeInput" placeholder="例如：1770 或輸入 X"></label>
         <label>五金支出 (元)：<input type="number" id="expenseInput" placeholder="0"></label>
         <label>備註說明：<input type="text" id="remarkInput" placeholder="選填"></label>
-        <button class="btn btn-primary" onclick="saveDailyRecord()">儲存今日收支記錄</button>
+        <button type="button" class="btn btn-primary" onclick="saveDailyRecord()">儲存今日收支記錄</button>
       </div>
     </div>
 
@@ -162,7 +163,7 @@
         <span>現鈔清點總計：</span>
         <span id="denomTotalDisplay">0 元</span>
       </div>
-      <button class="btn btn-primary" style="margin-top:10px; width:100%;" onclick="saveDenomRecord()">儲存今日現鈔盤點</button>
+      <button type="button" id="btnSaveDenom" class="btn btn-primary" style="margin-top:10px; width:100%;" onclick="saveDenomRecord()">儲存今日現鈔盤點</button>
     </div>
   </div>
 
@@ -236,6 +237,9 @@
   let denomMap = {};
 
   async function loadData() {
+    const statusEl = document.getElementById('dbStatusMsg');
+    statusEl.textContent = '載入雲端資料中...';
+
     const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
     const month = parseInt(document.getElementById('monthSelect').value, 10);
     const adYear = rocYear + 1911;
@@ -264,7 +268,11 @@
       .select('*')
       .gte('record_date', start)
       .lte('record_date', end);
-    if (recErr) console.error('讀取收支錯誤:', recErr);
+
+    if (recErr) {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '讀取收支失敗：' + recErr.message;
+    }
 
     dailyMap = {};
     (recs || []).forEach(r => { dailyMap[r.record_date] = r; });
@@ -275,12 +283,20 @@
       .eq('roc_year', rocYear)
       .eq('month', month)
       .maybeSingle();
-    if (denErr) console.error('讀取現鈔錯誤:', denErr);
 
-    denomMap = dens && dens.denom_data ? dens.denom_data : {};
+    if (denErr) {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '讀取現鈔失敗：' + denErr.message;
+    } else if (!recErr) {
+      statusEl.style.color = '#166534';
+      statusEl.textContent = '雲端資料已同步';
+    }
+
+    denomMap = (dens && dens.denom_data) ? dens.denom_data : {};
 
     renderMonthlyTable(adYear, month, daysInMonth);
     renderDenomInputs();
+    renderPrintDenomTable();
     onDateSelected();
   }
 
@@ -303,9 +319,9 @@
       .from('petty_cash_records')
       .upsert([{ record_date, income, expense, remark: remark || null }], { onConflict: 'record_date' });
     if (error) {
-      alert('儲存失敗：' + error.message);
+      alert('儲存收支失敗：' + error.message);
     } else {
-      alert('今日收支已儲存！');
+      alert('今日收支已成功儲存至雲端！');
       await loadData();
     }
   }
@@ -317,7 +333,7 @@
       return `
         <tr>
           <td><strong>${val} 元</strong></td>
-          <td><input type="number" min="0" value="${qty}" oninput="updateDenom(${val}, this.value)" style="width:80px;"></td>
+          <td><input type="number" min="0" value="${qty}" oninput="updateDenom(${val}, this.value)" style="width:85px;"></td>
           <td id="amt_${val}" style="font-weight:bold;">${(qty * val).toLocaleString()} 元</td>
         </tr>
       `;
@@ -330,6 +346,7 @@
     denomMap[val] = q;
     document.getElementById(`amt_${val}`).textContent = (q * val).toLocaleString() + ' 元';
     calcDenomTotal();
+    renderPrintDenomTable();
   }
 
   function calcDenomTotal() {
@@ -338,20 +355,51 @@
     document.getElementById('denomTotalDisplay').textContent = total.toLocaleString() + ' 元';
   }
 
-  async function saveDenomRecord() {
-    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
-    const month = parseInt(document.getElementById('monthSelect').value, 10);
-    const payload = {};
-    DENOMS.forEach(v => { payload[v] = parseInt(denomMap[v], 10) || 0; });
+  function renderPrintDenomTable() {
+    let denomSum = 0;
+    const printDenomBody = document.getElementById('printDenomBody');
+    printDenomBody.innerHTML = DENOMS.map(val => {
+      const q = parseInt(denomMap[val], 10) || 0;
+      const sub = q * val;
+      denomSum += sub;
+      return `
+        <tr>
+          <td>${val}</td>
+          <td style="text-align:center;">${q > 0 ? q : ''}</td>
+          <td style="text-align:right; padding-right:12px;">${sub > 0 ? sub.toLocaleString() : '0'}</td>
+        </tr>
+      `;
+    }).join('');
+    document.getElementById('printDenomSum').textContent = denomSum.toLocaleString() + ' 元';
+  }
 
-    const { error } = await supabaseClient
-      .from('petty_cash_denoms')
-      .upsert([{ roc_year: rocYear, month: month, denom_data: payload }], { onConflict: 'roc_year,month' });
-    if (error) {
-      alert('現鈔盤點儲存失敗：' + error.message);
-    } else {
-      alert('現鈔盤點已儲存！');
-      await loadData();
+  async function saveDenomRecord() {
+    const btn = document.getElementById('btnSaveDenom');
+    btn.disabled = true;
+    btn.textContent = '儲存中...';
+
+    try {
+      const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+      const month = parseInt(document.getElementById('monthSelect').value, 10);
+      const payload = {};
+      DENOMS.forEach(v => { payload[String(v)] = parseInt(denomMap[v], 10) || 0; });
+
+      const { error } = await supabaseClient
+        .from('petty_cash_denoms')
+        .upsert([{ roc_year: rocYear, month: month, denom_data: payload }], { onConflict: 'roc_year,month' });
+
+      if (error) {
+        alert('現鈔盤點儲存失敗：' + error.message);
+      } else {
+        renderPrintDenomTable();
+        alert('現鈔盤點已成功儲存至雲端！');
+        await loadData();
+      }
+    } catch (err) {
+      alert('發生未預期錯誤：' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '儲存今日現鈔盤點';
     }
   }
 
@@ -392,22 +440,6 @@
     document.getElementById('sumIncome').textContent = totalIncomeNum.toLocaleString();
     document.getElementById('sumExpense').textContent = totalExpenseNum.toLocaleString();
     document.getElementById('sumTotal').textContent = (totalIncomeNum - totalExpenseNum).toLocaleString() + ' 元';
-
-    let denomSum = 0;
-    const printDenomBody = document.getElementById('printDenomBody');
-    printDenomBody.innerHTML = DENOMS.map(val => {
-      const q = parseInt(denomMap[val], 10) || 0;
-      const sub = q * val;
-      denomSum += sub;
-      return `
-        <tr>
-          <td>${val}</td>
-          <td style="text-align:center;">${q > 0 ? q : ''}</td>
-          <td style="text-align:right; padding-right:12px;">${sub > 0 ? sub.toLocaleString() : '0'}</td>
-        </tr>
-      `;
-    }).join('');
-    document.getElementById('printDenomSum').textContent = denomSum.toLocaleString() + ' 元';
   }
 
   loadData();
