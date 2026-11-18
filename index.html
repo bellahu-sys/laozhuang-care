@@ -3,166 +3,225 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>系統功能總覽目錄 - 老庄社區照顧關懷據點</title>
-  <script src="config.js"></script>
+  <title>苗栗縣卓蘭鎮老庄社區照顧關懷據點 - 雲端管理系統</title>
   <style>
-    :root { --primary: #2c5e4f; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
-    * { box-sizing: border-box; font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; }
-    body { margin: 0; background: var(--bg); color: var(--text); }
+    :root { --primary: #2c5e4f; --bg: #f1f5f9; --card-bg: #ffffff; --text: #1e293b; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background-color: var(--bg); color: var(--text); }
 
+    /* 頂部導覽列改為靠左，並將分類選單移至左下方或下方主區塊 */
     nav.topbar {
-      background-color: var(--primary); color: #fff; padding: 0 20px;
+      background-color: var(--primary); color: white; padding: 12px 20px;
       display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
     }
-    .brand { font-weight: bold; font-size: 1.15rem; padding: 14px 0; }
-    .brand a { color: #fff; text-decoration: none; }
-    .nav-menu { display: flex; list-style: none; margin: 0; padding: 0; }
+    .brand { font-weight: bold; font-size: 1.15rem; color: white; text-decoration: none; }
+    
+    /* 左側導覽選單列 */
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .nav-item { position: relative; }
     .nav-btn {
-      display: block; color: #fff; text-decoration: none; padding: 14px 16px;
-      font-size: 0.95rem; cursor: pointer; background: transparent; border: none; font-family: inherit;
+      color: white; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
     }
-    .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.2); font-weight: bold; }
-    .dropdown {
-      display: none; position: absolute; top: 100%; right: 0; background: #fff;
-      min-width: 230px; box-shadow: 0 6px 16px rgba(0,0,0,0.15); border-radius: 0 0 6px 6px;
-      border: 1px solid var(--border); z-index: 100;
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 215px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
     }
-    .nav-item:hover .dropdown { display: block; }
-    .dropdown a {
-      display: block; color: var(--text); text-decoration: none; padding: 10px 16px;
-      font-size: 0.92rem; border-bottom: 1px solid #f1f5f9;
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
     }
-    .dropdown a:last-child { border-bottom: none; }
-    .dropdown a:hover { background: #e2e8f0; color: var(--primary); font-weight: bold; }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
-    .container { max-width: 1120px; margin: 30px auto; padding: 0 20px; }
-    h1 { color: var(--primary); font-size: 1.5rem; margin-bottom: 6px; }
-    .subtitle { color: #64748b; font-size: 0.95rem; margin-bottom: 28px; }
+    .container { max-width: 1060px; margin: 28px auto 50px auto; padding: 0 20px; }
+    .welcome { margin-bottom: 24px; color: #475569; }
+    .welcome h2 { color: var(--primary); margin-bottom: 6px; }
 
-    .category-title {
-      font-size: 1.15rem; font-weight: bold; color: var(--primary);
-      border-left: 4px solid var(--primary); padding-left: 10px; margin: 28px 0 14px 0;
+    /* 快捷功能導覽區（移到目錄總覽上方，方便點擊） */
+    .quick-toolbar {
+      background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px;
+      padding: 15px 20px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      display: flex; gap: 15px; align-items: center; flex-wrap: wrap;
     }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
-    .card {
-      display: block; background: #fff; border: 1px solid var(--border); border-radius: 8px;
-      padding: 18px; text-decoration: none; color: inherit; transition: transform 0.15s, box-shadow 0.15s;
+    .quick-toolbar span { font-weight: bold; color: var(--primary); }
+    .quick-links { display: flex; gap: 10px; flex-wrap: wrap; }
+    .quick-link-btn {
+      background: #f1f5f9; color: var(--text); text-decoration: none; padding: 6px 12px;
+      border-radius: 6px; font-size: 0.9rem; border: 1px solid #cbd5e1; font-weight: bold;
     }
-    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); border-color: var(--primary); }
-    .card-title { font-weight: bold; font-size: 1.05rem; color: #0f172a; margin-bottom: 8px; }
-    .card-desc { font-size: 0.88rem; color: #475569; line-height: 1.5; margin-bottom: 12px; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.78rem; font-weight: bold; }
-    .badge-on { background: #dcfce7; color: #166534; }
-    .badge-wait { background: #f1f5f9; color: #64748b; }
+    .quick-link-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .cat-heading {
+      font-size: 1.2rem; font-weight: bold; color: var(--primary);
+      border-left: 5px solid var(--primary); padding-left: 10px;
+      margin: 28px 0 14px 0;
+    }
+    .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+    .menu-card {
+      background: var(--card-bg); border-radius: 10px; padding: 20px;
+      text-decoration: none; color: inherit; border: 1px solid #cbd5e1;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .menu-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-color: var(--primary); }
+    .title { font-size: 1.12rem; font-weight: bold; color: var(--primary); margin-bottom: 6px; }
+    .desc { font-size: 0.88rem; color: #64748b; line-height: 1.45; }
+    .badge { display: inline-block; margin-top: 14px; padding: 3px 10px; font-size: 0.78rem; border-radius: 20px; background: #dcfce7; color: #166534; width: fit-content; font-weight: bold; }
+    .badge.todo { background: #f1f5f9; color: #64748b; }
   </style>
 </head>
 <body>
 
 <nav class="topbar">
-  <div class="brand"><a href="index.html">老庄社區照顧關懷據點｜雲端系統</a></div>
-  <ul class="nav-menu">
-    <li class="nav-item"><a href="index.html" class="nav-btn active">系統首頁</a></li>
-    <li class="nav-item">
-      <button class="nav-btn">人事資料 ▾</button>
-      <div class="dropdown">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item">
+      <a href="index.html" class="nav-btn active">系統首頁</a>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
         <a href="個案翻閱本.html">個案資料翻閱本</a>
         <a href="個案資料表.html">新增個案基本資料</a>
-        <a href="個案清單.html">個案名冊與服務狀況</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
         <a href="講師資料.html">講師資料管理</a>
         <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="#" onclick="alert('志工資料表預留擴充中，歡迎隨時提供 Excel 欄位建立！'); return false;">志工資料管理（預留）</a>
       </div>
-    </li>
-    <li class="nav-item">
-      <button class="nav-btn">行政類 ▾</button>
-      <div class="dropdown">
-        <a href="聯絡電話.html">聯絡電話總表</a>
-        <a href="月報表套印中心.html">月行事曆與報表套印中心</a>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
       </div>
-    </li>
-    <li class="nav-item">
-      <button class="nav-btn">報表套印 ▾</button>
-      <div class="dropdown">
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
         <a href="個案基本資料表套印.html">個案基本資料表套印</a>
         <a href="健康管理表套印.html">長輩健康管理表套印</a>
-        <a href="月報表套印中心.html">每月核銷簽到表與菜單套印</a>
       </div>
-    </li>
-  </ul>
+    </div>
+  </div>
 </nav>
 
-<div class="container">
-  <h1>系統功能總覽目錄</h1>
-  <div class="subtitle">已依業務類別整理為「人事資料」、「行政類」與「報表套印」，也可直接從上方導覽列下拉選單快速切換。</div>
+  <div class="container">
+    <div class="welcome">
+      <h2>系統功能總覽目錄</h2>
+      <p>已依業務類別整理為「人事資料」、「行政類」與「報表套印」，也可直接從上方左側導覽列下拉選單快速切換。</p>
+    </div>
 
-  <div class="category-title">一、人事資料</div>
-  <div class="grid">
-    <a href="個案清單.html" class="card">
-      <div class="card-title">個案資料管理</div>
-      <div class="card-desc">查詢 239 筆長輩名冊、服務狀況異動（服務中／暫停／死亡）、翻閱本與 Excel 匯入匯出。</div>
-      <span class="badge badge-on">已啟用（含翻閱本／新增）</span>
-    </a>
-    <a href="講師資料.html" class="card">
-      <div class="card-title">講師資料管理</div>
-      <div class="card-desc">管理內聘與外聘課程講師名冊、專長備註、服務狀態與聯絡方式，支援新增與修改。</div>
-      <span class="badge badge-on">已啟用</span>
-    </a>
-    <a href="臨時人員資料.html" class="card">
-      <div class="card-title">臨時人員資料管理</div>
-      <div class="card-desc">管理據點臨時人力名冊、身分證號、出生年月日、服務狀態與聯絡電話。</div>
-      <span class="badge badge-on">已啟用</span>
-    </a>
-    <div class="card" style="cursor:default;">
-      <div class="card-title">志工資料管理</div>
-      <div class="card-desc">管理社區據點志工名冊、服務時數與聯絡資訊（預留擴充模組）。</div>
-      <span class="badge badge-wait">預留擴充</span>
+    <!-- 快捷功能列 (方便在首頁直接點選常用功能) -->
+    <div class="quick-toolbar">
+      <span>快速導覽：</span>
+      <div class="quick-links">
+        <a href="個案翻閱本.html" class="quick-link-btn">個案翻閱本</a>
+        <a href="個案清單.html" class="quick-link-btn">個案名冊</a>
+        <a href="講師資料.html" class="quick-link-btn">講師資料</a>
+        <a href="臨時人員資料.html" class="quick-link-btn">臨時人員</a>
+        <a href="聯絡電話.html" class="quick-link-btn">聯絡電話</a>
+        <a href="零用金管理中心.html" class="quick-link-btn">零用金記錄</a>
+      </div>
+    </div>
+
+    <div class="cat-heading">一、人事資料</div>
+    <div class="menu-grid">
+      <a href="個案清單.html" class="menu-card">
+        <div>
+          <div class="title">個案資料管理</div>
+          <div class="desc">查詢長輩名冊、服務狀況異動（服務中／暫停／死亡）、翻閱本與 Excel 匯入匯出。</div>
+        </div>
+        <span class="badge">● 已啟用（含翻閱本／新增）</span>
+      </a>
+
+      <a href="講師資料.html" class="menu-card">
+        <div>
+          <div class="title">講師資料管理</div>
+          <div class="desc">管理內聘與外聘課程講師名冊、專長備註、服務狀態與聯絡方式，支援新增與修改。</div>
+        </div>
+        <span class="badge">● 已啟用</span>
+      </a>
+
+      <a href="臨時人員資料.html" class="menu-card">
+        <div>
+          <div class="title">臨時人員資料管理</div>
+          <div class="desc">管理據點臨時人力名冊、身分證號、出生年月日、服務狀態與聯絡電話。</div>
+        </div>
+        <span class="badge">● 已啟用</span>
+      </a>
+
+      <a href="#" onclick="alert('志工資料表已預留擴充位置，隨時提供名冊即可建立！'); return false;" class="menu-card">
+        <div>
+          <div class="title">志工資料管理</div>
+          <div class="desc">管理社區據點志工名冊、服務時數與聯絡資訊（預留擴充模組）。</div>
+        </div>
+        <span class="badge todo">○ 預留擴充</span>
+      </a>
+    </div>
+
+    <div class="cat-heading">二、行政類與每日記錄</div>
+    <div class="menu-grid">
+      <a href="聯絡電話.html" class="menu-card">
+        <div>
+          <div class="title">聯絡電話總表</div>
+          <div class="desc">自動彙整「個案、講師、臨時人員」全站通訊錄，輸入姓名或電話一秒查詢撥打。</div>
+        </div>
+        <span class="badge">● 已啟用</span>
+      </a>
+
+      <a href="零用金管理中心.html" class="menu-card">
+        <div>
+          <div class="title">零用金與現鈔清點</div>
+          <div class="desc">記錄每日訂餐費收入與五金支出，支援現鈔硬幣數量清點及月底結算表列印。</div>
+        </div>
+        <span class="badge">● 已啟用</span>
+      </a>
+    </div>
+
+    <div class="cat-heading">三、報表與公版套印</div>
+    <div class="menu-grid">
+      <a href="個案基本資料表套印.html" class="menu-card">
+        <div>
+          <div class="title">個案基本資料表套印</div>
+          <div class="desc">依老庄據點 A4 公版格式套印個案資料，支援下載 Word、1 份 PDF 或直接列印。</div>
+        </div>
+        <span class="badge">● 已啟用</span>
+      </a>
+
+      <a href="健康管理表套印.html" class="menu-card">
+        <div>
+          <div class="title">長輩健康管理表套印</div>
+          <div class="desc">從雲端勾選上課長輩名單，一鍵合併套印出一人一頁 Word 健康登記表。</div>
+        </div>
+        <span class="badge">● 已啟用</span>
+      </a>
     </div>
   </div>
 
-  <div class="category-title">二、行政類</div>
-  <div class="grid">
-    <a href="聯絡電話.html" class="card">
-      <div class="card-title">聯絡電話總表</div>
-      <div class="card-desc">自動彙整「個案、講師、臨時人員」全站通訊錄，輸入姓名或電話一秒查詢撥打。</div>
-      <span class="badge badge-on">已啟用</span>
-    </a>
-    <a href="月報表套印中心.html" class="card">
-      <div class="card-title">月行事曆與排程維護</div>
-      <div class="card-desc">每月勾選實際上班日（自動排除週六日與國定假日），維護當月課程排程與共餐菜單。</div>
-      <span class="badge badge-on">已啟用</span>
-    </a>
-  </div>
-
-  <div class="category-title">三、報表與公版套印</div>
-  <div class="grid">
-    <a href="個案基本資料表套印.html" class="card">
-      <div class="card-title">個案基本資料表套印</div>
-      <div class="card-desc">依縣府公版格式批次套印個案基本資料表，支援 Word 下載、PDF 匯出與直接列印。</div>
-      <span class="badge badge-on">已啟用</span>
-    </a>
-    <a href="健康管理表套印.html" class="card">
-      <div class="card-title">長輩健康管理表套印</div>
-      <div class="card-desc">自動篩選「服務中」長輩名單，一鍵批次產生一人一頁 Word 健康登記表。</div>
-      <span class="badge badge-on">已啟用</span>
-    </a>
-    <a href="月報表套印中心.html" class="card">
-      <div class="card-title">每月核銷簽到表與菜單套印</div>
-      <div class="card-desc">依本月上班日一鍵套印志工值班簽到表、專職出勤表、臨時人員時數表、課程簽到表與月菜單。</div>
-      <span class="badge badge-on">已啟用（5 合 1 套印）</span>
-    </a>
-  </div>
-</div>
-
-<script>
-  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true') {
-    const pwd = prompt('請輸入老庄據點系統通行密碼：');
-    if (pwd === STATION_PASSCODE) {
-      sessionStorage.setItem('care_auth', 'true');
-    } else {
-      document.body.innerHTML = '<div style="text-align:center;margin-top:80px;"><h2>密碼錯誤，無法存取系統</h2></div>';
+  <script>
+    const STATION_PASSCODE = 'laozhuang2026';
+    if (sessionStorage.getItem('care_auth') !== 'true') {
+      const input = prompt('🔒 請輸入老庄據點系統通行密碼：');
+      if (input === STATION_PASSCODE) {
+        sessionStorage.setItem('care_auth', 'true');
+      } else {
+        document.body.innerHTML = '<div style="text-align:center;margin-top:80px;font-family:sans-serif;"><h2>⛔ 密碼錯誤，無法存取系統</h2><button onclick="location.reload()" style="padding:10px 20px;font-size:1rem;">重新輸入</button></div>';
+      }
     }
-  }
-</script>
+  </script>
 </body>
 </html>

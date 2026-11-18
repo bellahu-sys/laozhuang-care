@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>每日零用金收支與現鈔清點管理中心 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --primary: #2c5e4f; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 0 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-bottom: 20px;
+    }
+    .brand { font-weight: bold; font-size: 1.1rem; padding: 14px 0; }
+    .brand a { color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; list-style: none; margin: 0; padding: 0; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      display: block; color: #fff; text-decoration: none; padding: 14px 16px;
+      font-size: 0.95rem; cursor: pointer; background: transparent; border: none; font-family: inherit;
+    }
+    .nav-item:hover .nav-btn { background: rgba(255,255,255,0.2); font-weight: bold; }
+    .dropdown {
+      display: none; position: absolute; top: 100%; right: 0; background: #fff;
+      min-width: 220px; box-shadow: 0 6px 16px rgba(0,0,0,0.15); border-radius: 0 0 6px 6px;
+      border: 1px solid var(--border); z-index: 100;
+    }
+    .nav-item:hover .dropdown { display: block; }
+    .dropdown a {
+      display: block; color: var(--text); text-decoration: none; padding: 10px 16px;
+      font-size: 0.92rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown a:last-child { border-bottom: none; }
+    .dropdown a:hover { background: #e2e8f0; color: var(--primary); font-weight: bold; }
+
+    .container {
+      max-width: 1000px; margin: 0 auto 30px auto; background: #fff;
+      padding: 24px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    h1 { color: var(--primary); font-size: 1.35rem; margin: 0 0 16px 0; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+
+    .toolbar {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid var(--border);
+    }
+    select, input[type="text"], input[type="number"] {
+      padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.95rem;
+    }
+    button.btn {
+      padding: 9px 16px; border: none; border-radius: 5px; font-weight: bold;
+      cursor: pointer; font-size: 0.95rem;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #1e4237; }
+    .btn-print { background: #2563eb; color: #fff; }
+    .btn-print:hover { background: #1d4ed8; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+    .card h3 { margin-top: 0; color: var(--primary); font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+
+    table.data-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    table.data-table th, table.data-table td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; font-size: 0.9rem; }
+    table.data-table th { background: #e2e8f0; text-align: center; }
+
+    .summary-box { background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 6px; margin-top: 14px; font-weight: bold; color: #0369a1; display: flex; justify-content: space-between; }
+
+    /* 列印專屬排版 (對齊 PDF 格式) */
+    .print-only { display: none; }
+    @media print {
+      nav.topbar, .toolbar, .tabs, .grid-2, .no-print { display: none !important; }
+      .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
+      .print-only { display: block !important; }
+      body { font-family: "DFKai-SB", "標楷體", serif; }
+      table.data-table th, table.data-table td { border: 1px solid #000; color: #000; padding: 4px 6px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="brand"><a href="index.html">老庄社區照顧關懷據點｜雲端管理系統</a></div>
+  <ul class="nav-menu">
+    <li class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></li>
+    <li class="nav-item">
+      <button class="nav-btn">每日記錄 ▾</button>
+      <div class="dropdown">
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+      </div>
+    </li>
+    <li class="nav-item">
+      <button class="nav-btn">行政類 ▾</button>
+      <div class="dropdown">
+        <a href="月報表套印中心.html">月行事曆與報表套印中心</a>
+      </div>
+    </li>
+  </ul>
+</nav>
+
+<div class="container">
+  <h1>每日零用金收支與現鈔清點記錄中心</h1>
+
+  <div class="toolbar no-print">
+    <label><strong>選擇民國年：</strong>
+      <select id="rocYearSelect" onchange="loadData()">
+        <option value="115" selected>115 年 (2026)</option>
+        <option value="116">116 年 (2027)</option>
+      </select>
+    </label>
+    <label><strong>選擇月份：</strong>
+      <select id="monthSelect" onchange="loadData()">
+        <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
+        <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
+        <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
+        <option value="10">10 月</option><option value="11" selected>11 月</option><option value="12">12 月</option>
+      </select>
+    </label>
+    <button class="btn btn-print" onclick="window.print()">列印月底結算表 (PDF)</button>
+  </div>
+
+  <div class="grid-2 no-print">
+    <!-- 左側：每日收支登錄 -->
+    <div class="card">
+      <h3>1. 每日收支記錄（訂餐費收入 / 五金支出）</h3>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+        <label>選擇日期：<select id="recordDateSelect" onchange="onDateSelected()"></select></label>
+        <label>餐費收入 (元)：<input type="number" id="incomeInput" placeholder="例如：1770 或輸入 X"></label>
+        <label>五金支出 (元)：<input type="number" id="expenseInput" placeholder="0"></label>
+        <label>備註說明：<input type="text" id="remarkInput" placeholder="選填"></label>
+        <button class="btn btn-primary" onclick="saveDailyRecord()">儲存今日收支記錄</button>
+      </div>
+    </div>
+
+    <!-- 右側：現鈔清點 -->
+    <div class="card">
+      <h3>2. 現鈔與硬幣清點盤點（點鈔方便）</h3>
+      <table class="data-table" style="margin-top:6px;">
+        <thead><tr><th>貨幣單位</th><th>數量</th><th>金額</th></tr></thead>
+        <tbody id="denomTableBody"></tbody>
+      </table>
+      <div class="summary-box">
+        <span>現鈔清點總計：</span>
+        <span id="denomTotalDisplay">0 元</span>
+      </div>
+      <button class="btn btn-primary" style="margin-top:10px; width:100%;" onclick="saveDenomRecord()">儲存今日現鈔盤點</button>
+    </div>
+  </div>
+
+  <!-- 月底完整呈現清單 (模擬 PDF 格式) -->
+  <div class="card">
+    <h3 class="no-print">3. 月底結算總表預覽（對齊 PDF 格式）</h3>
+    
+    <div style="text-align:center; font-size:1.2rem; font-weight:bold; margin-bottom:10px;" id="printTitle">
+      115年11月收支明細表
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:25%;">日期</th>
+          <th style="width:25%;">餐費(收入)</th>
+          <th style="width:25%;">支出</th>
+          <th style="width:25%;">備註</th>
+        </tr>
+      </thead>
+      <tbody id="monthlyTableBody"></tbody>
+      <tfoot>
+        <tr style="font-weight:bold; background:#e2e8f0;">
+          <td style="text-align:center;">小計</td>
+          <td id="sumIncome">0</td>
+          <td id="sumExpense">0</td>
+          <td></td>
+        </tr>
+        <tr style="font-weight:bold; background:#cbd5e1;">
+          <td style="text-align:center;">總計 (收入-支出)</td>
+          <td colspan="3" id="sumTotal" style="padding-left:12px;">0</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- 現鈔明細結算表 -->
+    <h4 style="margin:20px 0 8px 0; color:var(--primary);">現鈔與硬幣盤點結算</h4>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:33%;">貨幣單位</th>
+          <th style="width:33%;">數量</th>
+          <th style="width:34%;">金額</th>
+        </tr>
+      </thead>
+      <tbody id="printDenomBody"></tbody>
+      <tfoot>
+        <tr style="font-weight:bold; background:#e2e8f0;">
+          <td style="text-align:center;">總計</td>
+          <td></td>
+          <td id="printDenomSum" style="padding-left:12px;">0</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) sessionStorage.setItem('care_auth', 'true');
+    else document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const DENOMS = [1000, 500, 100, 50, 10, 5, 1];
+
+  let dailyMap = {};
+  let denomMap = {};
+
+  async function loadData() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const month = parseInt(document.getElementById('monthSelect').value, 10);
+    const adYear = rocYear + 1911;
+    document.getElementById('printTitle').textContent = `${rocYear}年${month}月收支明細表`;
+
+    // 產生當月日期下拉選單
+    const daysInMonth = new Date(adYear, month, 0).getDate();
+    const dateSel = document.getElementById('recordDateSelect');
+    dateSel.innerHTML = '';
+    for(let d=1; d<=daysInMonth; d++) {
+      const iso = `${adYear}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const opt = document.createElement('option');
+      opt.value = iso;
+      opt.textContent = `${month}/${d}`;
+      dateSel.appendChild(opt);
+    }
+
+    // 從 Supabase 撈取本月收支
+    const start = `${adYear}-${String(month).padStart(2,'0')}-01`;
+    const end = `${adYear}-${String(month).padStart(2,'0')}-${String(daysInMonth).padStart(2,'0')}`;
+
+    const { data: recs } = await supabaseClient.from('petty_cash_records').select('*').gte('record_date', start).lte('record_date', end);
+    dailyMap = {};
+    (recs || []).forEach(r => { dailyMap[r.record_date] = r; });
+
+    // 撈取現鈔盤點
+    const { data: dens } = await supabaseClient.from('petty_cash_denoms').select('*').eq('roc_year', rocYear).eq('month', month).single();
+    denomMap = dens ? (dens.denom_data || {}) : {};
+
+    renderMonthlyTable(adYear, month, daysInMonth);
+    renderDenomInputs();
+    onDateSelected();
+  }
+
+  function onDateSelected() {
+    const iso = document.getElementById('recordDateSelect').value;
+    const r = dailyMap[iso] || {};
+    document.getElementById('incomeInput').value = r.income !== undefined ? r.income : '';
+    document.getElementById('expenseInput').value = r.expense !== undefined ? r.expense : 0;
+    document.getElementById('remarkInput').value = r.remark || '';
+  }
+
+  async function saveDailyRecord() {
+    const record_date = document.getElementById('recordDateSelect').value;
+    const incomeRaw = document.getElementById('incomeInput').value.trim();
+    const income = isNaN(incomeRaw) ? incomeRaw : (incomeRaw === '' ? null : parseFloat(incomeRaw));
+    const expense = parseFloat(document.getElementById('expenseInput').value) || 0;
+    const remark = document.getElementById('remarkInput').value.trim();
+
+    const { error } = await supabaseClient.from('petty_cash_records').upsert([{ record_date, income, expense, remark }], { onConflict: 'record_date' });
+    if(error) alert('儲存失敗：' + error.message);
+    else { alert('今日收支已儲存！'); loadData(); }
+  }
+
+  function renderDenomInputs() {
+    const tbody = document.getElementById('denomTableBody');
+    tbody.innerHTML = DENOMS.map(val => {
+      const qty = denomMap[val] || 0;
+      return `
+        <tr>
+          <td><strong>${val} 元</strong></td>
+          <td><input type="number" min="0" value="${qty}" oninput="updateDenom(${val}, this.value)" style="width:70px;"></td>
+          <td id="amt_${val}" style="font-weight:bold;">${qty * val} 元</td>
+        </tr>
+      `;
+    }).join('');
+    calcDenomTotal();
+  }
+
+  function updateDenom(val, qty) {
+    denomMap[val] = parseInt(qty) || 0;
+    document.getElementById(`amt_${val}`).textContent = (denomMap[val] * val) + ' 元';
+    calcDenomTotal();
+  }
+
+  function calcDenomTotal() {
+    let total = 0;
+    DENOMS.forEach(v => { total += (denomMap[v] || 0) * v; });
+    document.getElementById('denomTotalDisplay').textContent = total.toLocaleString() + ' 元';
+  }
+
+  async function saveDenomRecord() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const month = parseInt(document.getElementById('monthSelect').value, 10);
+    const { error } = await supabaseClient.from('petty_cash_denoms').upsert([{ roc_year, month, denom_data: denomMap }], { onConflict: 'roc_year,month' });
+    if(error) alert('現鈔盤點儲存失敗：' + error.message);
+    else { alert('現鈔盤點已儲存！'); loadData(); }
+  }
+
+  function renderMonthlyTable(adYear, month, daysInMonth) {
+    let totalIncomeNum = 0;
+    let totalExpenseNum = 0;
+    let rowsHtml = '';
+
+    for(let d=1; d<=daysInMonth; d++) {
+      const iso = `${adYear}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const r = dailyMap[iso] || {};
+      const incVal = r.income !== undefined && r.income !== null ? r.income : '';
+      const expVal = r.expense !== undefined && r.expense !== null ? r.expense : '';
+
+      if(!isNaN(incVal) && incVal !== '') totalIncomeNum += parseFloat(incVal);
+      if(!isNaN(expVal) && expVal !== '') totalExpenseNum += parseFloat(expVal);
+
+      rowsHtml += `
+        <tr>
+          <td style="text-align:center;">${month}/${d}</td>
+          <td style="text-align:right;">${typeof incVal === 'number' ? incVal.toLocaleString() : incVal}</td>
+          <td style="text-align:right;">${expVal !== '' && expVal !== 0 ? parseFloat(expVal).toLocaleString() : ''}</td>
+          <td>${r.remark || ''}</td>
+        </tr>
+      `;
+    }
+
+    document.getElementById('monthlyTableBody').innerHTML = rowsHtml;
+    document.getElementById('sumIncome').textContent = totalIncomeNum.toLocaleString();
+    document.getElementById('sumExpense').textContent = totalExpenseNum.toLocaleString();
+    document.getElementById('sumTotal').textContent = (totalIncomeNum - totalExpenseNum).toLocaleString() + ' 元';
+
+    // 渲染列印現鈔總表
+    let denomSum = 0;
+    const printDenomBody = document.getElementById('printDenomBody');
+    printDenomBody.innerHTML = DENOMS.map(val => {
+      const q = denomMap[val] || 0;
+      const sub = q * val;
+      denomSum += sub;
+      return `
+        <tr>
+          <td>${val}</td>
+          <td style="text-align:center;">${q > 0 ? q : ''}</td>
+          <td style="text-align:right;">${sub > 0 ? sub.toLocaleString() : '0'}</td>
+        </tr>
+      `;
+    }).join('');
+    document.getElementById('printDenomSum').textContent = denomSum.toLocaleString() + ' 元';
+  }
+
+  loadData();
+</script>
+</body>
+</html>
