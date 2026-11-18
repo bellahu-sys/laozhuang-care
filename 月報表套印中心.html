@@ -604,7 +604,7 @@
       const fname = templateFilenames[key];
       if (window.location.protocol.startsWith('http')) {
         try {
-          const res = await fetch(encodeURI(fname));
+          const res = await fetch(encodeURI(fname) + '?v=' + Date.now(), { cache: 'no-store' });
           if (res.ok) {
             cachedTemplates[key] = await res.arrayBuffer();
             statusEl.style.color = '#166534';
