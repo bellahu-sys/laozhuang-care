@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>聯絡電話總表（行政類） - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --primary: #2c5e4f; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
+    nav.topbar {
+      background-color: var(--primary); color: white; padding: 10px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500; margin-bottom: 20px;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: white; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: white; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 215px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+    .container { max-width: 1150px; margin: 0 auto 30px auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--primary); padding-bottom: 12px; margin-bottom: 18px; }
+    .header-bar h1 { color: var(--primary); font-size: 1.4rem; margin: 0; }
+    .count-badge { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid var(--border); align-items: center; }
+    .filter-bar input[type="text"], .filter-bar select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 5px; font-size: 0.95rem; background: white; }
+    .filter-bar input[type="text"] { flex: 1 1 260px; }
+    button { padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.93rem; }
+    .btn-export { background: #15803d; color: white; margin-left: auto; }
+    .role-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.82rem; font-weight: bold; }
+    .r-case { background: #e0f2fe; color: #0369a1; }
+    .r-inst { background: #fef3c7; color: #92400e; }
+    .r-temp { background: #f3e8ff; color: #6b21a8; }
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 820px; }
+    th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; font-size: 0.95rem; }
+    th { background: #e2e8f0; white-space: nowrap; }
+    tr:hover { background: #f8fafc; }
+    a.tel-link { color: #0284c7; font-weight: bold; text-decoration: none; }
+    a.tel-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">🏠 老庄社區照顧關懷據點｜雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item">
+      <a href="index.html" class="nav-btn">🏠 系統首頁</a>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">👥 人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">📖 個案資料翻閱本</a>
+        <a href="個案資料表.html">📋 新增個案基本資料</a>
+        <a href="個案清單.html">🔍 個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">🎓 講師資料管理</a>
+        <a href="臨時人員資料.html">🧑‍💼 臨時人員資料管理</a>
+        <a href="#" onclick="alert('志工資料表預留擴充中，歡迎隨時提供 Excel 欄位建立！'); return false;">🤝 志工資料管理（預留）</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">🗂️ 行政類 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">☎️ 聯絡電話總表（全站通訊錄）</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">🖨️ 報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="個案基本資料表套印.html">📄 個案基本資料表套印</a>
+        <a href="健康管理表套印.html">🩺 長輩健康管理表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <h1>☎️ 聯絡電話總表（全站通訊錄）</h1>
+    <span class="count-badge" id="totalCount">共 0 筆聯絡資訊</span>
+  </div>
+
+  <div class="filter-bar">
+    <input type="text" id="searchInput" placeholder="輸入姓名、電話號碼、緊急聯絡人或住址一秒搜尋..." onkeyup="applyFilters()">
+    <select id="roleFilter" onchange="applyFilters()">
+      <option value="">全部身分別（個案／講師／臨時人員）</option>
+      <option value="個案">👴 長輩個案</option>
+      <option value="講師">🎓 課程講師</option>
+      <option value="臨時人員">🧑‍💼 臨時人員</option>
+    </select>
+    <label style="font-size:0.9rem; display:inline-flex; align-items:center; gap:5px; cursor:pointer;">
+      <input type="checkbox" id="hasPhoneOnly" onchange="applyFilters()"> 只顯示有登記電話者
+    </label>
+    <button type="button" class="btn-export" onclick="exportCsv()">📥 匯出通訊錄 Excel</button>
+  </div>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:95px;">類別</th>
+          <th style="width:85px;">編號</th>
+          <th style="width:110px;">姓名</th>
+          <th>主要電話／手機</th>
+          <th>緊急聯絡人／備註電話</th>
+          <th>居住地址</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="6" style="text-align:center; padding:25px;">正在彙整雲端通訊錄...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  if (sessionStorage.getItem('care_auth') !== 'true') {
+    const input = prompt('🔒 請輸入老庄據點系統通行密碼：');
+    if (input === STATION_PASSCODE) sessionStorage.setItem('care_auth', 'true');
+    else document.body.innerHTML = '<div style="text-align:center;margin-top:80px;"><h2>⛔ 密碼錯誤</h2></div>';
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let allContacts = [];
+  let filteredContacts = [];
+
+  async function loadAllContacts() {
+    const tbody = document.getElementById('tableBody');
+    const [casesRes, instRes, tempRes] = await Promise.all([
+      supabaseClient.from('cases').select('case_number, name, phone, mobile, address, neighborhood, house_number, contact_person, contact_relation, contact_phone').order('case_number', { ascending: true }),
+      supabaseClient.from('instructors').select('staff_number, name, mobile, phone, address, hire_type, status').order('staff_number', { ascending: true }),
+      supabaseClient.from('temp_staff').select('staff_number, name, mobile, phone, address, status').order('staff_number', { ascending: true })
+    ]);
+
+    allContacts = [];
+
+    if (!casesRes.error && Array.isArray(casesRes.data)) {
+      casesRes.data.forEach(c => {
+        const emerg = c.contact_person ? `${c.contact_person}${c.contact_relation ? '（' + c.contact_relation + '）' : ''}：${c.contact_phone || ''}` : (c.contact_phone || '');
+        allContacts.push({
+          role: '個案',
+          num: c.case_number || '',
+          name: c.name || '',
+          primaryPhone: [c.phone, c.mobile].filter(Boolean).join(' / '),
+          secondaryInfo: emerg,
+          address: c.address || ''
+        });
+      });
+    }
+
+    if (!instRes.error && Array.isArray(instRes.data)) {
+      instRes.data.forEach(i => {
+        const phones = [i.mobile, i.phone].filter(Boolean).join(' / ');
+        allContacts.push({
+          role: '講師',
+          num: i.staff_number || '',
+          name: i.name || '',
+          primaryPhone: phones,
+          secondaryInfo: `${i.hire_type ? i.hire_type + '講師' : '講師'}（${i.status || ''}）`,
+          address: i.address || ''
+        });
+      });
+    }
+
+    if (!tempRes.error && Array.isArray(tempRes.data)) {
+      tempRes.data.forEach(t => {
+        const phones = [t.mobile, t.phone].filter(Boolean).join(' / ');
+        allContacts.push({
+          role: '臨時人員',
+          num: t.staff_number || '',
+          name: t.name || '',
+          primaryPhone: phones,
+          secondaryInfo: `狀態：${t.status || ''}`,
+          address: t.address || ''
+        });
+      });
+    }
+
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const kw = document.getElementById('searchInput').value.trim().toLowerCase();
+    const role = document.getElementById('roleFilter').value;
+    const phoneOnly = document.getElementById('hasPhoneOnly').checked;
+
+    filteredContacts = allContacts.filter(item => {
+      const matchRole = !role || item.role === role;
+      const matchPhone = !phoneOnly || Boolean(item.primaryPhone || item.secondaryInfo);
+      const matchKw = !kw ||
+        item.name.toLowerCase().includes(kw) ||
+        item.num.toLowerCase().includes(kw) ||
+        item.primaryPhone.toLowerCase().includes(kw) ||
+        item.secondaryInfo.toLowerCase().includes(kw) ||
+        item.address.toLowerCase().includes(kw);
+      return matchRole && matchPhone && matchKw;
+    });
+    renderTable();
+  }
+
+  function roleBadge(r) {
+    if (r === '個案') return '<span class="role-tag r-case">👴 個案</span>';
+    if (r === '講師') return '<span class="role-tag r-inst">🎓 講師</span>';
+    return '<span class="role-tag r-temp">🧑‍💼 臨時人員</span>';
+  }
+
+  function formatClickablePhone(ph) {
+    if (!ph) return '<span style="color:#94a3b8;">未登記</span>';
+    return ph.split('/').map(p => {
+      const clean = p.trim();
+      const tel = clean.replace(/[^0-9+]/g, '');
+      return tel ? `<a class="tel-link" href="tel:${tel}">${clean}</a>` : clean;
+    }).join(' / ');
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    document.getElementById('totalCount').textContent = `顯示 ${filteredContacts.length} 筆（總計 ${allContacts.length} 筆）`;
+    if (filteredContacts.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:25px; color:#64748b;">查無符合條件的聯絡資料</td></tr>';
+      return;
+    }
+    tbody.innerHTML = filteredContacts.map(c => `
+      <tr>
+        <td>${roleBadge(c.role)}</td>
+        <td>${c.num}</td>
+        <td><strong>${c.name}</strong></td>
+        <td>${formatClickablePhone(c.primaryPhone)}</td>
+        <td>${c.secondaryInfo}</td>
+        <td>${c.address}</td>
+      </tr>
+    `).join('');
+  }
+
+  function exportCsv() {
+    if (filteredContacts.length === 0) return alert('無可匯出資料');
+    const headers = ['類別', '編號', '姓名', '主要電話/手機', '緊急聯絡人/備註', '地址'];
+    const esc = v => `"${String(v || '').replace(/"/g, '""')}"`;
+    const rows = filteredContacts.map(c => [c.role, c.num, c.name, c.primaryPhone, c.secondaryInfo, c.address].map(esc).join(','));
+    const csv = '\uFEFF' + [headers.map(esc).join(','), ...rows].join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    a.download = `老庄據點全站聯絡電話總表_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  }
+
+  loadAllContacts();
+</script>
+</body>
+</html>
