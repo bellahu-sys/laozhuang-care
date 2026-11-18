@@ -1182,7 +1182,8 @@
       };
       for (let i = 1; i <= 31; i++) {
         const d = workdays[i - 1];
-        map[`date_${i}`] = d ? `${pad2(d.month)}月${pad2(d.day)}日\n${d.weekday_text}` : '';
+        map[`date_${i}`] = d ? `${pad2(d.month)}月${pad2(d.day)}日` : '';
+        map[`week_${i}`] = d ? d.weekday_text : '';
         map[`log_${i}`] = d ? defaultLog : '';
       }
       buildMergedDocxAndDownload(buf, [map], `${rocYear}年${month}月_02 專職人員出勤紀錄表(${staffName}).docx`);
