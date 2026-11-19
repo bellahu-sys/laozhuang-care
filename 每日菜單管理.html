@@ -139,7 +139,7 @@
         <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
         <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
         <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
-        <option value="10" selected>10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+        <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
       </select>
     </label>
     <span id="statusText" style="font-weight:bold; color:#166534;"></span>
@@ -176,8 +176,13 @@
     <div class="card">
       <h2>2. 銜接【據點】食材費估算 AI 技能</h2>
       <p class="hint" style="margin:0 0 10px 0;">
-        輸入本月預計核銷的<strong>關懷與長照預算分配</strong>（系統會自動檢核長照單月不可超過 48,000 元），點擊下方按鈕即可自動組裝指令與整月菜單，直接貼進 Gemini 產生 TSV 採購單！
+        輸入本月預計核銷的<strong>關懷與長照預算分配</strong>與<strong>長照單月核銷上限</strong>（可依核定公文或當月狀況自行調整），點擊下方按鈕即可自動組裝指令與整月菜單，貼進 Gemini 產生 TSV 採購單！
       </p>
+      <div class="form-inline">
+        <label><strong>長照單月核銷上限 (元)：</strong>
+          <input type="number" id="ltcLimitInput" value="48000" step="1000" style="width:115px; border-color:#94a3b8; background:#fff;" oninput="checkBudgetLimit()">
+        </label>
+      </div>
       <div class="form-inline">
         <label><strong>關懷核銷目標 (元)：</strong>
           <input type="number" id="careBudgetInput" value="14000" step="500" style="width:110px;" oninput="checkBudgetLimit()">
@@ -199,8 +204,8 @@
   <table class="data-table">
     <thead>
       <tr>
-        <th style="width:130px;">供餐日期</th>
-        <th style="width:75px;">星期</th>
+        <th style="width:110px;">供餐日期</th>
+        <th style="width:85px;">星期</th>
         <th>當日菜色明細</th>
         <th style="width:90px;">人數</th>
         <th style="width:120px;">備註</th>
@@ -231,14 +236,28 @@
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
+  // 頁面載入時自動將年、月下拉選單對齊系統今天日期
+  (function initCurrentYearMonth() {
+    const today = new Date();
+    const curRocYear = String(today.getFullYear() - 1911);
+    const curMonth = String(today.getMonth() + 1);
+    const yearSel = document.getElementById('rocYearSelect');
+    const monthSel = document.getElementById('monthSelect');
+    if ([...yearSel.options].some(o => o.value === curRocYear)) {
+      yearSel.value = curRocYear;
+    }
+    monthSel.value = curMonth;
+  })();
+
   function checkBudgetLimit() {
     const care = parseInt(document.getElementById('careBudgetInput').value, 10) || 0;
     const ltc = parseInt(document.getElementById('ltcBudgetInput').value, 10) || 0;
+    const ltcLimit = parseInt(document.getElementById('ltcLimitInput').value, 10) || 0;
     const total = care + ltc;
     const warnBox = document.getElementById('budgetWarnBox');
     let msgs = [];
-    if (ltc > 48000) {
-      msgs.push('警告：長照核銷單月上限為 48,000 元，請調降長照金額！');
+    if (ltcLimit > 0 && ltc > ltcLimit) {
+      msgs.push(`警告：長照核銷目標（${ltc.toLocaleString()} 元）已超過設定的單月上限 ${ltcLimit.toLocaleString()} 元，請調降長照金額或調整上限！`);
     }
     if (total > 50000) {
       msgs.push(`提示：本月總採購金額為 ${total.toLocaleString()} 元（超過 5 萬元），依單張收據上限 5,000 元規定，收據總張數將自動放寬至 11–13 張。`);
@@ -278,7 +297,6 @@
     currentMenuMap = {};
     (menuRows || []).forEach(r => { currentMenuMap[r.menu_date] = r; });
 
-    // 直接產生當月所有日期供選取，不依賴月行事曆上班日資料
     allDatesIsoList = [];
     for (let d = 1; d <= daysInMonth; d++) {
       allDatesIsoList.push(`${adYear}-${pad2(month)}-${pad2(d)}`);
@@ -291,6 +309,13 @@
       const mark = currentMenuMap[iso] ? ' ✔' : '';
       return `<option value="${iso}">${parseInt(p[1], 10)}/${parseInt(p[2], 10)} (${WEEKDAYS[dt.getDay()]})${mark}</option>`;
     }).join('');
+
+    // 若選取的年月為系統當月，則預設選中今天日期
+    const now = new Date();
+    const todayIso = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+    if (allDatesIsoList.includes(todayIso)) {
+      dateSel.value = todayIso;
+    }
 
     onDateSelectChange();
     renderMenuTable();
@@ -354,11 +379,14 @@
     } else {
       await loadMenuData();
       document.getElementById('dateSelect').value = iso;
+      onDateSelectChange();
     }
   }
 
   async function deleteRow(iso) {
-    if (!confirm(`確定要刪除 ${iso} 的菜單記錄嗎？`)) return;
+    const p = iso.split('-');
+    const shortDate = `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
+    if (!confirm(`確定要刪除 ${shortDate} 的菜單記錄嗎？`)) return;
     const { error } = await supabaseClient
       .from('daily_menus')
       .delete()
@@ -385,7 +413,7 @@
       const dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
       return `
         <tr>
-          <td style="text-align:center;"><strong>${parseInt(p[1], 10)}/${parseInt(p[2], 10)}</strong> (${iso})</td>
+          <td style="text-align:center;"><strong>${parseInt(p[1], 10)}/${parseInt(p[2], 10)}</strong></td>
           <td style="text-align:center;">星期${WEEKDAYS[dt.getDay()]}</td>
           <td>${r.dishes}</td>
           <td style="text-align:center;">${r.meal_count || 40} 人</td>
@@ -405,6 +433,7 @@
     const adYear = rocYear + 1911;
     const care = parseInt(document.getElementById('careBudgetInput').value, 10) || 0;
     const ltc = parseInt(document.getElementById('ltcBudgetInput').value, 10) || 0;
+    const ltcLimit = parseInt(document.getElementById('ltcLimitInput').value, 10) || 48000;
 
     let startDate, endDate, periodTitle;
     if (mode === 'month') {
@@ -440,7 +469,7 @@
 
     const totalBudget = care + ltc;
     const promptText = `請幫我估算【據點】${periodTitle}的食材採購清單（共 ${rows.length} 個供餐日，每日供餐約 ${rows[0].meal_count || 40} 人）。
-本期間伙食預算總計約 ${totalBudget.toLocaleString()} 元，分配給關懷核銷及長照核銷的金額各約為 ${care.toLocaleString()} 元及 ${ltc.toLocaleString()} 元（注意：長照核銷收據每月總計不可超過 48,000 元）。
+本期間伙食預算總計約 ${totalBudget.toLocaleString()} 元，分配給關懷核銷及長照核銷的金額各約為 ${care.toLocaleString()} 元及 ${ltc.toLocaleString()} 元（注意：長照核銷收據每月總計不可超過 ${ltcLimit.toLocaleString()} 元）。
 
 以下是本據點 ${periodTitle} 的菜單：
 ${menuLines}`;
