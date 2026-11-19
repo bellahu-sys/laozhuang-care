@@ -1229,8 +1229,6 @@
       const buf = await getTemplateBuffer('f04');
       const rocYear = document.getElementById('rocYearSelect').value;
       const month = document.getElementById('monthSelect').value;
-      const half = Math.ceil(workdays.length / 2);
-
       const pageMaps = targets.map(s => {
         const map = {
           roc_year: rocYear,
@@ -1242,9 +1240,8 @@
         };
         for (let r = 1; r <= 23; r++) {
           const left = workdays[r - 1];
-          const right = workdays[r - 1 + half];
           map[`L${r}`] = left ? `${left.month}/${left.day}` : '';
-          map[`R${r}`] = right ? `${right.month}/${right.day}` : '';
+          map[`R${r}`] = '';
         }
         return map;
       });
@@ -1436,18 +1433,15 @@
       const targetId = document.getElementById('tempStaffSelect').value;
       const targets = (targetId === 'ALL') ? tempStaffList : tempStaffList.filter(s => String(s.id) === String(targetId));
       if (targets.length === 0) throw new Error('尚無服務中的臨時人員資料！');
-      const half = Math.ceil(workdays.length / 2);
-
       const pagesHtml = targets.map(s => {
         let rowsHtml = '';
-        const rowCount = Math.max(half, 18);
+        const rowCount = Math.max(workdays.length, 18);
         for (let r = 0; r < rowCount; r++) {
           const left = workdays[r];
-          const right = workdays[r + half];
           rowsHtml += `
             <tr style="height:8.8mm; text-align:center; font-size:11pt;">
               <td>${left ? `${left.month}/${left.day}` : ''}</td><td></td><td></td>
-              <td>${right ? `${right.month}/${right.day}` : ''}</td><td></td><td></td>
+              <td></td><td></td><td></td>
             </tr>
           `;
         }
