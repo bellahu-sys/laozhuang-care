@@ -26,7 +26,7 @@
     }
     .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
     .dropdown-content {
-      display: none; position: absolute; top: 100%; left: 0; min-width: 245px;
+      display: none; position: absolute; top: 100%; left: 0; min-width: 255px;
       background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
       border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
     }
@@ -60,6 +60,12 @@
     .desc { font-size: 0.88rem; color: #64748b; line-height: 1.45; }
     .badge { display: inline-block; margin-top: 14px; padding: 3px 10px; font-size: 0.78rem; border-radius: 20px; background: #dcfce7; color: #166534; width: fit-content; font-weight: bold; }
     .badge.todo { background: #f1f5f9; color: #64748b; }
+    .sub-links { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .sub-link-btn {
+      display: block; padding: 7px 11px; background: #f0fdfa; border: 1px solid #99f6e4;
+      border-radius: 6px; color: var(--primary); font-weight: bold; font-size: 0.9rem; text-decoration: none;
+    }
+    .sub-link-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
   </style>
 </head>
 <body>
@@ -107,7 +113,8 @@
       <button type="button" class="nav-btn">核銷管理 ▾</button>
       <div class="dropdown-content">
         <div class="dropdown-divider">關懷核銷</div>
-        <a href="每月業務費記錄.html">每月業務費記錄</a>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
         <div class="dropdown-divider">其他核銷計畫（預留）</div>
         <a href="#" onclick="alert('長照核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">長照核銷（待建立）</a>
         <a href="#" onclick="alert('多元核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">多元核銷（待建立）</a>
@@ -214,18 +221,22 @@
 
     <div class="cat-heading">四、核銷管理（依核銷計畫分類）</div>
     <div class="menu-grid">
-      <a href="每月業務費記錄.html" class="menu-card">
+      <div class="menu-card">
         <div>
           <div class="title">關懷核銷</div>
-          <div class="desc">包含：每月業務費記錄（支援瓦斯、電話、電費、水費多筆金額算式累加與筆數統計，及國字大寫換算）。</div>
+          <div class="desc">點選下方資料表進行每月核銷金額登錄與自動加總：</div>
+          <div class="sub-links">
+            <a href="每月業務費記錄.html" class="sub-link-btn">1. 每月業務費記錄</a>
+            <a href="專職人員薪資記錄.html" class="sub-link-btn">2. 專職人員薪資記錄</a>
+          </div>
         </div>
-        <span class="badge">● 已啟用（每月業務費記錄）</span>
-      </a>
+        <span class="badge">● 已啟用（共 2 項資料表）</span>
+      </div>
 
       <a href="#" onclick="alert('長照核銷專屬記錄表已預留擴充位置，隨時提供表單格式即可建立！'); return false;" class="menu-card">
         <div>
           <div class="title">長照核銷</div>
-          <div class="desc">管理巷弄長照站核銷記錄（不需要業務費記錄，預留建立長照專屬核銷表）。</div>
+          <div class="desc">管理巷弄長照站核銷記錄（預留建立長照專屬核銷表）。</div>
         </div>
         <span class="badge todo">○ 待建立專屬核銷表</span>
       </a>
@@ -233,7 +244,7 @@
       <a href="#" onclick="alert('多元核銷專屬記錄表已預留擴充位置，隨時提供表單格式即可建立！'); return false;" class="menu-card">
         <div>
           <div class="title">多元核銷</div>
-          <div class="desc">管理多元就業開發方案核銷記錄（不需要業務費記錄，預留建立多元專屬核銷表）。</div>
+          <div class="desc">管理多元就業開發方案核銷記錄（預留建立多元專屬核銷表）。</div>
         </div>
         <span class="badge todo">○ 待建立專屬核銷表</span>
       </a>
@@ -241,7 +252,7 @@
       <a href="#" onclick="alert('伯公核銷專屬記錄表已預留擴充位置，隨時提供表單格式即可建立！'); return false;" class="menu-card">
         <div>
           <div class="title">伯公核銷</div>
-          <div class="desc">管理伯公照護站核銷記錄（不需要業務費記錄，預留建立伯公專屬核銷表）。</div>
+          <div class="desc">管理伯公照護站核銷記錄（預留建立伯公專屬核銷表）。</div>
         </div>
         <span class="badge todo">○ 待建立專屬核銷表</span>
       </a>

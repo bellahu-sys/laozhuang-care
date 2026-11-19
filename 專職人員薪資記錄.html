@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>【關懷核銷】專職人員薪資記錄 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --primary: #2c5e4f; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-bottom: 20px;
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 255px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container {
+      max-width: 1180px; margin: 0 auto 30px auto; background: #fff;
+      padding: 24px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    h1 { color: var(--primary); font-size: 1.38rem; margin: 0 0 16px 0; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+    h2 { color: var(--primary); font-size: 1.08rem; margin: 18px 0 10px 0; }
+
+    .toolbar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 18px; background: #f8fafc; padding: 12px 15px; border-radius: 6px; border: 1px solid var(--border);
+    }
+    select, input[type="number"], input[type="text"] {
+      padding: 6px 9px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.94rem;
+    }
+    button.btn {
+      padding: 8px 15px; border: none; border-radius: 5px; font-weight: bold;
+      cursor: pointer; font-size: 0.94rem;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #1e4237; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+
+    table.summary-table { width: 100%; max-width: 680px; border-collapse: collapse; margin-bottom: 22px; }
+    table.summary-table th, table.summary-table td { border: 1px solid #475569; padding: 7px 10px; font-size: 0.94rem; }
+    table.summary-table th { background: #f1f5f9; text-align: center; font-weight: bold; }
+    table.summary-table td.num { text-align: right; font-weight: bold; }
+    table.summary-table tr.sum-highlight td { background: #bfdbfe; font-weight: bold; font-size: 1rem; }
+
+    table.payroll-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    table.payroll-table th, table.payroll-table td { border: 1px solid #475569; padding: 7px 8px; text-align: center; font-size: 0.93rem; }
+    table.payroll-table th { background: #f1f5f9; color: #1e293b; font-weight: bold; }
+    th.employer-col { background: #fb923c !important; color: #1e293b !important; }
+    th.subtotal-col { background: #dbeafe !important; color: #1e3a8a !important; }
+    td.calc-cell { font-weight: bold; background: #f8fafc; text-align: right !important; padding-right: 10px !important; }
+    table.payroll-table input[type="number"] { width: 100%; text-align: right; padding: 5px 6px; }
+    .grand-row td { background: #e2e8f0 !important; font-weight: bold; font-size: 0.98rem; text-align: right !important; padding-right: 10px !important; }
+    .grand-row td:first-child { text-align: center !important; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">每月核銷 5 份簽到/出勤表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <div class="dropdown-divider">其他核銷計畫（預留）</div>
+        <a href="#" onclick="alert('長照核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">長照核銷（待建立）</a>
+        <a href="#" onclick="alert('多元核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">多元核銷（待建立）</a>
+        <a href="#" onclick="alert('伯公核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">伯公核銷（待建立）</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <h1>【關懷核銷】2. 專職人員薪資記錄</h1>
+
+  <div class="toolbar">
+    <label><strong>民國年：</strong>
+      <select id="rocYearSelect" onchange="loadPayroll()">
+        <option value="115">115 年 (2026)</option>
+        <option value="116">116 年 (2027)</option>
+        <option value="117">117 年 (2028)</option>
+      </select>
+    </label>
+    <label><strong>專職人員姓名：</strong>
+      <input type="text" id="staffNameInput" value="胡靜如" style="width:110px;" onchange="loadPayroll()">
+    </label>
+    <label><strong>檢視季別：</strong>
+      <select id="quarterSelect" onchange="renderAllTables()">
+        <option value="all">全年 1～12 月</option>
+        <option value="1">第 1 季（1～3 月）</option>
+        <option value="2">第 2 季（4～6 月）</option>
+        <option value="3">第 3 季（7～9 月）</option>
+        <option value="4" selected>第 4 季（10～12 月）</option>
+      </select>
+    </label>
+    <button type="button" class="btn btn-amber" onclick="copyFirstMonthToQuarter()">將本季首月金額套用至全季</button>
+    <button type="button" class="btn btn-primary" onclick="saveAllPayroll()">儲存全部變更</button>
+    <span id="statusText" style="font-weight:bold; color:#166534;"></span>
+  </div>
+
+  <!-- 上半部：專職人員薪資與雇主負擔核銷彙總表 -->
+  <h2>一、專職人員薪資＋勞保＋健保＋勞退雇主負擔 核銷彙總</h2>
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th style="width:75px;">月份</th>
+        <th colspan="2">專職人員薪資（實領＋自付額）</th>
+        <th colspan="2">勞保＋健保＋勞退雇主負擔</th>
+      </tr>
+    </thead>
+    <tbody id="summaryBody"></tbody>
+    <tfoot id="summaryFoot"></tfoot>
+  </table>
+
+  <!-- 下半部：每月勞健保、勞退與實領薪資明細編輯 -->
+  <h2>二、每月勞健保自付、雇主負擔、勞退與實領薪資明細</h2>
+  <table class="payroll-table">
+    <thead>
+      <tr>
+        <th style="width:70px;">月份</th>
+        <th>勞保自付</th>
+        <th class="employer-col">勞保(雇主負擔)<br>＋單位墊償金</th>
+        <th>健保自付</th>
+        <th class="employer-col">健保(雇主負擔)</th>
+        <th class="employer-col">勞退</th>
+        <th class="subtotal-col">自付額合計</th>
+        <th class="subtotal-col">雇主負擔合計</th>
+        <th>實領薪資</th>
+      </tr>
+    </thead>
+    <tbody id="payrollBody"></tbody>
+    <tfoot id="payrollFoot"></tfoot>
+  </table>
+</div>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const INPUT_FIELDS = ['labor_self', 'labor_employer', 'health_self', 'health_employer', 'pension_employer', 'net_salary'];
+  let payrollMap = {};
+
+  async function loadPayroll() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const staffName = document.getElementById('staffNameInput').value.trim() || '胡靜如';
+    const statusEl = document.getElementById('statusText');
+    statusEl.textContent = '載入中...';
+
+    const { data, error } = await supabaseClient
+      .from('fulltime_payroll_records')
+      .select('*')
+      .eq('roc_year', rocYear)
+      .eq('staff_name', staffName);
+
+    if (error) {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '讀取失敗：' + error.message;
+      return;
+    }
+
+    payrollMap = {};
+    for (let m = 1; m <= 12; m++) {
+      payrollMap[m] = {
+        roc_year: rocYear, month: m, staff_name: staffName,
+        labor_self: 0, labor_employer: 0, health_self: 0,
+        health_employer: 0, pension_employer: 0, net_salary: 0
+      };
+    }
+    (data || []).forEach(r => {
+      payrollMap[r.month] = { ...payrollMap[r.month], ...r };
+    });
+
+    statusEl.style.color = '#166534';
+    statusEl.textContent = '資料已同步';
+    renderAllTables();
+  }
+
+  function getVisibleMonths() {
+    const q = document.getElementById('quarterSelect').value;
+    if (q === '1') return [1, 2, 3];
+    if (q === '2') return [4, 5, 6];
+    if (q === '3') return [7, 8, 9];
+    if (q === '4') return [10, 11, 12];
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  }
+
+  function onCellChange(m, field, val) {
+    payrollMap[m][field] = parseFloat(val) || 0;
+    recalcAll();
+  }
+
+  function copyFirstMonthToQuarter() {
+    const months = getVisibleMonths();
+    if (months.length <= 1) return;
+    const first = payrollMap[months[0]];
+    for (let i = 1; i < months.length; i++) {
+      const targetM = months[i];
+      INPUT_FIELDS.forEach(f => { payrollMap[targetM][f] = first[f]; });
+    }
+    renderAllTables();
+  }
+
+  function recalcAll() {
+    const months = getVisibleMonths();
+    const sums = {
+      labor_self: 0, labor_employer: 0, health_self: 0,
+      health_employer: 0, pension_employer: 0, self_sub: 0, emp_sub: 0, net_salary: 0
+    };
+    let totalGrossSalary = 0;
+
+    months.forEach(m => {
+      const r = payrollMap[m];
+      const selfSub = (Number(r.labor_self) || 0) + (Number(r.health_self) || 0);
+      const empSub = (Number(r.labor_employer) || 0) + (Number(r.health_employer) || 0) + (Number(r.pension_employer) || 0);
+      const netSal = Number(r.net_salary) || 0;
+      const grossSal = netSal + selfSub;
+
+      // 更新明細表小計
+      const selfEl = document.getElementById(`self-sub-${m}`);
+      const empEl = document.getElementById(`emp-sub-${m}`);
+      if (selfEl) selfEl.textContent = selfSub ? selfSub.toLocaleString() : '-';
+      if (empEl) empEl.textContent = empSub ? empSub.toLocaleString() : '-';
+
+      // 更新上方彙總表
+      const sumSalEl = document.getElementById(`sum-sal-${m}`);
+      const sumEmpEl = document.getElementById(`sum-emp-${m}`);
+      if (sumSalEl) sumSalEl.textContent = grossSal ? grossSal.toLocaleString() : '-';
+      if (sumEmpEl) sumEmpEl.textContent = empSub ? empSub.toLocaleString() : '-';
+
+      totalGrossSalary += grossSal;
+      sums.labor_self += Number(r.labor_self) || 0;
+      sums.labor_employer += Number(r.labor_employer) || 0;
+      sums.health_self += Number(r.health_self) || 0;
+      sums.health_employer += Number(r.health_employer) || 0;
+      sums.pension_employer += Number(r.pension_employer) || 0;
+      sums.self_sub += selfSub;
+      sums.emp_sub += empSub;
+      sums.net_salary += netSal;
+    });
+
+    Object.keys(sums).forEach(k => {
+      const el = document.getElementById(`tot-${k}`);
+      if (el) el.textContent = sums[k] ? sums[k].toLocaleString() : '-';
+    });
+
+    const grandClaim = totalGrossSalary + sums.emp_sub;
+    const sumGrandEl = document.getElementById('sum-grand-claim');
+    if (sumGrandEl) sumGrandEl.textContent = grandClaim ? grandClaim.toLocaleString() : '-';
+  }
+
+  function renderAllTables() {
+    const months = getVisibleMonths();
+
+    // 1. 渲染上方彙總表
+    document.getElementById('summaryBody').innerHTML = months.map(m => `
+      <tr>
+        <td style="text-align:center;"><strong>${m}月</strong></td>
+        <td style="width:110px;">專職人員</td>
+        <td class="num" id="sum-sal-${m}">-</td>
+        <td style="width:110px;">雇主負擔</td>
+        <td class="num" id="sum-emp-${m}">-</td>
+      </tr>
+    `).join('');
+
+    document.getElementById('summaryFoot').innerHTML = `
+      <tr class="sum-highlight">
+        <td></td>
+        <td>合計</td>
+        <td class="num" id="sum-grand-claim" style="color:#1e3a8a;">-</td>
+        <td colspan="2" style="font-size:0.86rem; color:#475569; font-weight:normal;">（專職人員薪資＋雇主負擔總計）</td>
+      </tr>
+    `;
+
+    // 2. 渲染下方明細編輯表
+    document.getElementById('payrollBody').innerHTML = months.map(m => {
+      const r = payrollMap[m];
+      const numInput = (f) => {
+        const v = Number(r[f]) || 0;
+        return `<td><input type="number" value="${v === 0 ? '' : v}" placeholder="0" oninput="onCellChange(${m}, '${f}', this.value)"></td>`;
+      };
+      return `
+        <tr>
+          <td><strong>${m}月</strong></td>
+          ${numInput('labor_self')}
+          ${numInput('labor_employer')}
+          ${numInput('health_self')}
+          ${numInput('health_employer')}
+          ${numInput('pension_employer')}
+          <td class="calc-cell" id="self-sub-${m}">-</td>
+          <td class="calc-cell" id="emp-sub-${m}">-</td>
+          ${numInput('net_salary')}
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('payrollFoot').innerHTML = `
+      <tr class="grand-row">
+        <td>合計</td>
+        <td id="tot-labor_self">-</td>
+        <td id="tot-labor_employer">-</td>
+        <td id="tot-health_self">-</td>
+        <td id="tot-health_employer">-</td>
+        <td id="tot-pension_employer">-</td>
+        <td id="tot-self_sub">-</td>
+        <td id="tot-emp_sub">-</td>
+        <td id="tot-net_salary">-</td>
+      </tr>
+    `;
+
+    recalcAll();
+  }
+
+  async function saveAllPayroll() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const staffName = document.getElementById('staffNameInput').value.trim() || '胡靜如';
+    const months = getVisibleMonths();
+    const payload = months.map(m => ({
+      roc_year: rocYear,
+      month: m,
+      staff_name: staffName,
+      labor_self: Number(payrollMap[m].labor_self) || 0,
+      labor_employer: Number(payrollMap[m].labor_employer) || 0,
+      health_self: Number(payrollMap[m].health_self) || 0,
+      health_employer: Number(payrollMap[m].health_employer) || 0,
+      pension_employer: Number(payrollMap[m].pension_employer) || 0,
+      net_salary: Number(payrollMap[m].net_salary) || 0
+    }));
+
+    const statusEl = document.getElementById('statusText');
+    statusEl.textContent = '儲存中...';
+
+    const { error } = await supabaseClient
+      .from('fulltime_payroll_records')
+      .upsert(payload, { onConflict: 'roc_year,month,staff_name' });
+
+    if (error) {
+      alert('儲存失敗：' + error.message);
+      statusEl.textContent = '儲存失敗';
+    } else {
+      statusEl.style.color = '#166534';
+      statusEl.textContent = '已成功儲存至雲端！';
+    }
+  }
+
+  loadPayroll();
+</script>
+</body>
+</html>
