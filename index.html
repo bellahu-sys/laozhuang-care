@@ -26,7 +26,7 @@
     }
     .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
     .dropdown-content {
-      display: none; position: absolute; top: 100%; left: 0; min-width: 235px;
+      display: none; position: absolute; top: 100%; left: 0; min-width: 245px;
       background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
       border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
     }
@@ -42,19 +42,6 @@
     .container { max-width: 1060px; margin: 28px auto 50px auto; padding: 0 20px; }
     .welcome { margin-bottom: 24px; color: #475569; }
     .welcome h2 { color: var(--primary); margin-bottom: 6px; }
-
-    .quick-toolbar {
-      background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px;
-      padding: 15px 20px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      display: flex; gap: 15px; align-items: center; flex-wrap: wrap;
-    }
-    .quick-toolbar span { font-weight: bold; color: var(--primary); }
-    .quick-links { display: flex; gap: 10px; flex-wrap: wrap; }
-    .quick-link-btn {
-      background: #f1f5f9; color: var(--text); text-decoration: none; padding: 6px 12px;
-      border-radius: 6px; font-size: 0.9rem; border: 1px solid #cbd5e1; font-weight: bold;
-    }
-    .quick-link-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
 
     .cat-heading {
       font-size: 1.2rem; font-weight: bold; color: var(--primary);
@@ -115,27 +102,27 @@
         <a href="健康管理表套印.html">長輩健康管理表套印</a>
       </div>
     </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html?plan=關懷">每月業務費記錄（關懷）</a>
+        <div class="dropdown-divider">長照核銷</div>
+        <a href="每月業務費記錄.html?plan=長照">每月業務費記錄（長照）</a>
+        <div class="dropdown-divider">多元核銷</div>
+        <a href="每月業務費記錄.html?plan=多元">每月業務費記錄（多元）</a>
+        <div class="dropdown-divider">伯公核銷</div>
+        <a href="每月業務費記錄.html?plan=伯公">每月業務費記錄（伯公）</a>
+      </div>
+    </div>
   </div>
 </nav>
 
   <div class="container">
     <div class="welcome">
       <h2>系統功能總覽目錄</h2>
-      <p>已依業務類別整理為「人事資料」、「行政類」與「報表套印」，也可直接從上方導覽列下拉選單快速切換。</p>
-    </div>
-
-    <div class="quick-toolbar">
-      <span>快速導覽：</span>
-      <div class="quick-links">
-        <a href="月報表套印中心.html" class="quick-link-btn">月報表套印中心（5份表單）</a>
-        <a href="個案翻閱本.html" class="quick-link-btn">個案翻閱本</a>
-        <a href="個案清單.html" class="quick-link-btn">個案名冊</a>
-        <a href="講師資料.html" class="quick-link-btn">講師資料</a>
-        <a href="臨時人員資料.html" class="quick-link-btn">臨時人員</a>
-        <a href="聯絡電話.html" class="quick-link-btn">聯絡電話</a>
-        <a href="零用金管理中心.html" class="quick-link-btn">零用金記錄</a>
-        <a href="每日菜單管理.html" class="quick-link-btn">每日菜單管理</a>
-      </div>
+      <p>已依業務類別整理為「人事資料」、「行政類」、「報表套印」與「核銷管理」，也可直接從上方導覽列下拉選單快速切換。</p>
     </div>
 
     <div class="cat-heading">一、人事資料</div>
@@ -194,7 +181,7 @@
       <a href="每日菜單管理.html" class="menu-card">
         <div>
           <div class="title">每日菜單管理與採購估算</div>
-          <div class="desc">登錄每日供餐菜色，自動連動行事曆供餐日，並可一鍵複製整月/整季菜單與預算指令給 AI 生成採購單。</div>
+          <div class="desc">登錄每日供餐菜色，並可一鍵複製整月或整季菜單與預算指令給 AI 生成採購單。</div>
         </div>
         <span class="badge">● 已啟用</span>
       </a>
@@ -226,16 +213,51 @@
         <span class="badge">● 已啟用</span>
       </a>
     </div>
+
+    <div class="cat-heading">四、核銷管理（依核銷計畫分類）</div>
+    <div class="menu-grid">
+      <a href="每月業務費記錄.html?plan=關懷" class="menu-card">
+        <div>
+          <div class="title">關懷核銷</div>
+          <div class="desc">目前包含：每月業務費記錄（食材、瓦斯、網路、電話、電費、水費、臨時酬勞費及國字大寫換算）。</div>
+        </div>
+        <span class="badge">● 已啟用（每月業務費記錄）</span>
+      </a>
+
+      <a href="每月業務費記錄.html?plan=長照" class="menu-card">
+        <div>
+          <div class="title">長照核銷</div>
+          <div class="desc">管理巷弄長照站核銷記錄（可獨立記錄長照計畫業務費，後續可繼續擴充專屬子表）。</div>
+        </div>
+        <span class="badge">● 已啟用（支援業務費／可再擴充）</span>
+      </a>
+
+      <a href="每月業務費記錄.html?plan=多元" class="menu-card">
+        <div>
+          <div class="title">多元核銷</div>
+          <div class="desc">管理多元就業開發方案核銷記錄（可獨立記錄多元計畫費用，後續可繼續擴充專屬子表）。</div>
+        </div>
+        <span class="badge">● 已啟用（支援業務費／可再擴充）</span>
+      </a>
+
+      <a href="每月業務費記錄.html?plan=伯公" class="menu-card">
+        <div>
+          <div class="title">伯公核銷</div>
+          <div class="desc">管理伯公照護站核銷記錄（可獨立記錄伯公計畫業務費，後續可繼續擴充專屬子表）。</div>
+        </div>
+        <span class="badge">● 已啟用（支援業務費／可再擴充）</span>
+      </a>
+    </div>
   </div>
 
   <script>
     const STATION_PASSCODE = 'laozhuang2026';
     if (sessionStorage.getItem('care_auth') !== 'true') {
-      const input = prompt('🔒 請輸入老庄據點系統通行密碼：');
+      const input = prompt('請輸入老庄據點系統通行密碼：');
       if (input === STATION_PASSCODE) {
         sessionStorage.setItem('care_auth', 'true');
       } else {
-        document.body.innerHTML = '<div style="text-align:center;margin-top:80px;font-family:sans-serif;"><h2>⛔ 密碼錯誤，無法存取系統</h2><button onclick="location.reload()" style="padding:10px 20px;font-size:1rem;">重新輸入</button></div>';
+        document.body.innerHTML = '<div style="text-align:center;margin-top:80px;font-family:sans-serif;"><h2>密碼錯誤，無法存取系統</h2><button onclick="location.reload()" style="padding:10px 20px;font-size:1rem;">重新輸入</button></div>';
       }
     }
   </script>
