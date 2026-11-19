@@ -61,6 +61,8 @@
     .btn-primary:hover { background: #1e4237; }
     .btn-print { background: #2563eb; color: #fff; }
     .btn-print:hover { background: #1d4ed8; }
+    .btn-danger { background: #dc2626; color: #fff; padding: 5px 12px; font-size: 0.85rem; }
+    .btn-danger:hover { background: #b91c1c; }
 
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
     @media(max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
@@ -73,6 +75,13 @@
     table.data-table th { background: #e2e8f0; text-align: center; }
 
     .summary-box { background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 6px; margin-top: 14px; font-weight: bold; color: #0369a1; display: flex; justify-content: space-between; }
+
+    .reconcile-box {
+      margin-top: 14px; padding: 12px 16px; border-radius: 6px; font-weight: bold; font-size: 0.98rem;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+    .reconcile-ok { background: #dcfce7; border: 1px solid #86efac; color: #166534; }
+    .reconcile-diff { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
 
     @page {
       size: A4 portrait;
@@ -225,23 +234,31 @@
     </div>
 
     <div class="card">
-      <h3>2. 現鈔與硬幣清點盤點（點鈔方便）</h3>
+      <h3>2. 今日現鈔與硬幣清點（自動累加至本月總計）</h3>
       <table class="data-table" style="margin-top:6px;">
-        <thead><tr><th>貨幣單位</th><th>數量</th><th>金額</th></tr></thead>
+        <thead><tr><th>貨幣單位</th><th>今日新增數量</th><th>今日金額</th></tr></thead>
         <tbody id="denomTableBody"></tbody>
       </table>
       <div class="summary-box">
-        <span>現鈔清點總計：</span>
+        <span>本次清點小計：</span>
         <span id="denomTotalDisplay">0 元</span>
       </div>
-      <button type="button" id="btnSaveDenom" class="btn btn-primary" style="margin-top:10px; width:100%;" onclick="saveDenomRecord()">儲存今日現鈔盤點</button>
+      <button type="button" id="btnSaveDenom" class="btn btn-primary" style="margin-top:10px; width:100%;" onclick="saveDenomRecord()">儲存今日現鈔盤點（累加至本月結算）</button>
     </div>
   </div>
 
   <div class="card print-card">
-    <h3 class="no-print">3. 月底結算總表預覽（列印自動合併為 1 頁 A4）</h3>
+    <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:10px;">
+      <h3 style="border:none; margin:0; padding:0;">3. 月底結算總表預覽（本月全月累計對帳）</h3>
+      <button type="button" class="btn btn-danger" onclick="resetMonthlyDenoms()">清空本月現鈔盤點重計</button>
+    </div>
+
+    <div id="reconcileBox" class="reconcile-box reconcile-ok no-print">
+      <span id="reconcileStatusText">帳實核對中...</span>
+      <span id="reconcileDetailText"></span>
+    </div>
     
-    <div style="text-align:center; font-size:1.2rem; font-weight:bold; margin-bottom:10px;" id="printTitle">
+    <div style="text-align:center; font-size:1.2rem; font-weight:bold; margin:12px 0 10px 0;" id="printTitle">
       115年11月收支明細表
     </div>
 
@@ -273,13 +290,13 @@
       </div>
 
       <div class="print-col-right">
-        <h4 id="denomPrintHeading" style="margin:20px 0 8px 0; color:var(--primary);">現鈔與硬幣盤點結算</h4>
+        <h4 id="denomPrintHeading" style="margin:0 0 8px 0; color:var(--primary);">現鈔與硬幣盤點結算（全月累計）</h4>
         <table class="data-table">
           <thead>
             <tr>
               <th style="width:33%;">貨幣單位</th>
-              <th style="width:33%;">數量</th>
-              <th style="width:34%;">金額</th>
+              <th style="width:33%;">累計數量</th>
+              <th style="width:34%;">累計金額</th>
             </tr>
           </thead>
           <tbody id="printDenomBody"></tbody>
@@ -311,8 +328,9 @@
   const DENOMS = [1000, 500, 100, 50, 10, 5, 1];
 
   let dailyMap = {};
-  let inputDenomMap = {};
-  let savedDenomMap = {};
+  let inputDenomMap = {}; // 上方單日輸入區（儲存後清零）
+  let savedDenomMap = {}; // 雲端本月累計盤點結果（顯示於下方結算表）
+  let currentNetCashBalance = 0; // 上方收支結餘（收入 - 支出）
 
   const todayObj = new Date();
   const todayRocYear = todayObj.getFullYear() - 1911;
@@ -381,7 +399,7 @@
       statusEl.textContent = '讀取現鈔失敗：' + denErr.message;
     } else if (!recErr) {
       statusEl.style.color = '#166534';
-      statusEl.textContent = '雲端資料已同步（v2.2 單頁清零版）';
+      statusEl.textContent = '雲端資料已同步（全月累計核對版）';
     }
 
     savedDenomMap = (dens && dens.denom_data) ? dens.denom_data : {};
@@ -447,6 +465,24 @@
     document.getElementById('denomTotalDisplay').textContent = total.toLocaleString() + ' 元';
   }
 
+  function updateReconcileStatus(denomTotal) {
+    const box = document.getElementById('reconcileBox');
+    const statusTxt = document.getElementById('reconcileStatusText');
+    const detailTxt = document.getElementById('reconcileDetailText');
+    const diff = denomTotal - currentNetCashBalance;
+
+    detailTxt.textContent = `收支結餘：${currentNetCashBalance.toLocaleString()} 元 ｜ 現鈔累計：${denomTotal.toLocaleString()} 元`;
+
+    if (diff === 0) {
+      box.className = 'reconcile-box reconcile-ok no-print';
+      statusTxt.textContent = '帳實完全相符！上方收支結餘與下方現鈔硬幣累計金額一致。';
+    } else {
+      box.className = 'reconcile-box reconcile-diff no-print';
+      const sign = diff > 0 ? `現鈔多出 ${diff.toLocaleString()} 元` : `現鈔短少 ${Math.abs(diff).toLocaleString()} 元`;
+      statusTxt.textContent = `帳實尚有差額（${sign}），請核對收支或今日尚未累加的現鈔。`;
+    }
+  }
+
   function renderPrintDenomTable() {
     let denomSum = 0;
     const printDenomBody = document.getElementById('printDenomBody');
@@ -463,37 +499,82 @@
       `;
     }).join('');
     document.getElementById('printDenomSum').textContent = denomSum.toLocaleString() + ' 元';
+    updateReconcileStatus(denomSum);
   }
 
   async function saveDenomRecord() {
     const btn = document.getElementById('btnSaveDenom');
     btn.disabled = true;
-    btn.textContent = '儲存中...';
+    btn.textContent = '累加儲存中...';
 
     try {
       const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
       const month = parseInt(document.getElementById('monthSelect').value, 10);
-      const payload = {};
-      DENOMS.forEach(v => { payload[String(v)] = parseInt(inputDenomMap[v], 10) || 0; });
+
+      // 先向雲端抓取最新本月累計數量，確保跨電腦操作時不會漏算
+      const { data: latestRow } = await supabaseClient
+        .from('petty_cash_denoms')
+        .select('denom_data')
+        .eq('roc_year', rocYear)
+        .eq('month', month)
+        .maybeSingle();
+
+      const baseMap = (latestRow && latestRow.denom_data) ? latestRow.denom_data : savedDenomMap;
+      const accumulatedPayload = {};
+      let addedAmount = 0;
+
+      DENOMS.forEach(v => {
+        const key = String(v);
+        const prevQty = parseInt(baseMap[key], 10) || 0;
+        const addQty = parseInt(inputDenomMap[v], 10) || 0;
+        accumulatedPayload[key] = prevQty + addQty;
+        addedAmount += addQty * v;
+      });
+
+      if (addedAmount === 0) {
+        alert('請先輸入今日新增的鈔票或硬幣數量再按儲存！');
+        return;
+      }
 
       const { error } = await supabaseClient
         .from('petty_cash_denoms')
-        .upsert([{ roc_year: rocYear, month: month, denom_data: payload }], { onConflict: 'roc_year,month' });
+        .upsert([{ roc_year: rocYear, month: month, denom_data: accumulatedPayload }], { onConflict: 'roc_year,month' });
 
       if (error) {
         alert('現鈔盤點儲存失敗：' + error.message);
       } else {
-        savedDenomMap = payload;
-        inputDenomMap = {};
+        savedDenomMap = accumulatedPayload;
+        inputDenomMap = {}; // 儲存後上方輸入欄位自動清零
         renderDenomInputs();
         renderPrintDenomTable();
-        alert('現鈔盤點已成功儲存至雲端，輸入欄位已清零！');
+        alert(`已將本次 ${addedAmount.toLocaleString()} 元累加至本月現鈔結算表，上方輸入欄位已清零！`);
       }
     } catch (err) {
       alert('發生未預期錯誤：' + err.message);
     } finally {
       btn.disabled = false;
-      btn.textContent = '儲存今日現鈔盤點';
+      btn.textContent = '儲存今日現鈔盤點（累加至本月結算）';
+    }
+  }
+
+  async function resetMonthlyDenoms() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const month = parseInt(document.getElementById('monthSelect').value, 10);
+    if (!confirm(`確定要將 ${rocYear} 年 ${month} 月的「累計現鈔與硬幣盤點數量」全部歸零重算嗎？`)) return;
+
+    const emptyPayload = {};
+    DENOMS.forEach(v => { emptyPayload[String(v)] = 0; });
+
+    const { error } = await supabaseClient
+      .from('petty_cash_denoms')
+      .upsert([{ roc_year: rocYear, month: month, denom_data: emptyPayload }], { onConflict: 'roc_year,month' });
+
+    if (error) {
+      alert('歸零失敗：' + error.message);
+    } else {
+      savedDenomMap = emptyPayload;
+      renderPrintDenomTable();
+      alert('本月現鈔盤點結算已歸零，可重新開始累計！');
     }
   }
 
@@ -530,10 +611,11 @@
       `;
     }
 
+    currentNetCashBalance = totalIncomeNum - totalExpenseNum;
     document.getElementById('monthlyTableBody').innerHTML = rowsHtml;
     document.getElementById('sumIncome').textContent = totalIncomeNum.toLocaleString();
     document.getElementById('sumExpense').textContent = totalExpenseNum.toLocaleString();
-    document.getElementById('sumTotal').textContent = (totalIncomeNum - totalExpenseNum).toLocaleString() + ' 元';
+    document.getElementById('sumTotal').textContent = currentNetCashBalance.toLocaleString() + ' 元';
   }
 
   loadData();
