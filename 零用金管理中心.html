@@ -197,8 +197,9 @@
   <div class="toolbar no-print">
     <label><strong>選擇民國年：</strong>
       <select id="rocYearSelect" onchange="loadData()">
-        <option value="115" selected>115 年 (2026)</option>
+        <option value="115">115 年 (2026)</option>
         <option value="116">116 年 (2027)</option>
+        <option value="117">117 年 (2028)</option>
       </select>
     </label>
     <label><strong>選擇月份：</strong>
@@ -206,7 +207,7 @@
         <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
         <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
         <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
-        <option value="10">10 月</option><option value="11" selected>11 月</option><option value="12">12 月</option>
+        <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
       </select>
     </label>
     <button class="btn btn-print" onclick="window.print()">列印月底結算表 (單頁 A4)</button>
@@ -215,7 +216,7 @@
 
   <div class="grid-2 no-print">
     <div class="card">
-      <h3>1. 每日收支記錄（訂餐費收入 / 五金支出）</h3>
+      <h3>1. 每日收支記錄</h3>
       <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
         <label>選擇日期：<select id="recordDateSelect" onchange="onDateSelected()"></select></label>
         <label>餐費收入 (元)：<input type="text" id="incomeInput" placeholder="例如：1770 或輸入 X"></label>
@@ -312,9 +313,22 @@
   const DENOMS = [1000, 500, 100, 50, 10, 5, 1];
 
   let dailyMap = {};
-  let denomMap = {};
+  let inputDenomMap = {}; // 上方輸入區（儲存後清零）
+  let savedDenomMap = {}; // 雲端已儲存的盤點結果（顯示於下方結算表）
 
-  async function loadData() {
+  // 初始化預設為當日
+  const todayObj = new Date();
+  const todayRocYear = todayObj.getFullYear() - 1911;
+  const todayMonth = todayObj.getMonth() + 1;
+  const todayIso = `${todayObj.getFullYear()}-${String(todayMonth).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+
+  const yearSel = document.getElementById('rocYearSelect');
+  if (Array.from(yearSel.options).some(o => parseInt(o.value, 10) === todayRocYear)) {
+    yearSel.value = String(todayRocYear);
+  }
+  document.getElementById('monthSelect').value = String(todayMonth);
+
+  async function loadData(keepDate = false) {
     const statusEl = document.getElementById('dbStatusMsg');
     statusEl.textContent = '載入雲端資料中...';
 
@@ -334,8 +348,11 @@
       opt.textContent = `${month}/${d}`;
       dateSel.appendChild(opt);
     }
-    if (prevSelected && Array.from(dateSel.options).some(o => o.value === prevSelected)) {
+
+    if (keepDate && prevSelected && Array.from(dateSel.options).some(o => o.value === prevSelected)) {
       dateSel.value = prevSelected;
+    } else if (Array.from(dateSel.options).some(o => o.value === todayIso)) {
+      dateSel.value = todayIso;
     }
 
     const start = `${adYear}-${String(month).padStart(2, '0')}-01`;
@@ -370,7 +387,8 @@
       statusEl.textContent = '雲端資料已同步';
     }
 
-    denomMap = (dens && dens.denom_data) ? dens.denom_data : {};
+    savedDenomMap = (dens && dens.denom_data) ? dens.denom_data : {};
+    inputDenomMap = {}; // 輸入框預設為 0
 
     renderMonthlyTable(adYear, month, daysInMonth);
     renderDenomInputs();
@@ -400,14 +418,14 @@
       alert('儲存收支失敗：' + error.message);
     } else {
       alert('今日收支已成功儲存至雲端！');
-      await loadData();
+      await loadData(true);
     }
   }
 
   function renderDenomInputs() {
     const tbody = document.getElementById('denomTableBody');
     tbody.innerHTML = DENOMS.map(val => {
-      const qty = parseInt(denomMap[val], 10) || 0;
+      const qty = parseInt(inputDenomMap[val], 10) || 0;
       return `
         <tr>
           <td><strong>${val} 元</strong></td>
@@ -421,15 +439,14 @@
 
   function updateDenom(val, qty) {
     const q = parseInt(qty, 10) || 0;
-    denomMap[val] = q;
+    inputDenomMap[val] = q;
     document.getElementById(`amt_${val}`).textContent = (q * val).toLocaleString() + ' 元';
     calcDenomTotal();
-    renderPrintDenomTable();
   }
 
   function calcDenomTotal() {
     let total = 0;
-    DENOMS.forEach(v => { total += (parseInt(denomMap[v], 10) || 0) * v; });
+    DENOMS.forEach(v => { total += (parseInt(inputDenomMap[v], 10) || 0) * v; });
     document.getElementById('denomTotalDisplay').textContent = total.toLocaleString() + ' 元';
   }
 
@@ -437,7 +454,7 @@
     let denomSum = 0;
     const printDenomBody = document.getElementById('printDenomBody');
     printDenomBody.innerHTML = DENOMS.map(val => {
-      const q = parseInt(denomMap[val], 10) || 0;
+      const q = parseInt(savedDenomMap[val], 10) || 0;
       const sub = q * val;
       denomSum += sub;
       return `
@@ -460,7 +477,7 @@
       const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
       const month = parseInt(document.getElementById('monthSelect').value, 10);
       const payload = {};
-      DENOMS.forEach(v => { payload[String(v)] = parseInt(denomMap[v], 10) || 0; });
+      DENOMS.forEach(v => { payload[String(v)] = parseInt(inputDenomMap[v], 10) || 0; });
 
       const { error } = await supabaseClient
         .from('petty_cash_denoms')
@@ -469,9 +486,11 @@
       if (error) {
         alert('現鈔盤點儲存失敗：' + error.message);
       } else {
+        savedDenomMap = payload;
+        inputDenomMap = {}; // 儲存後上方數字清零
+        renderDenomInputs();
         renderPrintDenomTable();
-        alert('現鈔盤點已成功儲存至雲端！');
-        await loadData();
+        alert('現鈔盤點已成功儲存至雲端，輸入欄位已清零！');
       }
     } catch (err) {
       alert('發生未預期錯誤：' + err.message);
