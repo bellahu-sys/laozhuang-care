@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>【關懷核銷】3. 臨時人員時數記錄 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --primary: #2c5e4f; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-bottom: 20px;
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 255px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container {
+      max-width: 1160px; margin: 0 auto 30px auto; background: #fff;
+      padding: 24px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    h1 { color: var(--primary); font-size: 1.38rem; margin: 0 0 16px 0; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+
+    .toolbar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 14px; background: #f8fafc; padding: 12px 15px; border-radius: 6px; border: 1px solid var(--border);
+    }
+    select, input[type="number"], input[type="text"] {
+      padding: 6px 9px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.94rem;
+    }
+    button.btn {
+      padding: 8px 15px; border: none; border-radius: 5px; font-weight: bold;
+      cursor: pointer; font-size: 0.94rem;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #1e4237; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-sm { padding: 4px 8px; font-size: 0.8rem; }
+
+    .tip-box {
+      background: #f0fdfa; border: 1px solid #99f6e4; color: #115e59;
+      padding: 9px 14px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 16px; line-height: 1.5;
+    }
+
+    table.hours-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    table.hours-table th, table.hours-table td { border: 1px solid #475569; padding: 7px 9px; text-align: center; font-size: 0.94rem; }
+    table.hours-table th { background: #f1f5f9; color: #1e293b; font-weight: bold; }
+    th.gray-th { background: #e2e8f0 !important; }
+    th.peach-th { background: #fed7aa !important; }
+    td.peach-cell { background: #ffedd5; font-weight: bold; text-align: right !important; padding-right: 12px !important; }
+    td.num-cell { text-align: right !important; padding-right: 12px !important; font-weight: bold; }
+    tr.month-divider td { border-top: 2px solid #1e293b; }
+    table.hours-table input[type="number"] { width: 75px; text-align: right; padding: 5px 6px; color: #dc2626; font-weight: bold; }
+    table.hours-table input[type="text"] { width: 115px; text-align: center; font-weight: bold; padding: 5px 6px; }
+    .grand-row td { background: #e2e8f0 !important; font-weight: bold; font-size: 1rem; border-top: 2px solid #1e293b; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">每月核銷 5 份簽到/出勤表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <div class="dropdown-divider">其他核銷計畫（預留）</div>
+        <a href="#" onclick="alert('長照核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">長照核銷（待建立）</a>
+        <a href="#" onclick="alert('多元核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">多元核銷（待建立）</a>
+        <a href="#" onclick="alert('伯公核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">伯公核銷（待建立）</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <h1>【關懷核銷】3. 臨時人員時數記錄</h1>
+
+  <div class="toolbar">
+    <label><strong>民國年：</strong>
+      <select id="rocYearSelect" onchange="loadHoursRecords()">
+        <option value="115">115 年 (2026)</option>
+        <option value="116">116 年 (2027)</option>
+        <option value="117">117 年 (2028)</option>
+      </select>
+    </label>
+    <label><strong>檢視區間：</strong>
+      <select id="quarterSelect" onchange="renderTable()">
+        <option value="all">全年 1～12 月</option>
+        <option value="1">第 1 季（1～3 月）</option>
+        <option value="2">第 2 季（4～6 月）</option>
+        <option value="3">第 3 季（7～9 月）</option>
+        <option value="4" selected>第 4 季（10～12 月）</option>
+      </select>
+    </label>
+    <label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-weight:bold; color:#1e293b;">
+      <input type="checkbox" id="syncDaysCheckbox" checked> 同月主廚與助手天數同步連動
+    </label>
+    <button type="button" class="btn btn-blue" onclick="syncDaysFromCalendar()">從月行事曆帶入上班天數</button>
+    <button type="button" class="btn btn-primary" onclick="saveAllRecords()">儲存全部變更</button>
+    <span id="statusText" style="font-weight:bold; color:#166534;"></span>
+  </div>
+
+  <div class="tip-box">
+    規則說明：每月固定配置<strong>「主廚」</strong>與<strong>「助手」</strong>2 位臨時人員（若有人員異動可直接點姓名欄位更換或從下拉提示選取）；因據點有上班則兩位皆有上班，修改任一人「天數」時會自動同步更新同月另一人的天數（若遇個別請假可先取消勾選「同月天數同步連動」再微調）。
+  </div>
+
+  <datalist id="tempStaffList"></datalist>
+
+  <table class="hours-table">
+    <thead>
+      <tr>
+        <th style="width:70px;">月份</th>
+        <th style="width:75px;">職務</th>
+        <th style="width:135px;">姓名</th>
+        <th style="width:95px;">天數</th>
+        <th class="gray-th">時數<br><span style="font-size:0.82rem; font-weight:normal;">＝天數 × 3H（09:00-12:00）</span></th>
+        <th class="gray-th" style="width:95px; color:#dc2626;">單價</th>
+        <th class="gray-th" style="width:115px;">應領金額</th>
+        <th class="gray-th" style="width:115px;">實領金額</th>
+        <th class="peach-th" style="width:120px;">單月合計</th>
+      </tr>
+    </thead>
+    <tbody id="hoursBody"></tbody>
+    <tfoot id="hoursFoot"></tfoot>
+  </table>
+</div>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const ROLES = ['主廚', '助手'];
+  let monthRoleMap = {}; // key: `${month}-${role}`
+
+  async function loadTempStaffDatalist() {
+    const { data } = await supabaseClient
+      .from('temp_staff')
+      .select('name, status')
+      .order('staff_number', { ascending: true });
+    if (data) {
+      document.getElementById('tempStaffList').innerHTML = data
+        .map(s => `<option value="${s.name}">${s.status || ''}</option>`)
+        .join('');
+    }
+  }
+
+  async function loadHoursRecords() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const statusEl = document.getElementById('statusText');
+    statusEl.textContent = '載入中...';
+
+    const { data, error } = await supabaseClient
+      .from('temp_staff_hours')
+      .select('*')
+      .eq('roc_year', rocYear);
+
+    if (error) {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '讀取失敗：' + error.message;
+      return;
+    }
+
+    // 初始化 1-12 月每月固定「主廚」與「助手」兩列
+    monthRoleMap = {};
+    for (let m = 1; m <= 12; m++) {
+      ROLES.forEach(role => {
+        monthRoleMap[`${m}-${role}`] = {
+          roc_year: rocYear,
+          month: m,
+          role_label: role,
+          staff_name: '',
+          work_days: 0,
+          hours_per_day: 3,
+          hourly_rate: 196
+        };
+      });
+    }
+
+    (data || []).forEach(r => {
+      const role = ROLES.includes(r.role_label) ? r.role_label : '主廚';
+      monthRoleMap[`${r.month}-${role}`] = { ...monthRoleMap[`${r.month}-${role}`], ...r, role_label: role };
+    });
+
+    statusEl.style.color = '#166534';
+    statusEl.textContent = '資料已同步';
+    renderTable();
+  }
+
+  function getVisibleMonths() {
+    const q = document.getElementById('quarterSelect').value;
+    if (q === '1') return [1, 2, 3];
+    if (q === '2') return [4, 5, 6];
+    if (q === '3') return [7, 8, 9];
+    if (q === '4') return [10, 11, 12];
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  }
+
+  function onNameChange(m, role, val) {
+    monthRoleMap[`${m}-${role}`].staff_name = val.trim();
+  }
+
+  function onDaysChange(m, role, val) {
+    const days = parseFloat(val) || 0;
+    const syncBoth = document.getElementById('syncDaysCheckbox').checked;
+    if (syncBoth) {
+      ROLES.forEach(r => {
+        monthRoleMap[`${m}-${r}`].work_days = days;
+        const inp = document.getElementById(`days-${m}-${r}`);
+        if (inp && inp.value !== String(val)) {
+          inp.value = days === 0 ? '' : days;
+        }
+      });
+    } else {
+      monthRoleMap[`${m}-${role}`].work_days = days;
+    }
+    recalcAll();
+  }
+
+  function onRateChange(m, role, val) {
+    const rate = parseFloat(val) || 0;
+    monthRoleMap[`${m}-${role}`].hourly_rate = rate;
+    recalcAll();
+  }
+
+  // 從月行事曆 work_calendar 讀取當月上班日數並自動套用至主廚與助手
+  async function syncDaysFromCalendar() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const months = getVisibleMonths();
+    const { data, error } = await supabaseClient
+      .from('work_calendar')
+      .select('month, is_workday')
+      .eq('roc_year', rocYear)
+      .in('month', months)
+      .eq('is_workday', true);
+
+    if (error) {
+      alert('讀取月行事曆失敗：' + error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      alert(`目前月行事曆中尚未建立 ${rocYear} 年選取月份的上班日資料。`);
+      return;
+    }
+
+    const countByMonth = {};
+    data.forEach(row => {
+      countByMonth[row.month] = (countByMonth[row.month] || 0) + 1;
+    });
+
+    months.forEach(m => {
+      if (countByMonth[m] !== undefined) {
+        ROLES.forEach(role => {
+          monthRoleMap[`${m}-${role}`].work_days = countByMonth[m];
+        });
+      }
+    });
+
+    renderTable();
+    const statusEl = document.getElementById('statusText');
+    statusEl.style.color = '#1d4ed8';
+    statusEl.textContent = '已從月行事曆帶入上班天數（請記得按儲存）';
+  }
+
+  function recalcAll() {
+    const months = getVisibleMonths();
+    let grandHours = 0;
+    let grandPay = 0;
+
+    months.forEach(m => {
+      let mTotal = 0;
+      ROLES.forEach(role => {
+        const rec = monthRoleMap[`${m}-${role}`];
+        const days = Number(rec.work_days) || 0;
+        const hrs = days * (Number(rec.hours_per_day) || 3);
+        const rate = Number(rec.hourly_rate) || 196;
+        const pay = Math.round(hrs * rate);
+
+        grandHours += hrs;
+        grandPay += pay;
+        mTotal += pay;
+
+        const hrsEl = document.getElementById(`hrs-${m}-${role}`);
+        const dueEl = document.getElementById(`due-${m}-${role}`);
+        const actEl = document.getElementById(`act-${m}-${role}`);
+        if (hrsEl) hrsEl.textContent = hrs > 0 ? hrs : '-';
+        if (dueEl) dueEl.textContent = pay > 0 ? pay.toLocaleString() : '-';
+        if (actEl) actEl.textContent = pay > 0 ? pay.toLocaleString() : '-';
+      });
+
+      const mTotEl = document.getElementById(`mtot-${m}`);
+      if (mTotEl) mTotEl.textContent = mTotal > 0 ? mTotal.toLocaleString() : '-';
+    });
+
+    document.getElementById('grand-hours').textContent = grandHours > 0 ? grandHours : '-';
+    document.getElementById('grand-due').textContent = grandPay > 0 ? grandPay.toLocaleString() : '-';
+    document.getElementById('grand-act').textContent = grandPay > 0 ? grandPay.toLocaleString() : '-';
+    document.getElementById('grand-mtot').textContent = grandPay > 0 ? grandPay.toLocaleString() : '-';
+  }
+
+  function renderTable() {
+    const months = getVisibleMonths();
+    const tbody = document.getElementById('hoursBody');
+    const rows = [];
+
+    months.forEach((m, mIdx) => {
+      ROLES.forEach((role, rIdx) => {
+        const rec = monthRoleMap[`${m}-${role}`];
+        const isFirstRole = (rIdx === 0);
+        const isLastRole = (rIdx === ROLES.length - 1);
+        const trClass = (mIdx > 0 && isFirstRole) ? 'month-divider' : '';
+        const daysVal = Number(rec.work_days) || 0;
+        const rateVal = Number(rec.hourly_rate) || 196;
+
+        rows.push(`
+          <tr class="${trClass}">
+            <td><strong>${m}月</strong></td>
+            <td style="color:#475569; font-weight:bold;">${role}</td>
+            <td>
+              <input type="text" list="tempStaffList" value="${rec.staff_name || ''}" placeholder="選擇${role}" oninput="onNameChange(${m}, '${role}', this.value)">
+            </td>
+            <td>
+              <input type="number" id="days-${m}-${role}" value="${daysVal === 0 ? '' : daysVal}" placeholder="0" min="0" max="31" oninput="onDaysChange(${m}, '${role}', this.value)">
+            </td>
+            <td id="hrs-${m}-${role}" style="color:#dc2626; font-weight:bold;">-</td>
+            <td>
+              <input type="number" value="${rateVal}" style="color:#1e293b;" oninput="onRateChange(${m}, '${role}', this.value)">
+            </td>
+            <td class="peach-cell" id="due-${m}-${role}">-</td>
+            <td class="peach-cell" id="act-${m}-${role}">-</td>
+            <td class="num-cell" ${isLastRole ? `id="mtot-${m}"` : ''}></td>
+          </tr>
+        `);
+      });
+    });
+
+    tbody.innerHTML = rows.join('');
+    document.getElementById('hoursFoot').innerHTML = `
+      <tr class="grand-row">
+        <td colspan="4">合計</td>
+        <td id="grand-hours">-</td>
+        <td>196</td>
+        <td style="text-align:right; padding-right:12px;" id="grand-due">-</td>
+        <td style="text-align:right; padding-right:12px;" id="grand-act">-</td>
+        <td style="text-align:right; padding-right:12px; color:#b91c1c;" id="grand-mtot">-</td>
+      </tr>
+    `;
+    recalcAll();
+  }
+
+  async function saveAllRecords() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const months = getVisibleMonths();
+    const payload = [];
+
+    months.forEach(m => {
+      ROLES.forEach(role => {
+        const rec = monthRoleMap[`${m}-${role}`];
+        payload.push({
+          roc_year: rocYear,
+          month: m,
+          role_label: role,
+          staff_name: rec.staff_name || '',
+          work_days: Number(rec.work_days) || 0,
+          hours_per_day: 3,
+          hourly_rate: Number(rec.hourly_rate) || 196
+        });
+      });
+    });
+
+    const statusEl = document.getElementById('statusText');
+    statusEl.textContent = '儲存中...';
+
+    const { error } = await supabaseClient
+      .from('temp_staff_hours')
+      .upsert(payload, { onConflict: 'roc_year,month,role_label' });
+
+    if (error) {
+      alert('儲存失敗：' + error.message);
+      statusEl.textContent = '儲存失敗';
+    } else {
+      statusEl.style.color = '#166534';
+      statusEl.textContent = '已成功儲存至雲端！';
+    }
+  }
+
+  loadTempStaffDatalist();
+  loadHoursRecords();
+</script>
+</body>
+</html>
