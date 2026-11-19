@@ -76,11 +76,6 @@
     table.data-table th, table.data-table td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; font-size: 0.92rem; }
     table.data-table th { background: #e2e8f0; text-align: center; }
 
-    .ai-box {
-      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
-      padding: 16px; margin-bottom: 20px;
-    }
-    .ai-box h3 { margin: 0 0 10px 0; color: #166534; font-size: 1.08rem; }
     .budget-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
     .budget-row label { font-size: 0.92rem; font-weight: bold; color: #1e293b; }
     .warn-text { color: #b91c1c; font-size: 0.85rem; font-weight: bold; }
@@ -216,6 +211,8 @@
 
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  const NL = String.fromCharCode(10);
+  const TAB = String.fromCharCode(9);
 
   let menuMap = {};
   let workdayIsoList = [];
@@ -269,7 +266,7 @@
 
     if (mErr) {
       statusEl.style.color = '#dc2626';
-      statusEl.textContent = '讀取菜單失敗（請確認已執行建表 SQL）：' + mErr.message;
+      statusEl.textContent = '讀取菜單失敗：' + mErr.message;
       return;
     }
 
@@ -302,7 +299,7 @@
       }
     }
 
-    // 填滿日期下拉選單（包含本月所有日期，方便補登）
+    // 填滿日期下拉選單
     const dateSel = document.getElementById('menuDateSelect');
     const prevSelected = dateSel.value;
     dateSel.innerHTML = '';
@@ -356,6 +353,7 @@
     if (error) {
       alert('儲存菜單失敗：' + error.message);
     } else {
+      alert('當日菜單已儲存至雲端！');
       await loadMenuData(true);
     }
   }
@@ -426,23 +424,19 @@
         const m = parseInt(p[1], 10);
         const d = parseInt(p[2], 10);
         const countNote = (r.meal_count && r.meal_count !== 40) ? `（當日 ${r.meal_count} 人份）` : '';
-        return `${m}/${d}	${r.dishes}${countNote}`;
-      }).join('
-');
+        return `${m}/${d}${TAB}${r.dishes}${countNote}`;
+      }).join(NL);
 
-      const promptText = `請使用【據點】食材費估算技能，依據以下 ${rocYear}年${month}月菜單為我生成採購明細單（TSV格式）：
-` +
-        `【本月核銷預算分配】
-` +
-        `・關懷核銷目標金額：約 ${careBudget.toLocaleString()} 元
-` +
-        `・長照核銷目標金額：約 ${ltcBudget.toLocaleString()} 元（嚴格不可超過 48,000 元）
-` +
-        `・本月合計預估食材費：約 ${(careBudget + ltcBudget).toLocaleString()} 元
-
-` +
-        `【${month}月菜單】
-` + menuLines;
+      const promptText = [
+        `請使用【據點】食材費估算技能，依據以下 ${rocYear}年${month}月菜單為我生成採購明細單（TSV格式）：`,
+        `【本月核銷預算分配】`,
+        `・關懷核銷目標金額：約 ${careBudget.toLocaleString()} 元`,
+        `・長照核銷目標金額：約 ${ltcBudget.toLocaleString()} 元（嚴格不可超過 48,000 元）`,
+        `・本月合計預估食材費：約 ${(careBudget + ltcBudget).toLocaleString()} 元`,
+        ``,
+        `【${month}月菜單】`,
+        menuLines
+      ].join(NL);
 
       await navigator.clipboard.writeText(promptText);
       alert(`已成功複製 ${rocYear}年${month}月 菜單與預算指令！請直接到 Gemini 對話框貼上（Ctrl+V）執行即可。`);
@@ -466,15 +460,15 @@
 
       const menuLines = qData.map(r => {
         const p = r.menu_date.split('-');
-        return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}	${r.dishes}`;
-      }).join('
-');
+        return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}${TAB}${r.dishes}`;
+      }).join(NL);
 
-      const promptText = `請使用【據點】食材費估算技能，以下是本據點 ${rocYear}年 ${qStartMonth}-${qEndMonth}月的菜單，3個月的伙食費用約 10萬到 10萬8仟左右，分配給關懷及長照核銷的金額各約為 4萬1仟及 6萬以上（注意長照核銷收據每月總計不可超過 4萬8仟元）：
-
-` +
-        `【${qStartMonth}-${qEndMonth}月菜單】
-` + menuLines;
+      const promptText = [
+        `請使用【據點】食材費估算技能，以下是本據點 ${rocYear}年 ${qStartMonth}-${qEndMonth}月的菜單，3個月的伙食費用約 10萬到 10萬8仟左右，分配給關懷及長照核銷的金額各約為 4萬1仟及 6萬以上（注意長照核銷收據每月總計不可超過 4萬8仟元）：`,
+        ``,
+        `【${qStartMonth}-${qEndMonth}月菜單】`,
+        menuLines
+      ].join(NL);
 
       await navigator.clipboard.writeText(promptText);
       alert(`已成功複製 ${qStartMonth}-${qEndMonth}月（整季 ${qData.length} 筆）菜單與採購指令！請直接到 Gemini 貼上執行。`);
@@ -486,9 +480,8 @@
     if (rows.length === 0) { alert('本月尚無菜單可複製！'); return; }
     const text = rows.map(r => {
       const p = r.menu_date.split('-');
-      return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}	${r.dishes}`;
-    }).join('
-');
+      return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}${TAB}${r.dishes}`;
+    }).join(NL);
     await navigator.clipboard.writeText(text);
     alert('已複製本月純菜單（日期＋菜色 TSV 格式），可直接貼上 Excel！');
   }
