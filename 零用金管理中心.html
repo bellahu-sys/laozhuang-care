@@ -74,11 +74,59 @@
 
     .summary-box { background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 6px; margin-top: 14px; font-weight: bold; color: #0369a1; display: flex; justify-content: space-between; }
 
+    /* 列印專用：合併為單一 A4 頁面並隱藏瀏覽器預設頁首頁尾 */
+    @page {
+      size: A4 portrait;
+      margin: 0mm;
+    }
     @media print {
-      nav.topbar, .toolbar, .grid-2, .no-print { display: none !important; }
-      .container { box-shadow: none; margin: 0; padding: 0; max-width: 100%; }
-      body { font-family: "DFKai-SB", "BiauKai", "標楷體", serif; }
-      table.data-table th, table.data-table td { border: 1px solid #000; color: #000; padding: 4px 6px; }
+      nav.topbar, .toolbar, .grid-2, .no-print, h1 { display: none !important; }
+      body {
+        margin: 0;
+        padding: 8mm 12mm;
+        background: #fff;
+        font-family: "DFKai-SB", "BiauKai", "標楷體", serif;
+      }
+      .container {
+        box-shadow: none;
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+        width: 100%;
+      }
+      .print-card {
+        background: #fff !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      #printTitle {
+        font-size: 13pt !important;
+        margin-bottom: 4px !important;
+        font-family: "DFKai-SB", "BiauKai", "標楷體", serif !important;
+      }
+      table.data-table {
+        margin-top: 2px !important;
+      }
+      table.data-table th, table.data-table td {
+        border: 1px solid #000 !important;
+        color: #000 !important;
+        padding: 1.5px 6px !important;
+        font-size: 9.5pt !important;
+        line-height: 1.15 !important;
+        font-family: "DFKai-SB", "BiauKai", "標楷體", serif !important;
+      }
+      table.data-table th {
+        background: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      #denomPrintHeading {
+        margin: 8px 0 3px 0 !important;
+        font-size: 11pt !important;
+        color: #000 !important;
+        font-family: "DFKai-SB", "BiauKai", "標楷體", serif !important;
+      }
     }
   </style>
 </head>
@@ -137,7 +185,7 @@
         <option value="10">10 月</option><option value="11" selected>11 月</option><option value="12">12 月</option>
       </select>
     </label>
-    <button class="btn btn-print" onclick="window.print()">列印月底結算表 (PDF)</button>
+    <button class="btn btn-print" onclick="window.print()">列印月底結算表 (單頁 PDF)</button>
     <span id="dbStatusMsg" style="font-size:0.88rem; color:#166534; font-weight:bold;"></span>
   </div>
 
@@ -167,8 +215,8 @@
     </div>
   </div>
 
-  <div class="card">
-    <h3 class="no-print">3. 月底結算總表預覽（對齊 PDF 格式）</h3>
+  <div class="card print-card">
+    <h3 class="no-print">3. 月底結算總表預覽（列印自動合併為 1 頁 A4）</h3>
     
     <div style="text-align:center; font-size:1.2rem; font-weight:bold; margin-bottom:10px;" id="printTitle">
       115年11月收支明細表
@@ -177,10 +225,10 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th style="width:25%;">日期</th>
+          <th style="width:20%;">日期</th>
           <th style="width:25%;">餐費(收入)</th>
-          <th style="width:25%;">支出</th>
-          <th style="width:25%;">備註</th>
+          <th style="width:20%;">支出</th>
+          <th style="width:35%;">備註</th>
         </tr>
       </thead>
       <tbody id="monthlyTableBody"></tbody>
@@ -198,7 +246,7 @@
       </tfoot>
     </table>
 
-    <h4 style="margin:20px 0 8px 0; color:var(--primary);">現鈔與硬幣盤點結算</h4>
+    <h4 id="denomPrintHeading" style="margin:20px 0 8px 0; color:var(--primary);">現鈔與硬幣盤點結算</h4>
     <table class="data-table">
       <thead>
         <tr>
