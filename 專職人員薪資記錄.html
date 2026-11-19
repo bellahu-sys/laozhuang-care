@@ -45,28 +45,38 @@
       padding: 24px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     }
     h1 { color: var(--primary); font-size: 1.38rem; margin: 0 0 16px 0; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
-    h2 { color: var(--primary); font-size: 1.08rem; margin: 18px 0 10px 0; }
+    h2 { color: var(--primary); font-size: 1.08rem; margin: 18px 0 8px 0; }
 
     .toolbar {
       display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-      margin-bottom: 18px; background: #f8fafc; padding: 12px 15px; border-radius: 6px; border: 1px solid var(--border);
+      margin-bottom: 14px; background: #f8fafc; padding: 12px 15px; border-radius: 6px; border: 1px solid var(--border);
     }
     select, input[type="number"], input[type="text"] {
       padding: 6px 9px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.94rem;
     }
+    input::placeholder { color: #94a3b8; font-weight: normal; }
     button.btn {
-      padding: 8px 15px; border: none; border-radius: 5px; font-weight: bold;
-      cursor: pointer; font-size: 0.94rem;
+      padding: 8px 14px; border: none; border-radius: 5px; font-weight: bold;
+      cursor: pointer; font-size: 0.93rem;
     }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: #1e4237; }
     .btn-amber { background: #d97706; color: #fff; }
     .btn-amber:hover { background: #b45309; }
+    .btn-sec { background: #64748b; color: #fff; }
+    .btn-sec:hover { background: #475569; }
+    .btn-sm { padding: 4px 9px; font-size: 0.82rem; }
 
-    table.summary-table { width: 100%; max-width: 680px; border-collapse: collapse; margin-bottom: 22px; }
+    .tip-box {
+      background: #f0fdfa; border: 1px solid #99f6e4; color: #115e59;
+      padding: 9px 14px; border-radius: 6px; font-size: 0.89rem; margin-bottom: 14px; line-height: 1.5;
+    }
+
+    table.summary-table { width: 100%; max-width: 820px; border-collapse: collapse; margin-bottom: 22px; }
     table.summary-table th, table.summary-table td { border: 1px solid #475569; padding: 7px 10px; font-size: 0.94rem; }
     table.summary-table th { background: #f1f5f9; text-align: center; font-weight: bold; }
     table.summary-table td.num { text-align: right; font-weight: bold; }
+    table.summary-table input[type="number"] { width: 115px; text-align: right; font-weight: bold; padding: 4px 7px; }
     table.summary-table tr.sum-highlight td { background: #bfdbfe; font-weight: bold; font-size: 1rem; }
 
     table.payroll-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
@@ -152,9 +162,14 @@
         <option value="4" selected>第 4 季（10～12 月）</option>
       </select>
     </label>
-    <button type="button" class="btn btn-amber" onclick="copyFirstMonthToQuarter()">將本季首月金額套用至全季</button>
+    <button type="button" class="btn btn-amber" onclick="fillStandardToEmpty()">空白月份填入正常版標準金額</button>
     <button type="button" class="btn btn-primary" onclick="saveAllPayroll()">儲存全部變更</button>
     <span id="statusText" style="font-weight:bold; color:#166534;"></span>
+  </div>
+
+  <div class="tip-box">
+    說明：1. <strong>「專職人員薪資」</strong>無請假時預設為 <strong>35,000</strong>（或自動帶入下方實領＋自付額），若有請假可直接修改金額或點「請假比例試算」依天數折算。<br>
+    2. <strong>「勞保＋健保＋勞退雇主負擔」</strong>自動連動下方明細表的<strong>「雇主負擔合計」</strong>；明細欄位若為空白，格子內淡灰色數字即為<strong>正常版標準金額提示</strong>（中途換人可直接輸入新金額）。
   </div>
 
   <!-- 上半部：專職人員薪資與雇主負擔核銷彙總表 -->
@@ -162,9 +177,9 @@
   <table class="summary-table">
     <thead>
       <tr>
-        <th style="width:75px;">月份</th>
-        <th colspan="2">專職人員薪資（實領＋自付額）</th>
-        <th colspan="2">勞保＋健保＋勞退雇主負擔</th>
+        <th style="width:70px;">月份</th>
+        <th colspan="2">專職人員薪資（無請假 35,000，請假依比例變更）</th>
+        <th colspan="2">勞保＋健保＋勞退雇主負擔（連動下方合計）</th>
       </tr>
     </thead>
     <tbody id="summaryBody"></tbody>
@@ -205,6 +220,17 @@
 
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const INPUT_FIELDS = ['labor_self', 'labor_employer', 'health_self', 'health_employer', 'pension_employer', 'net_salary'];
+
+  // 正常版標準金額（作為空白欄位淡色提示與一鍵填入基準）
+  const STD_DEFAULTS = {
+    labor_self: 908,
+    labor_employer: 3236,
+    health_self: 563,
+    health_employer: 1757,
+    pension_employer: 2178,
+    net_salary: 33529
+  };
+
   let payrollMap = {};
 
   async function loadPayroll() {
@@ -230,7 +256,8 @@
       payrollMap[m] = {
         roc_year: rocYear, month: m, staff_name: staffName,
         labor_self: 0, labor_employer: 0, health_self: 0,
-        health_employer: 0, pension_employer: 0, net_salary: 0
+        health_employer: 0, pension_employer: 0, net_salary: 0,
+        gross_salary: null
       };
     }
     (data || []).forEach(r => {
@@ -251,20 +278,69 @@
     return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   }
 
-  function onCellChange(m, field, val) {
+  function onDetailChange(m, field, val) {
     payrollMap[m][field] = parseFloat(val) || 0;
+    // 若使用者未手動覆寫請假比例薪資，則明細變更時自動同步計算 實領＋自付額
+    if (payrollMap[m].gross_salary === null || payrollMap[m].gross_salary === undefined) {
+      const r = payrollMap[m];
+      const autoGross = (Number(r.net_salary) || 0) + (Number(r.labor_self) || 0) + (Number(r.health_self) || 0);
+      const salInput = document.getElementById(`sum-sal-input-${m}`);
+      if (salInput) salInput.value = autoGross > 0 ? autoGross : '';
+    }
     recalcAll();
   }
 
-  function copyFirstMonthToQuarter() {
-    const months = getVisibleMonths();
-    if (months.length <= 1) return;
-    const first = payrollMap[months[0]];
-    for (let i = 1; i < months.length; i++) {
-      const targetM = months[i];
-      INPUT_FIELDS.forEach(f => { payrollMap[targetM][f] = first[f]; });
+  function onGrossSalaryChange(m, val) {
+    const trimmed = String(val).trim();
+    if (trimmed === '') {
+      payrollMap[m].gross_salary = null;
+    } else {
+      payrollMap[m].gross_salary = parseFloat(trimmed) || 0;
     }
+    recalcAll();
+  }
+
+  // 請假依比例試算小幫手
+  function calcLeaveRatio(m) {
+    const baseStr = prompt(`${m} 月全薪基準（無請假金額）：`, '35000');
+    if (baseStr === null) return;
+    const base = parseFloat(baseStr) || 35000;
+
+    const totalDaysStr = prompt(`${m} 月應出勤／計薪總天數（通常為 30 天）：`, '30');
+    if (totalDaysStr === null) return;
+    const totalDays = parseFloat(totalDaysStr) || 30;
+
+    const workDaysStr = prompt(`扣除請假後，實際計薪天數（例如請假 2 天則輸入 28）：`, String(totalDays));
+    if (workDaysStr === null) return;
+    const workDays = parseFloat(workDaysStr) || 0;
+
+    const prorated = Math.round(base * (workDays / totalDays));
+    payrollMap[m].gross_salary = prorated;
+    const salInput = document.getElementById(`sum-sal-input-${m}`);
+    if (salInput) salInput.value = prorated;
+    recalcAll();
+  }
+
+  // 空白月份一鍵填入正常版標準金額
+  function fillStandardToEmpty() {
+    const months = getVisibleMonths();
+    months.forEach(m => {
+      const r = payrollMap[m];
+      const isEmpty = INPUT_FIELDS.every(f => (Number(r[f]) || 0) === 0);
+      if (isEmpty) {
+        INPUT_FIELDS.forEach(f => { r[f] = STD_DEFAULTS[f]; });
+      }
+    });
     renderAllTables();
+  }
+
+  function getEffectiveGrossSalary(m) {
+    const r = payrollMap[m];
+    if (r.gross_salary !== null && r.gross_salary !== undefined) {
+      return Number(r.gross_salary) || 0;
+    }
+    const detailSum = (Number(r.net_salary) || 0) + (Number(r.labor_self) || 0) + (Number(r.health_self) || 0);
+    return detailSum > 0 ? detailSum : 0;
   }
 
   function recalcAll() {
@@ -280,7 +356,6 @@
       const selfSub = (Number(r.labor_self) || 0) + (Number(r.health_self) || 0);
       const empSub = (Number(r.labor_employer) || 0) + (Number(r.health_employer) || 0) + (Number(r.pension_employer) || 0);
       const netSal = Number(r.net_salary) || 0;
-      const grossSal = netSal + selfSub;
 
       // 更新明細表小計
       const selfEl = document.getElementById(`self-sub-${m}`);
@@ -288,13 +363,13 @@
       if (selfEl) selfEl.textContent = selfSub ? selfSub.toLocaleString() : '-';
       if (empEl) empEl.textContent = empSub ? empSub.toLocaleString() : '-';
 
-      // 更新上方彙總表
-      const sumSalEl = document.getElementById(`sum-sal-${m}`);
+      // 上方彙總表的雇主負擔完全來自下方「雇主負擔合計」
       const sumEmpEl = document.getElementById(`sum-emp-${m}`);
-      if (sumSalEl) sumSalEl.textContent = grossSal ? grossSal.toLocaleString() : '-';
       if (sumEmpEl) sumEmpEl.textContent = empSub ? empSub.toLocaleString() : '-';
 
-      totalGrossSalary += grossSal;
+      const effGross = getEffectiveGrossSalary(m);
+      totalGrossSalary += effGross;
+
       sums.labor_self += Number(r.labor_self) || 0;
       sums.labor_employer += Number(r.labor_employer) || 0;
       sums.health_self += Number(r.health_self) || 0;
@@ -310,8 +385,12 @@
       if (el) el.textContent = sums[k] ? sums[k].toLocaleString() : '-';
     });
 
-    const grandClaim = totalGrossSalary + sums.emp_sub;
+    const sumSalTotEl = document.getElementById('sum-sal-total');
+    const sumEmpTotEl = document.getElementById('sum-emp-total');
     const sumGrandEl = document.getElementById('sum-grand-claim');
+    if (sumSalTotEl) sumSalTotEl.textContent = totalGrossSalary ? totalGrossSalary.toLocaleString() : '-';
+    if (sumEmpTotEl) sumEmpTotEl.textContent = sums.emp_sub ? sums.emp_sub.toLocaleString() : '-';
+    const grandClaim = totalGrossSalary + sums.emp_sub;
     if (sumGrandEl) sumGrandEl.textContent = grandClaim ? grandClaim.toLocaleString() : '-';
   }
 
@@ -319,31 +398,52 @@
     const months = getVisibleMonths();
 
     // 1. 渲染上方彙總表
-    document.getElementById('summaryBody').innerHTML = months.map(m => `
-      <tr>
-        <td style="text-align:center;"><strong>${m}月</strong></td>
-        <td style="width:110px;">專職人員</td>
-        <td class="num" id="sum-sal-${m}">-</td>
-        <td style="width:110px;">雇主負擔</td>
-        <td class="num" id="sum-emp-${m}">-</td>
-      </tr>
-    `).join('');
+    document.getElementById('summaryBody').innerHTML = months.map(m => {
+      const r = payrollMap[m];
+      const detailGross = (Number(r.net_salary) || 0) + (Number(r.labor_self) || 0) + (Number(r.health_self) || 0);
+      const displayVal = (r.gross_salary !== null && r.gross_salary !== undefined)
+        ? r.gross_salary
+        : (detailGross > 0 ? detailGross : '');
+
+      return `
+        <tr>
+          <td style="text-align:center;"><strong>${m}月</strong></td>
+          <td style="width:165px;">
+            專職人員
+            <button type="button" class="btn btn-sec btn-sm" style="margin-left:4px;" onclick="calcLeaveRatio(${m})">請假試算</button>
+          </td>
+          <td class="num" style="width:140px;">
+            <input type="number" id="sum-sal-input-${m}" value="${displayVal}" placeholder="35000" oninput="onGrossSalaryChange(${m}, this.value)">
+          </td>
+          <td style="width:95px; text-align:center;">雇主負擔</td>
+          <td class="num" id="sum-emp-${m}" style="width:110px;">-</td>
+        </tr>
+      `;
+    }).join('');
 
     document.getElementById('summaryFoot').innerHTML = `
+      <tr style="background:#e2e8f0; font-weight:bold;">
+        <td style="text-align:center;">小計</td>
+        <td>薪資小計</td>
+        <td class="num" id="sum-sal-total">-</td>
+        <td style="text-align:center;">雇主負擔小計</td>
+        <td class="num" id="sum-emp-total">-</td>
+      </tr>
       <tr class="sum-highlight">
         <td></td>
-        <td>合計</td>
+        <td>核銷總合計</td>
         <td class="num" id="sum-grand-claim" style="color:#1e3a8a;">-</td>
         <td colspan="2" style="font-size:0.86rem; color:#475569; font-weight:normal;">（專職人員薪資＋雇主負擔總計）</td>
       </tr>
     `;
 
-    // 2. 渲染下方明細編輯表
+    // 2. 渲染下方明細編輯表（正常版標準金額設為 placeholder 提示）
     document.getElementById('payrollBody').innerHTML = months.map(m => {
       const r = payrollMap[m];
       const numInput = (f) => {
         const v = Number(r[f]) || 0;
-        return `<td><input type="number" value="${v === 0 ? '' : v}" placeholder="0" oninput="onCellChange(${m}, '${f}', this.value)"></td>`;
+        const stdHint = STD_DEFAULTS[f];
+        return `<td><input type="number" value="${v === 0 ? '' : v}" placeholder="${stdHint}" oninput="onDetailChange(${m}, '${f}', this.value)"></td>`;
       };
       return `
         <tr>
@@ -390,7 +490,10 @@
       health_self: Number(payrollMap[m].health_self) || 0,
       health_employer: Number(payrollMap[m].health_employer) || 0,
       pension_employer: Number(payrollMap[m].pension_employer) || 0,
-      net_salary: Number(payrollMap[m].net_salary) || 0
+      net_salary: Number(payrollMap[m].net_salary) || 0,
+      gross_salary: (payrollMap[m].gross_salary !== null && payrollMap[m].gross_salary !== undefined)
+        ? Number(payrollMap[m].gross_salary)
+        : null
     }));
 
     const statusEl = document.getElementById('statusText');
