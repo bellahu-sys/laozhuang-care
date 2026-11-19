@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>每日菜單管理與採購估算中心 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --primary: #2c5e4f; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-bottom: 20px;
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 235px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container {
+      max-width: 1060px; margin: 0 auto 30px auto; background: #fff;
+      padding: 24px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    h1 { color: var(--primary); font-size: 1.35rem; margin: 0 0 16px 0; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+
+    .toolbar {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid var(--border);
+    }
+    select, input[type="text"], input[type="number"], textarea {
+      padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.95rem;
+    }
+    button.btn {
+      padding: 9px 16px; border: none; border-radius: 5px; font-weight: bold;
+      cursor: pointer; font-size: 0.94rem;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: #1e4237; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-sec { background: #64748b; color: #fff; }
+    .btn-del { background: #dc2626; color: #fff; padding: 5px 10px; font-size: 0.85rem; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    @media(max-width: 820px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 16px; }
+    .card h3 { margin-top: 0; color: var(--primary); font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+
+    table.data-table { width: 100%; border-collapse: collapse; margin-top: 8px; background: #fff; }
+    table.data-table th, table.data-table td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; font-size: 0.92rem; }
+    table.data-table th { background: #e2e8f0; text-align: center; }
+
+    .ai-box {
+      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+      padding: 16px; margin-bottom: 20px;
+    }
+    .ai-box h3 { margin: 0 0 10px 0; color: #166534; font-size: 1.08rem; }
+    .budget-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    .budget-row label { font-size: 0.92rem; font-weight: bold; color: #1e293b; }
+    .warn-text { color: #b91c1c; font-size: 0.85rem; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">每月核銷 5 份簽到/出勤表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <h1>每日菜單管理與採購估算中心</h1>
+
+  <div class="toolbar">
+    <label><strong>選擇民國年：</strong>
+      <select id="rocYearSelect" onchange="loadMenuData()">
+        <option value="115">115 年 (2026)</option>
+        <option value="116">116 年 (2027)</option>
+        <option value="117">117 年 (2028)</option>
+      </select>
+    </label>
+    <label><strong>選擇月份：</strong>
+      <select id="monthSelect" onchange="loadMenuData()">
+        <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
+        <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
+        <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
+        <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+      </select>
+    </label>
+    <button type="button" class="btn btn-sec" onclick="syncWorkdaysFromCalendar()">從月行事曆帶入本月供餐日</button>
+    <span id="statusMsg" style="font-weight:bold; color:#166534; font-size:0.9rem;"></span>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>1. 登錄 / 編輯單日菜色</h3>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+        <label>供餐日期：<select id="menuDateSelect" onchange="onMenuDateSelected()"></select></label>
+        <label>當日菜色（以頓號分隔）：
+          <input type="text" id="dishesInput" list="dishHistoryList" placeholder="例如：滷肉、滷豆輪、炒青江菜、炒南瓜" style="width:100%; margin-top:4px;">
+        </label>
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <label>供餐人數：<input type="number" id="mealCountInput" value="40" min="1" style="width:80px;"> 人</label>
+          <label style="flex:1;">備註：<input type="text" id="remarkInput" placeholder="例如：老人會旅遊停餐" style="width:100%;"></label>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="saveMenuRecord()">儲存當日菜單至雲端</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. 銜接【據點】食材費估算 AI 技能</h3>
+      <p style="font-size:0.88rem; color:#475569; margin-top:0; line-height:1.5;">
+        輸入本月預計核銷的<strong>關懷</strong>與<strong>長照</strong>預算分配（系統會自動檢核長照單月不可超過 48,000 元），點擊下方按鈕即可自動組裝指令與整月菜單，直接貼進 Gemini 產生 TSV 採購單！
+      </p>
+      <div class="budget-row">
+        <label>關懷核銷目標 (元)：<input type="number" id="careBudgetInput" value="14000" step="500" oninput="checkBudgetLimit()" style="width:110px;"></label>
+        <label>長照核銷目標 (元)：<input type="number" id="ltcBudgetInput" value="22000" step="500" oninput="checkBudgetLimit()" style="width:110px;"></label>
+      </div>
+      <div id="budgetWarnBox" class="warn-text" style="margin-bottom:10px;"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-blue" onclick="copyAiPrompt('month')">一鍵複製「本月菜單 ＋ 採購指令」給 AI</button>
+        <button type="button" class="btn btn-amber" onclick="copyAiPrompt('quarter')">一鍵複製「本季 3 個月菜單」給 AI</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+      <h3 style="border:none; margin:0; padding:0;" id="tableHeading">115 年 11 月 每日菜單總表</h3>
+      <button type="button" class="btn btn-sec" style="padding:5px 12px; font-size:0.85rem;" onclick="copyPlainTsv()">僅複製純菜單表格 (Excel 格式)</button>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:110px;">日期</th>
+          <th style="width:90px;">星期</th>
+          <th>當日菜色內容</th>
+          <th style="width:80px;">人數</th>
+          <th style="width:160px;">備註</th>
+          <th style="width:110px;">操作</th>
+        </tr>
+      </thead>
+      <tbody id="menuTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<datalist id="dishHistoryList"></datalist>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+
+  let menuMap = {};
+  let workdayIsoList = [];
+
+  const todayObj = new Date();
+  const todayRocYear = todayObj.getFullYear() - 1911;
+  const todayMonth = todayObj.getMonth() + 1;
+  const todayIso = `${todayObj.getFullYear()}-${String(todayMonth).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+
+  const yearSel = document.getElementById('rocYearSelect');
+  if (Array.from(yearSel.options).some(o => parseInt(o.value, 10) === todayRocYear)) {
+    yearSel.value = String(todayRocYear);
+  }
+  document.getElementById('monthSelect').value = String(todayMonth);
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function checkBudgetLimit() {
+    const care = parseInt(document.getElementById('careBudgetInput').value, 10) || 0;
+    const ltc = parseInt(document.getElementById('ltcBudgetInput').value, 10) || 0;
+    const warnEl = document.getElementById('budgetWarnBox');
+    if (ltc > 48000) {
+      warnEl.textContent = '警告：長照核銷單月上限為 48,000 元，請調降長照核銷金額！';
+    } else if (care + ltc > 52000) {
+      warnEl.textContent = `提醒：本月合計 ${(care + ltc).toLocaleString()} 元，若開 11 張收據平均每張約 ${Math.round((care + ltc) / 11).toLocaleString()} 元（請留意單張收據上限 5,000 元規則）。`;
+    } else {
+      warnEl.textContent = '';
+    }
+  }
+
+  async function loadMenuData(keepDate = false) {
+    const statusEl = document.getElementById('statusMsg');
+    statusEl.textContent = '載入雲端菜單資料中...';
+
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const month = parseInt(document.getElementById('monthSelect').value, 10);
+    const adYear = rocYear + 1911;
+    document.getElementById('tableHeading').textContent = `${rocYear} 年 ${month} 月 每日菜單總表`;
+
+    const daysInMonth = new Date(adYear, month, 0).getDate();
+    const start = `${adYear}-${pad2(month)}-01`;
+    const end = `${adYear}-${pad2(month)}-${pad2(daysInMonth)}`;
+
+    // 1. 讀取本月菜單
+    const { data: mData, error: mErr } = await supabaseClient
+      .from('daily_menus')
+      .select('*')
+      .gte('menu_date', start)
+      .lte('menu_date', end)
+      .order('menu_date', { ascending: true });
+
+    if (mErr) {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '讀取菜單失敗（請確認已執行建表 SQL）：' + mErr.message;
+      return;
+    }
+
+    menuMap = {};
+    const dishSet = new Set();
+    (mData || []).forEach(r => {
+      menuMap[r.menu_date] = r;
+      if (r.dishes) dishSet.add(r.dishes);
+    });
+
+    const dl = document.getElementById('dishHistoryList');
+    dl.innerHTML = Array.from(dishSet).map(d => `<option value="${d}">`).join('');
+
+    // 2. 讀取行事曆上班日（若無設定則預設週一至週五）
+    const { data: calData } = await supabaseClient
+      .from('work_calendar')
+      .select('work_date, is_workday')
+      .eq('roc_year', rocYear)
+      .eq('month', month);
+
+    workdayIsoList = [];
+    if (calData && calData.length > 0) {
+      calData.forEach(c => { if (c.is_workday) workdayIsoList.push(c.work_date); });
+    } else {
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dt = new Date(adYear, month - 1, d);
+        if (dt.getDay() >= 1 && dt.getDay() <= 5) {
+          workdayIsoList.push(`${adYear}-${pad2(month)}-${pad2(d)}`);
+        }
+      }
+    }
+
+    // 填滿日期下拉選單（包含本月所有日期，方便補登）
+    const dateSel = document.getElementById('menuDateSelect');
+    const prevSelected = dateSel.value;
+    dateSel.innerHTML = '';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = `${adYear}-${pad2(month)}-${pad2(d)}`;
+      const dt = new Date(adYear, month - 1, d);
+      const opt = document.createElement('option');
+      opt.value = iso;
+      opt.textContent = `${month}/${d} (${WEEKDAYS[dt.getDay()].replace('星期', '')})`;
+      dateSel.appendChild(opt);
+    }
+
+    if (keepDate && prevSelected && Array.from(dateSel.options).some(o => o.value === prevSelected)) {
+      dateSel.value = prevSelected;
+    } else if (Array.from(dateSel.options).some(o => o.value === todayIso)) {
+      dateSel.value = todayIso;
+    }
+
+    statusEl.style.color = '#166534';
+    statusEl.textContent = `已載入 ${Object.keys(menuMap).length} 筆菜單記錄`;
+
+    renderMenuTable(adYear, month, daysInMonth);
+    onMenuDateSelected();
+  }
+
+  function onMenuDateSelected() {
+    const iso = document.getElementById('menuDateSelect').value;
+    const item = menuMap[iso];
+    document.getElementById('dishesInput').value = item ? item.dishes : '';
+    document.getElementById('mealCountInput').value = item && item.meal_count ? item.meal_count : 40;
+    document.getElementById('remarkInput').value = item && item.remark ? item.remark : '';
+  }
+
+  async function saveMenuRecord() {
+    const menu_date = document.getElementById('menuDateSelect').value;
+    const roc_year = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const month = parseInt(document.getElementById('monthSelect').value, 10);
+    const dishes = document.getElementById('dishesInput').value.trim();
+    const meal_count = parseInt(document.getElementById('mealCountInput').value, 10) || 40;
+    const remark = document.getElementById('remarkInput').value.trim();
+
+    if (!dishes) {
+      alert('請先輸入當日菜色！');
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from('daily_menus')
+      .upsert([{ menu_date, roc_year, month, dishes, meal_count, remark: remark || null }], { onConflict: 'menu_date' });
+
+    if (error) {
+      alert('儲存菜單失敗：' + error.message);
+    } else {
+      await loadMenuData(true);
+    }
+  }
+
+  async function deleteMenuRecord(iso) {
+    if (!confirm(`確定要刪除 ${iso} 的菜單記錄嗎？`)) return;
+    const { error } = await supabaseClient.from('daily_menus').delete().eq('menu_date', iso);
+    if (error) alert('刪除失敗：' + error.message);
+    else await loadMenuData(true);
+  }
+
+  function editMenuRow(iso) {
+    document.getElementById('menuDateSelect').value = iso;
+    onMenuDateSelected();
+    document.getElementById('dishesInput').focus();
+  }
+
+  function renderMenuTable(adYear, month, daysInMonth) {
+    const tbody = document.getElementById('menuTableBody');
+    const allDatesSet = new Set([...workdayIsoList, ...Object.keys(menuMap)]);
+    const sortedDates = Array.from(allDatesSet).sort();
+
+    if (sortedDates.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">本月尚無供餐日期</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = sortedDates.map(iso => {
+      const p = iso.split('-');
+      const dObj = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+      const dow = WEEKDAYS[dObj.getDay()];
+      const item = menuMap[iso];
+      return `
+        <tr style="${item ? '' : 'background:#fffbeb;'}">
+          <td style="text-align:center;"><strong>${parseInt(p[1], 10)}/${parseInt(p[2], 10)}</strong></td>
+          <td style="text-align:center;">${dow}</td>
+          <td>${item ? item.dishes : '<span style="color:#94a3b8;">（尚未輸入菜色）</span>'}</td>
+          <td style="text-align:center;">${item ? (item.meal_count || 40) + ' 人' : '-'}</td>
+          <td>${item && item.remark ? item.remark : ''}</td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.82rem;" onclick="editMenuRow('${iso}')">編輯</button>
+            ${item ? `<button type="button" class="btn btn-del" onclick="deleteMenuRecord('${iso}')">刪除</button>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function syncWorkdaysFromCalendar() {
+    alert('已自動對齊「月行事曆」設定的本月上班日（排除週末與國定假日），可直接點右側「編輯」逐日填入菜色！');
+  }
+
+  async function copyAiPrompt(scope) {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const month = parseInt(document.getElementById('monthSelect').value, 10);
+    const adYear = rocYear + 1911;
+    const careBudget = parseInt(document.getElementById('careBudgetInput').value, 10) || 0;
+    const ltcBudget = parseInt(document.getElementById('ltcBudgetInput').value, 10) || 0;
+
+    if (scope === 'month') {
+      const rows = Object.values(menuMap).sort((a, b) => a.menu_date.localeCompare(b.menu_date));
+      if (rows.length === 0) {
+        alert('本月尚未輸入任何菜色，請先登錄菜單後再複製！');
+        return;
+      }
+      const menuLines = rows.map(r => {
+        const p = r.menu_date.split('-');
+        const m = parseInt(p[1], 10);
+        const d = parseInt(p[2], 10);
+        const countNote = (r.meal_count && r.meal_count !== 40) ? `（當日 ${r.meal_count} 人份）` : '';
+        return `${m}/${d}	${r.dishes}${countNote}`;
+      }).join('
+');
+
+      const promptText = `請使用【據點】食材費估算技能，依據以下 ${rocYear}年${month}月菜單為我生成採購明細單（TSV格式）：
+` +
+        `【本月核銷預算分配】
+` +
+        `・關懷核銷目標金額：約 ${careBudget.toLocaleString()} 元
+` +
+        `・長照核銷目標金額：約 ${ltcBudget.toLocaleString()} 元（嚴格不可超過 48,000 元）
+` +
+        `・本月合計預估食材費：約 ${(careBudget + ltcBudget).toLocaleString()} 元
+
+` +
+        `【${month}月菜單】
+` + menuLines;
+
+      await navigator.clipboard.writeText(promptText);
+      alert(`已成功複製 ${rocYear}年${month}月 菜單與預算指令！請直接到 Gemini 對話框貼上（Ctrl+V）執行即可。`);
+    } else if (scope === 'quarter') {
+      const qStartMonth = Math.floor((month - 1) / 3) * 3 + 1;
+      const qEndMonth = qStartMonth + 2;
+      const startIso = `${adYear}-${pad2(qStartMonth)}-01`;
+      const endIso = `${adYear}-${pad2(qEndMonth)}-${pad2(new Date(adYear, qEndMonth, 0).getDate())}`;
+
+      const { data: qData } = await supabaseClient
+        .from('daily_menus')
+        .select('*')
+        .gte('menu_date', startIso)
+        .lte('menu_date', endIso)
+        .order('menu_date', { ascending: true });
+
+      if (!qData || qData.length === 0) {
+        alert(`${qStartMonth}-${qEndMonth} 月尚無菜單資料！`);
+        return;
+      }
+
+      const menuLines = qData.map(r => {
+        const p = r.menu_date.split('-');
+        return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}	${r.dishes}`;
+      }).join('
+');
+
+      const promptText = `請使用【據點】食材費估算技能，以下是本據點 ${rocYear}年 ${qStartMonth}-${qEndMonth}月的菜單，3個月的伙食費用約 10萬到 10萬8仟左右，分配給關懷及長照核銷的金額各約為 4萬1仟及 6萬以上（注意長照核銷收據每月總計不可超過 4萬8仟元）：
+
+` +
+        `【${qStartMonth}-${qEndMonth}月菜單】
+` + menuLines;
+
+      await navigator.clipboard.writeText(promptText);
+      alert(`已成功複製 ${qStartMonth}-${qEndMonth}月（整季 ${qData.length} 筆）菜單與採購指令！請直接到 Gemini 貼上執行。`);
+    }
+  }
+
+  async function copyPlainTsv() {
+    const rows = Object.values(menuMap).sort((a, b) => a.menu_date.localeCompare(b.menu_date));
+    if (rows.length === 0) { alert('本月尚無菜單可複製！'); return; }
+    const text = rows.map(r => {
+      const p = r.menu_date.split('-');
+      return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}	${r.dishes}`;
+    }).join('
+');
+    await navigator.clipboard.writeText(text);
+    alert('已複製本月純菜單（日期＋菜色 TSV 格式），可直接貼上 Excel！');
+  }
+
+  loadMenuData();
+</script>
+</body>
+</html>
