@@ -313,7 +313,7 @@
   const DENOMS = [1000, 500, 100, 50, 10, 5, 1];
 
   let dailyMap = {};
-  let inputDenomMap = {}; // 上方輸入區（儲存後清零）
+  let inputDenomMap = {}; // 上方輸入區（預設及儲存後皆為 0）
   let savedDenomMap = {}; // 雲端已儲存的盤點結果（顯示於下方結算表）
 
   // 初始化預設為當日
@@ -384,11 +384,11 @@
       statusEl.textContent = '讀取現鈔失敗：' + denErr.message;
     } else if (!recErr) {
       statusEl.style.color = '#166534';
-      statusEl.textContent = '雲端資料已同步';
+      statusEl.textContent = '雲端資料已同步（v2.2 單頁清零版）';
     }
 
     savedDenomMap = (dens && dens.denom_data) ? dens.denom_data : {};
-    inputDenomMap = {}; // 輸入框預設為 0
+    inputDenomMap = {}; // 輸入框預設清零
 
     renderMonthlyTable(adYear, month, daysInMonth);
     renderDenomInputs();
