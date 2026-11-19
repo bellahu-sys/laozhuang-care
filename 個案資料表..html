@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新增個案基本資料 - 苗栗縣卓蘭鎮老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --primary: #2c5e4f; --border: #cbd5e1; --text: #1e293b; --bg: #f1f5f9; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; }
+    body { background-color: var(--bg); color: var(--text); margin: 0; line-height: 1.5; }
+    nav.topbar {
+      background-color: var(--primary); color: white; padding: 10px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500; margin-bottom: 20px;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: white; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: white; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 215px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+    .container { max-width: 920px; margin: 0 auto 30px auto; background: #ffffff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+    header { text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 15px; margin-bottom: 20px; }
+    header h1 { font-size: 1.45rem; color: var(--primary); margin: 0 0 10px 0; }
+    .top-meta { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 0.95rem; }
+    .top-meta input {{ width: 90px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; }}
+    .form-section { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 18px; overflow: hidden; }
+    .section-title { background-color: var(--primary); color: white; padding: 8px 12px; font-weight: bold; font-size: 1rem; }
+    .form-row { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+    .form-row:last-child { border-bottom: none; }
+    .form-group { flex: 1 1 250px; padding: 12px; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .form-group:last-child { border-right: none; }
+    .form-group.full-width { flex: 1 1 100%; }
+    label.field-label { font-weight: bold; margin-bottom: 6px; color: #334155; font-size: 0.95rem; }
+    input[type="text"], input[type="tel"], input[type="date"], input[type="number"], select, textarea {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 1rem; min-height: 38px;
+    }
+    .options-group { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 4px; }
+    .option-item { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.95rem; min-height: 36px; }
+    .option-item input[type="radio"], .option-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+    .inline-input { width: 120px !important; min-height: 32px !important; padding: 4px 8px !important; font-size: 0.9rem !important; }
+    .inline-num { width: 65px !important; min-height: 32px !important; padding: 4px 6px !important; text-align: center; }
+    .btn-area { display: flex; gap: 15px; justify-content: center; margin-top: 25px; flex-wrap: wrap; }
+    button { padding: 12px 28px; font-size: 1.05rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; min-width: 150px; }
+    .btn-submit { background-color: var(--primary); color: white; }
+    .btn-submit:hover { background-color: #1e4237; }
+    .btn-submit:disabled { background-color: #94a3b8; cursor: not-allowed; }
+    .btn-reset { background-color: #94a3b8; color: white; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">🏠 老庄社區照顧關懷據點｜雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item">
+      <a href="index.html" class="nav-btn">🏠 系統首頁</a>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">👥 人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">📖 個案資料翻閱本</a>
+        <a href="個案資料表.html">📋 新增個案基本資料</a>
+        <a href="個案清單.html">🔍 個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">🎓 講師資料管理</a>
+        <a href="臨時人員資料.html">🧑‍💼 臨時人員資料管理</a>
+        <a href="#" onclick="alert('志工資料表預留擴充中，歡迎隨時提供 Excel 欄位建立！'); return false;">🤝 志工資料管理（預留）</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">🗂️ 行政類 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">☎️ 聯絡電話總表（全站通訊錄）</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">🖨️ 報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="個案基本資料表套印.html">📄 個案基本資料表套印</a>
+        <a href="健康管理表套印.html">🩺 長輩健康管理表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <form id="caseForm">
+    <header>
+      <h1>苗栗縣卓蘭鎮老庄社區照顧關懷據點個案基本資料表</h1>
+      <div class="top-meta">
+        <span>據點編號 *：<input type="text" name="case_number" placeholder="如: 240" required></span>
+        <span><input type="text" name="neighborhood" style="width: 55px;"> 鄰</span>
+        <span><input type="text" name="house_number" style="width: 65px;"> 號</span>
+      </div>
+    </header>
+
+    <div class="form-section">
+      <div class="section-title">一、基本資料與政府系統編號</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">姓名 *</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="form-group">
+          <label class="field-label">身分證字號</label>
+          <input type="text" name="id_number" placeholder="如：K123456789" style="text-transform: uppercase;">
+        </div>
+        <div class="form-group">
+          <label class="field-label">系統 ID（政府給個案的編號）</label>
+          <input type="text" name="gov_system_id" placeholder="請輸入政府系統編號">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">性別</label>
+          <div class="options-group">
+            <label class="option-item"><input type="radio" name="gender" value="男"> 男</label>
+            <label class="option-item"><input type="radio" name="gender" value="女"> 女</label>
+          </div>
+        </div>
+        <div class="form-group" style="flex: 2 1 400px;">
+          <label class="field-label">使用語言</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="languages" value="國語"> 國語</label>
+            <label class="option-item"><input type="checkbox" name="languages" value="台語"> 台語</label>
+            <label class="option-item"><input type="checkbox" name="languages" value="客語"> 客語</label>
+            <label class="option-item"><input type="checkbox" name="languages" value="其它"> 其它 <input type="text" name="language_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">電話</label>
+          <input type="tel" name="phone">
+        </div>
+        <div class="form-group">
+          <label class="field-label">生日</label>
+          <input type="date" name="birth_date">
+        </div>
+        <div class="form-group">
+          <label class="field-label">信仰</label>
+          <input type="text" name="religion">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">興趣專長</label>
+          <input type="text" name="interests">
+        </div>
+        <div class="form-group">
+          <label class="field-label">過去從事何職</label>
+          <input type="text" name="past_occupation">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">地址</label>
+          <input type="text" name="address" value="苗栗縣卓蘭鎮老庄里">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">二、生活與福利狀況</div>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">住屋狀況</label>
+          <div class="options-group">
+            <label class="option-item"><input type="radio" name="housing" value="自有住宅"> 自有住宅</label>
+            <label class="option-item"><input type="radio" name="housing" value="租賃"> 租賃</label>
+            <label class="option-item"><input type="radio" name="housing" value="借住"> 借住</label>
+            <label class="option-item"><input type="radio" name="housing" value="臨時住屋"> 臨時住屋 <input type="text" name="housing_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">身分別</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="identity" value="低收入戶"> 低收入戶</label>
+            <label class="option-item"><input type="checkbox" name="identity" value="中低收入戶"> 中低收入戶</label>
+            <label class="option-item"><input type="checkbox" name="identity" value="一般戶老人"> 一般戶老人</label>
+            <label class="option-item"><input type="checkbox" name="identity" value="獨居老人"> 獨居老人</label>
+            <label class="option-item">
+              <input type="checkbox" name="identity" value="身心障礙者"> 身心障礙者
+              <select name="disability_level" style="width:105px; min-height:32px; padding:2px 6px;">
+                <option value="">選擇等級</option>
+                <option value="輕度">輕度</option>
+                <option value="中度">中度</option>
+                <option value="重度">重度</option>
+                <option value="極重度">極重度</option>
+              </select>
+            </label>
+            <label class="option-item"><input type="checkbox" name="identity" value="其他"> 其他 <input type="text" name="identity_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">經濟來源</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="income_source" value="無"> 無</label>
+            <label class="option-item"><input type="checkbox" name="income_source" value="子女奉養"> 子女奉養</label>
+            <label class="option-item"><input type="checkbox" name="income_source" value="政府補助"> 政府補助</label>
+            <label class="option-item"><input type="checkbox" name="income_source" value="其他"> 其他 <input type="text" name="income_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">婚姻狀況</label>
+          <div class="options-group">
+            <label class="option-item"><input type="radio" name="marital_status" value="未婚"> 未婚</label>
+            <label class="option-item"><input type="radio" name="marital_status" value="已婚"> 已婚</label>
+            <label class="option-item"><input type="radio" name="marital_status" value="離婚"> 離婚</label>
+            <label class="option-item"><input type="radio" name="marital_status" value="喪偶"> 喪偶</label>
+            <label class="option-item"><input type="radio" name="marital_status" value="分居"> 分居</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">三、健康與行動能力</div>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">身體狀況</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="health" value="健康"> 健康</label>
+            <label class="option-item"><input type="checkbox" name="health" value="眼部疾病"> 眼部疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="腎臟疾病"> 腎臟疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="心臟病"> 心臟病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="糖尿病"> 糖尿病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="骨與關節疾病"> 骨與關節疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="老化"> 老化</label>
+            <label class="option-item"><input type="checkbox" name="health" value="肝臟疾病"> 肝臟疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="肺部疾病"> 肺部疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="高血壓"> 高血壓</label>
+            <label class="option-item"><input type="checkbox" name="health" value="腸胃部"> 腸胃部</label>
+            <label class="option-item"><input type="checkbox" name="health" value="其他"> 其他 <input type="text" name="health_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">活動型態</label>
+          <div class="options-group">
+            <label class="option-item"><input type="radio" name="mobility" value="完全自理"> 完全自理</label>
+            <label class="option-item"><input type="radio" name="mobility" value="部分自理"> 部分自理</label>
+            <label class="option-item"><input type="radio" name="mobility" value="完全無法自理"> 完全無法自理</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">輔助器材</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="無"> 無</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="助聽器"> 助聽器</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="輪椅"> 輪椅</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="助行器"> 助行器</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="柺杖"> 柺杖</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="其他"> 其他 <input type="text" name="assistive_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">四、緊急聯絡與家庭狀況</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">聯絡人</label>
+          <input type="text" name="contact_person">
+        </div>
+        <div class="form-group">
+          <label class="field-label">關係</label>
+          <input type="text" name="contact_relation">
+        </div>
+        <div class="form-group">
+          <label class="field-label">聯絡電話</label>
+          <input type="tel" name="contact_phone">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">家庭狀況</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="family_status" value="夫妻同住"> 夫妻同住</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="女兒"> 女兒 <input type="number" name="daughters_count" class="inline-num" min="0"> 人</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="兒子"> 兒子 <input type="number" name="sons_count" class="inline-num" min="0"> 人</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="子女居住外地"> 子女居住外地</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="獨居"> 獨居</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="其他共同居住"> 其他同住 <input type="number" name="other_cohabitants_count" class="inline-num" min="0"> 人，關係：<input type="text" name="other_cohabitants_relation" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">五、需求評估與訪視紀錄</div>
+      <div class="form-row">
+        <div class="form-group" style="flex: 1 1 55%;">
+          <label class="field-label">個案主觀問題陳述</label>
+          <textarea name="subjective_statement" rows="3"></textarea>
+        </div>
+        <div class="form-group" style="flex: 1 1 45%;">
+          <label class="field-label">希望提供的服務</label>
+          <div class="options-group" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+            <label class="option-item"><input type="checkbox" name="desired_services" value="關懷問安"> 關懷問安</label>
+            <label class="option-item"><input type="checkbox" name="desired_services" value="電話問安"> 電話問安</label>
+            <label class="option-item"><input type="checkbox" name="desired_services" value="餐飲服務"> 餐飲服務</label>
+            <label class="option-item"><input type="checkbox" name="desired_services" value="健康促進活動"> 健康促進活動</label>
+            <label class="option-item"><input type="checkbox" name="desired_services" value="其他"> 其他 <input type="text" name="desired_services_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">補充陳述（訪視員）</label>
+          <textarea name="visitor_notes" rows="2"></textarea>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">填表人</label>
+          <input type="text" name="filler">
+        </div>
+        <div class="form-group">
+          <label class="field-label">單位主管</label>
+          <input type="text" name="supervisor">
+        </div>
+        <div class="form-group">
+          <label class="field-label">填表日期</label>
+          <input type="date" name="record_date">
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-area">
+      <button type="submit" id="submitBtn" class="btn-submit">💾 儲存並新增個案</button>
+      <button type="reset" class="btn-reset">🔄 清除重填</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  if (sessionStorage.getItem('care_auth') !== 'true') {
+    const input = prompt('🔒 請輸入老庄據點系統通行密碼：');
+    if (input === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<div style="text-align:center;margin-top:80px;font-family:sans-serif;"><h2>⛔ 密碼錯誤，無法存取系統</h2><button onclick="location.reload()" style="padding:10px 20px;font-size:1rem;">重新輸入</button></div>';
+    }
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  document.querySelector('input[name="record_date"]').valueAsDate = new Date();
+
+  document.getElementById('caseForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '儲存中，請稍候...';
+
+    const formData = new FormData(this);
+    const checkboxFields = ['languages', 'identity', 'income_source', 'health', 'assistive_devices', 'family_status', 'desired_services'];
+    const payload = {};
+
+    checkboxFields.forEach(field => { payload[field] = formData.getAll(field); });
+
+    for (let [key, value] of formData.entries()) {
+      if (!checkboxFields.includes(key)) {
+        if (value === '') {
+          payload[key] = null;
+        } else if (['daughters_count', 'sons_count', 'other_cohabitants_count'].includes(key)) {
+          payload[key] = parseInt(value, 10);
+        } else if (key === 'id_number') {
+          payload[key] = value.trim().toUpperCase();
+        } else {
+          payload[key] = value.trim();
+        }
+      }
+    }
+
+    const { data, error } = await supabaseClient.from('cases').insert([payload]).select('id');
+
+    if (error) {
+      alert('❌ 儲存失敗，請檢查欄位或網路連線：\n' + error.message);
+    } else {
+      const newId = data && data[0] ? data[0].id : null;
+      if (newId) {
+        await supabaseClient.from('case_service_status').insert([{
+          case_id: newId,
+          status: '服務中',
+          effective_date: new Date().toISOString().slice(0, 10),
+          reason: '新收案建檔',
+          recorded_by: payload.filler || null
+        }]);
+      }
+      alert('✅ 個案「' + payload.name + '」已成功存入雲端資料庫，並建立「服務中」初始狀態！');
+      this.reset();
+      document.querySelector('input[name="address"]').value = '苗栗縣卓蘭鎮老庄里';
+      document.querySelector('input[name="record_date"]').valueAsDate = new Date();
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = '💾 儲存並新增個案';
+  });
+</script>
+</body>
+</html>
