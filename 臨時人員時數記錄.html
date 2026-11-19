@@ -41,7 +41,7 @@
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
     .container {
-      max-width: 1160px; margin: 0 auto 30px auto; background: #fff;
+      max-width: 1220px; margin: 0 auto 30px auto; background: #fff;
       padding: 24px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     }
     h1 { color: var(--primary); font-size: 1.38rem; margin: 0 0 16px 0; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
@@ -51,7 +51,7 @@
       margin-bottom: 14px; background: #f8fafc; padding: 12px 15px; border-radius: 6px; border: 1px solid var(--border);
     }
     select, input[type="number"], input[type="text"] {
-      padding: 6px 9px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.94rem;
+      padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.93rem;
     }
     button.btn {
       padding: 8px 15px; border: none; border-radius: 5px; font-weight: bold;
@@ -59,11 +59,8 @@
     }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: #1e4237; }
-    .btn-amber { background: #d97706; color: #fff; }
-    .btn-amber:hover { background: #b45309; }
     .btn-blue { background: #2563eb; color: #fff; }
     .btn-blue:hover { background: #1d4ed8; }
-    .btn-sm { padding: 4px 8px; font-size: 0.8rem; }
 
     .tip-box {
       background: #f0fdfa; border: 1px solid #99f6e4; color: #115e59;
@@ -71,15 +68,25 @@
     }
 
     table.hours-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    table.hours-table th, table.hours-table td { border: 1px solid #475569; padding: 7px 9px; text-align: center; font-size: 0.94rem; }
+    table.hours-table th, table.hours-table td { border: 1px solid #475569; padding: 7px 8px; text-align: center; font-size: 0.93rem; }
     table.hours-table th { background: #f1f5f9; color: #1e293b; font-weight: bold; }
     th.gray-th { background: #e2e8f0 !important; }
     th.peach-th { background: #fed7aa !important; }
     td.peach-cell { background: #ffedd5; font-weight: bold; text-align: right !important; padding-right: 12px !important; }
     td.num-cell { text-align: right !important; padding-right: 12px !important; font-weight: bold; }
     tr.month-divider td { border-top: 2px solid #1e293b; }
-    table.hours-table input[type="number"] { width: 75px; text-align: right; padding: 5px 6px; color: #dc2626; font-weight: bold; }
-    table.hours-table input[type="text"] { width: 115px; text-align: center; font-weight: bold; padding: 5px 6px; }
+    table.hours-table input[type="number"] { width: 72px; text-align: right; padding: 5px 6px; color: #dc2626; font-weight: bold; }
+
+    .name-picker-wrap {
+      display: flex; gap: 4px; align-items: center; justify-content: center;
+    }
+    .name-picker-wrap select {
+      width: 96px; padding: 5px 4px; font-size: 0.88rem; background: #f8fafc;
+    }
+    .name-picker-wrap input[type="text"] {
+      width: 96px; text-align: center; font-weight: bold; padding: 5px 6px;
+    }
+
     .grand-row td { background: #e2e8f0 !important; font-weight: bold; font-size: 1rem; border-top: 2px solid #1e293b; }
   </style>
 </head>
@@ -156,29 +163,28 @@
     <label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-weight:bold; color:#1e293b;">
       <input type="checkbox" id="syncDaysCheckbox" checked> 同月主廚與助手天數同步連動
     </label>
-    <button type="button" class="btn btn-blue" onclick="syncDaysFromCalendar()">從月行事曆帶入上班天數</button>
+    <button type="button" class="btn btn-blue" onclick="syncDaysFromCalendar()">重算截至今日上班天數</button>
     <button type="button" class="btn btn-primary" onclick="saveAllRecords()">儲存全部變更</button>
     <span id="statusText" style="font-weight:bold; color:#166534;"></span>
   </div>
 
   <div class="tip-box">
-    規則說明：每月固定配置<strong>「主廚」</strong>與<strong>「助手」</strong>2 位臨時人員（若有人員異動可直接點姓名欄位更換或從下拉提示選取）；因據點有上班則兩位皆有上班，修改任一人「天數」時會自動同步更新同月另一人的天數（若遇個別請假可先取消勾選「同月天數同步連動」再微調）。
+    說明：1. <strong>自動計算截至今日天數</strong>：系統會自動從「月行事曆」統計截至今日（<span id="todayLabel"></span>）為止的實際上班日數（例如當月截至今日上班 14 天即自動顯示 14，未來尚未到的月份顯示 0），您也可以隨時手動修改天數。<br>
+    2. <strong>姓名選擇或自行輸入</strong>：每位人員皆可從左側下拉選單直接挑選名冊人員，或直接在右側文字框輸入姓名。
   </div>
-
-  <datalist id="tempStaffList"></datalist>
 
   <table class="hours-table">
     <thead>
       <tr>
-        <th style="width:70px;">月份</th>
-        <th style="width:75px;">職務</th>
-        <th style="width:135px;">姓名</th>
-        <th style="width:95px;">天數</th>
+        <th style="width:65px;">月份</th>
+        <th style="width:65px;">職務</th>
+        <th style="width:215px;">姓名（名冊選擇 或 自行輸入）</th>
+        <th style="width:90px;">天數</th>
         <th class="gray-th">時數<br><span style="font-size:0.82rem; font-weight:normal;">＝天數 × 3H（09:00-12:00）</span></th>
-        <th class="gray-th" style="width:95px; color:#dc2626;">單價</th>
-        <th class="gray-th" style="width:115px;">應領金額</th>
-        <th class="gray-th" style="width:115px;">實領金額</th>
-        <th class="peach-th" style="width:120px;">單月合計</th>
+        <th class="gray-th" style="width:90px; color:#dc2626;">單價</th>
+        <th class="gray-th" style="width:110px;">應領金額</th>
+        <th class="gray-th" style="width:110px;">實領金額</th>
+        <th class="peach-th" style="width:115px;">單月合計</th>
       </tr>
     </thead>
     <tbody id="hoursBody"></tbody>
@@ -200,17 +206,67 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const ROLES = ['主廚', '助手'];
   let monthRoleMap = {}; // key: `${month}-${role}`
+  let tempStaffList = [];
 
-  async function loadTempStaffDatalist() {
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function getTodayIso() {
+    const now = new Date();
+    return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+  }
+
+  (function showTodayInfo() {
+    const now = new Date();
+    const rocY = now.getFullYear() - 1911;
+    document.getElementById('todayLabel').textContent = `${rocY}年${now.getMonth() + 1}月${now.getDate()}日`;
+    const ySel = document.getElementById('rocYearSelect');
+    if ([...ySel.options].some(o => o.value === String(rocY))) {
+      ySel.value = String(rocY);
+    }
+  })();
+
+  async function loadTempStaffOptions() {
     const { data } = await supabaseClient
       .from('temp_staff')
       .select('name, status')
       .order('staff_number', { ascending: true });
-    if (data) {
-      document.getElementById('tempStaffList').innerHTML = data
-        .map(s => `<option value="${s.name}">${s.status || ''}</option>`)
-        .join('');
+    tempStaffList = data || [];
+  }
+
+  // 計算指定民國年各月「截至今日為止」的實際上班日數（優先讀取 work_calendar，若無則以週一至週五推算）
+  async function getWorkdaysUpToToday(rocYear) {
+    const todayIso = getTodayIso();
+    const adYear = rocYear + 1911;
+    const { data, error } = await supabaseClient
+      .from('work_calendar')
+      .select('work_date, month, is_workday')
+      .eq('roc_year', rocYear)
+      .eq('is_workday', true);
+
+    const countMap = {};
+    for (let m = 1; m <= 12; m++) countMap[m] = 0;
+
+    if (!error && data && data.length > 0) {
+      data.forEach(row => {
+        if (row.work_date <= todayIso) {
+          countMap[row.month] = (countMap[row.month] || 0) + 1;
+        }
+      });
+    } else {
+      // 若行事曆尚未建檔，自動以週一至週五推算截至今日的平日天數
+      for (let m = 1; m <= 12; m++) {
+        const daysInM = new Date(adYear, m, 0).getDate();
+        let cnt = 0;
+        for (let d = 1; d <= daysInM; d++) {
+          const iso = `${adYear}-${pad2(m)}-${pad2(d)}`;
+          if (iso > todayIso) break;
+          const dow = new Date(adYear, m - 1, d).getDay();
+          if (dow >= 1 && dow <= 5) cnt++;
+        }
+        countMap[m] = cnt;
+      }
     }
+    return countMap;
   }
 
   async function loadHoursRecords() {
@@ -218,18 +274,21 @@
     const statusEl = document.getElementById('statusText');
     statusEl.textContent = '載入中...';
 
-    const { data, error } = await supabaseClient
-      .from('temp_staff_hours')
-      .select('*')
-      .eq('roc_year', rocYear);
+    if (tempStaffList.length === 0) {
+      await loadTempStaffOptions();
+    }
 
-    if (error) {
+    const [hoursRes, calDaysMap] = await Promise.all([
+      supabaseClient.from('temp_staff_hours').select('*').eq('roc_year', rocYear),
+      getWorkdaysUpToToday(rocYear)
+    ]);
+
+    if (hoursRes.error) {
       statusEl.style.color = '#dc2626';
-      statusEl.textContent = '讀取失敗：' + error.message;
+      statusEl.textContent = '讀取失敗：' + hoursRes.error.message;
       return;
     }
 
-    // 初始化 1-12 月每月固定「主廚」與「助手」兩列
     monthRoleMap = {};
     for (let m = 1; m <= 12; m++) {
       ROLES.forEach(role => {
@@ -238,16 +297,30 @@
           month: m,
           role_label: role,
           staff_name: '',
-          work_days: 0,
+          work_days: calDaysMap[m] || 0,
           hours_per_day: 3,
           hourly_rate: 196
         };
       });
     }
 
-    (data || []).forEach(r => {
+    const now = new Date();
+    const curRocYear = now.getFullYear() - 1911;
+    const curMonth = now.getMonth() + 1;
+
+    (hoursRes.data || []).forEach(r => {
       const role = ROLES.includes(r.role_label) ? r.role_label : '主廚';
-      monthRoleMap[`${r.month}-${role}`] = { ...monthRoleMap[`${r.month}-${role}`], ...r, role_label: role };
+      let days = Number(r.work_days) || 0;
+      // 若為當月且資料庫尚未儲存天數（仍為 0），或超過截至今日上班日數，自動帶入截至今日的實際上班天數
+      if (rocYear === curRocYear && r.month === curMonth && days === 0) {
+        days = calDaysMap[r.month] || 0;
+      }
+      monthRoleMap[`${r.month}-${role}`] = {
+        ...monthRoleMap[`${r.month}-${role}`],
+        ...r,
+        role_label: role,
+        work_days: days
+      };
     });
 
     statusEl.style.color = '#166534';
@@ -264,8 +337,20 @@
     return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   }
 
-  function onNameChange(m, role, val) {
-    monthRoleMap[`${m}-${role}`].staff_name = val.trim();
+  function onSelectStaffDropdown(m, role, selectedName) {
+    if (!selectedName) return;
+    monthRoleMap[`${m}-${role}`].staff_name = selectedName;
+    const inp = document.getElementById(`name-input-${m}-${role}`);
+    if (inp) inp.value = selectedName;
+  }
+
+  function onNameInputChange(m, role, val) {
+    const trimmed = val.trim();
+    monthRoleMap[`${m}-${role}`].staff_name = trimmed;
+    const sel = document.getElementById(`name-sel-${m}-${role}`);
+    if (sel) {
+      sel.value = [...sel.options].some(o => o.value === trimmed) ? trimmed : '';
+    }
   }
 
   function onDaysChange(m, role, val) {
@@ -291,43 +376,22 @@
     recalcAll();
   }
 
-  // 從月行事曆 work_calendar 讀取當月上班日數並自動套用至主廚與助手
+  // 一鍵重算「截至今日為止」的上班天數
   async function syncDaysFromCalendar() {
     const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
     const months = getVisibleMonths();
-    const { data, error } = await supabaseClient
-      .from('work_calendar')
-      .select('month, is_workday')
-      .eq('roc_year', rocYear)
-      .in('month', months)
-      .eq('is_workday', true);
-
-    if (error) {
-      alert('讀取月行事曆失敗：' + error.message);
-      return;
-    }
-    if (!data || data.length === 0) {
-      alert(`目前月行事曆中尚未建立 ${rocYear} 年選取月份的上班日資料。`);
-      return;
-    }
-
-    const countByMonth = {};
-    data.forEach(row => {
-      countByMonth[row.month] = (countByMonth[row.month] || 0) + 1;
-    });
+    const calDaysMap = await getWorkdaysUpToToday(rocYear);
 
     months.forEach(m => {
-      if (countByMonth[m] !== undefined) {
-        ROLES.forEach(role => {
-          monthRoleMap[`${m}-${role}`].work_days = countByMonth[m];
-        });
-      }
+      ROLES.forEach(role => {
+        monthRoleMap[`${m}-${role}`].work_days = calDaysMap[m] || 0;
+      });
     });
 
     renderTable();
     const statusEl = document.getElementById('statusText');
     statusEl.style.color = '#1d4ed8';
-    statusEl.textContent = '已從月行事曆帶入上班天數（請記得按儲存）';
+    statusEl.textContent = '已依月行事曆更新截至今日之實際上班天數（請記得按儲存）';
   }
 
   function recalcAll() {
@@ -379,13 +443,25 @@
         const trClass = (mIdx > 0 && isFirstRole) ? 'month-divider' : '';
         const daysVal = Number(rec.work_days) || 0;
         const rateVal = Number(rec.hourly_rate) || 196;
+        const curName = rec.staff_name || '';
+
+        const optionsHtml = `<option value="">--選取--</option>` + tempStaffList.map(s => {
+          const selAttr = (s.name === curName) ? 'selected' : '';
+          const statusTag = s.status && s.status !== '服務中' ? `(${s.status})` : '';
+          return `<option value="${s.name}" ${selAttr}>${s.name}${statusTag}</option>`;
+        }).join('');
 
         rows.push(`
           <tr class="${trClass}">
             <td><strong>${m}月</strong></td>
             <td style="color:#475569; font-weight:bold;">${role}</td>
             <td>
-              <input type="text" list="tempStaffList" value="${rec.staff_name || ''}" placeholder="選擇${role}" oninput="onNameChange(${m}, '${role}', this.value)">
+              <div class="name-picker-wrap">
+                <select id="name-sel-${m}-${role}" onchange="onSelectStaffDropdown(${m}, '${role}', this.value)" title="從臨時人員名冊選擇">
+                  ${optionsHtml}
+                </select>
+                <input type="text" id="name-input-${m}-${role}" value="${curName}" placeholder="或自行輸入" oninput="onNameInputChange(${m}, '${role}', this.value)">
+              </div>
             </td>
             <td>
               <input type="number" id="days-${m}-${role}" value="${daysVal === 0 ? '' : daysVal}" placeholder="0" min="0" max="31" oninput="onDaysChange(${m}, '${role}', this.value)">
@@ -452,7 +528,6 @@
     }
   }
 
-  loadTempStaffDatalist();
   loadHoursRecords();
 </script>
 </body>
