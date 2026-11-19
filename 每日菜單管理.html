@@ -137,7 +137,6 @@
         <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
       </select>
     </label>
-    <button type="button" class="btn btn-sec" onclick="syncWorkdaysFromCalendar()">從月行事曆帶入本月供餐日</button>
     <span id="statusMsg" style="font-weight:bold; color:#166534; font-size:0.9rem;"></span>
   </div>
 
@@ -280,23 +279,10 @@
     const dl = document.getElementById('dishHistoryList');
     dl.innerHTML = Array.from(dishSet).map(d => `<option value="${d}">`).join('');
 
-    // 2. 讀取行事曆上班日（若無設定則預設週一至週五）
-    const { data: calData } = await supabaseClient
-      .from('work_calendar')
-      .select('work_date, is_workday')
-      .eq('roc_year', rocYear)
-      .eq('month', month);
-
+    // 直接產生當月所有日期供選取，不受行事曆上班日限制
     workdayIsoList = [];
-    if (calData && calData.length > 0) {
-      calData.forEach(c => { if (c.is_workday) workdayIsoList.push(c.work_date); });
-    } else {
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dt = new Date(adYear, month - 1, d);
-        if (dt.getDay() >= 1 && dt.getDay() <= 5) {
-          workdayIsoList.push(`${adYear}-${pad2(month)}-${pad2(d)}`);
-        }
-      }
+    for (let d = 1; d <= daysInMonth; d++) {
+      workdayIsoList.push(`${adYear}-${pad2(month)}-${pad2(d)}`);
     }
 
     // 填滿日期下拉選單
@@ -400,10 +386,6 @@
         </tr>
       `;
     }).join('');
-  }
-
-  async function syncWorkdaysFromCalendar() {
-    alert('已自動對齊「月行事曆」設定的本月上班日（排除週末與國定假日），可直接點右側「編輯」逐日填入菜色！');
   }
 
   async function copyAiPrompt(scope) {
