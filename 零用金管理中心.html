@@ -74,25 +74,28 @@
 
     .summary-box { background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 6px; margin-top: 14px; font-weight: bold; color: #0369a1; display: flex; justify-content: space-between; }
 
-    /* 列印專用：合併為單一 A4 頁面並隱藏瀏覽器預設頁首頁尾 */
+    /* 列印專用：強制合併為單一 A4 頁面（左收支明細、右現鈔盤點並排） */
     @page {
       size: A4 portrait;
       margin: 0mm;
     }
     @media print {
       nav.topbar, .toolbar, .grid-2, .no-print, h1 { display: none !important; }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        font-family: "DFKai-SB", "BiauKai", "標楷體", serif !important;
+      }
       body {
-        margin: 0;
-        padding: 8mm 12mm;
-        background: #fff;
-        font-family: "DFKai-SB", "BiauKai", "標楷體", serif;
+        padding: 10mm 10mm !important;
       }
       .container {
-        box-shadow: none;
-        margin: 0;
-        padding: 0;
-        max-width: 100%;
-        width: 100%;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
       }
       .print-card {
         background: #fff !important;
@@ -101,31 +104,52 @@
         margin: 0 !important;
       }
       #printTitle {
-        font-size: 13pt !important;
-        margin-bottom: 4px !important;
+        font-size: 15pt !important;
+        margin-bottom: 8px !important;
         font-family: "DFKai-SB", "BiauKai", "標楷體", serif !important;
       }
+      .print-layout-row {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        width: 100% !important;
+      }
+      .print-col-left {
+        width: 63% !important;
+      }
+      .print-col-right {
+        width: 35% !important;
+      }
       table.data-table {
-        margin-top: 2px !important;
+        margin-top: 0 !important;
+        width: 100% !important;
       }
       table.data-table th, table.data-table td {
         border: 1px solid #000 !important;
         color: #000 !important;
-        padding: 1.5px 6px !important;
+        padding: 2.5px 5px !important;
         font-size: 9.5pt !important;
-        line-height: 1.15 !important;
+        line-height: 1.2 !important;
         font-family: "DFKai-SB", "BiauKai", "標楷體", serif !important;
       }
       table.data-table th {
-        background: #f1f5f9 !important;
+        background: #e2e8f0 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
       #denomPrintHeading {
-        margin: 8px 0 3px 0 !important;
+        margin: 0 0 4px 0 !important;
+        padding: 4px !important;
+        text-align: center !important;
+        background: #e2e8f0 !important;
+        border: 1px solid #000 !important;
+        border-bottom: none !important;
         font-size: 11pt !important;
         color: #000 !important;
         font-family: "DFKai-SB", "BiauKai", "標楷體", serif !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
     }
   </style>
@@ -185,7 +209,7 @@
         <option value="10">10 月</option><option value="11" selected>11 月</option><option value="12">12 月</option>
       </select>
     </label>
-    <button class="btn btn-print" onclick="window.print()">列印月底結算表 (單頁 PDF)</button>
+    <button class="btn btn-print" onclick="window.print()">列印月底結算表 (單頁 A4)</button>
     <span id="dbStatusMsg" style="font-size:0.88rem; color:#166534; font-weight:bold;"></span>
   </div>
 
@@ -222,48 +246,54 @@
       115年11月收支明細表
     </div>
 
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th style="width:20%;">日期</th>
-          <th style="width:25%;">餐費(收入)</th>
-          <th style="width:20%;">支出</th>
-          <th style="width:35%;">備註</th>
-        </tr>
-      </thead>
-      <tbody id="monthlyTableBody"></tbody>
-      <tfoot>
-        <tr style="font-weight:bold; background:#e2e8f0;">
-          <td style="text-align:center;">小計</td>
-          <td id="sumIncome" style="text-align:right; padding-right:12px;">0</td>
-          <td id="sumExpense" style="text-align:right; padding-right:12px;">0</td>
-          <td></td>
-        </tr>
-        <tr style="font-weight:bold; background:#cbd5e1;">
-          <td style="text-align:center;">總計</td>
-          <td colspan="3" id="sumTotal" style="padding-left:12px;">0</td>
-        </tr>
-      </tfoot>
-    </table>
+    <div class="print-layout-row">
+      <div class="print-col-left">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:18%;">日期</th>
+              <th style="width:24%;">餐費(收入)</th>
+              <th style="width:20%;">支出</th>
+              <th style="width:38%;">備註</th>
+            </tr>
+          </thead>
+          <tbody id="monthlyTableBody"></tbody>
+          <tfoot>
+            <tr style="font-weight:bold; background:#e2e8f0;">
+              <td style="text-align:center;">小計</td>
+              <td id="sumIncome" style="text-align:right; padding-right:8px;">0</td>
+              <td id="sumExpense" style="text-align:right; padding-right:8px;">0</td>
+              <td></td>
+            </tr>
+            <tr style="font-weight:bold; background:#cbd5e1;">
+              <td style="text-align:center;">總計</td>
+              <td colspan="3" id="sumTotal" style="padding-left:10px;">0</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
 
-    <h4 id="denomPrintHeading" style="margin:20px 0 8px 0; color:var(--primary);">現鈔與硬幣盤點結算</h4>
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th style="width:33%;">貨幣單位</th>
-          <th style="width:33%;">數量</th>
-          <th style="width:34%;">金額</th>
-        </tr>
-      </thead>
-      <tbody id="printDenomBody"></tbody>
-      <tfoot>
-        <tr style="font-weight:bold; background:#e2e8f0;">
-          <td style="text-align:center;">總計</td>
-          <td></td>
-          <td id="printDenomSum" style="text-align:right; padding-right:12px;">0</td>
-        </tr>
-      </tfoot>
-    </table>
+      <div class="print-col-right">
+        <h4 id="denomPrintHeading" style="margin:20px 0 8px 0; color:var(--primary);">現鈔與硬幣盤點結算</h4>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:33%;">貨幣單位</th>
+              <th style="width:33%;">數量</th>
+              <th style="width:34%;">金額</th>
+            </tr>
+          </thead>
+          <tbody id="printDenomBody"></tbody>
+          <tfoot>
+            <tr style="font-weight:bold; background:#e2e8f0;">
+              <td style="text-align:center;">總計</td>
+              <td></td>
+              <td id="printDenomSum" style="text-align:right; padding-right:8px;">0</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -414,7 +444,7 @@
         <tr>
           <td>${val}</td>
           <td style="text-align:center;">${q > 0 ? q : ''}</td>
-          <td style="text-align:right; padding-right:12px;">${sub > 0 ? sub.toLocaleString() : '0'}</td>
+          <td style="text-align:right; padding-right:8px;">${sub > 0 ? sub.toLocaleString() : '0'}</td>
         </tr>
       `;
     }).join('');
@@ -477,8 +507,8 @@
       rowsHtml += `
         <tr>
           <td style="text-align:center;">${month}/${d}</td>
-          <td style="text-align:right; padding-right:12px;">${incDisplay}</td>
-          <td style="text-align:right; padding-right:12px;">${expVal > 0 ? expVal.toLocaleString() : ''}</td>
+          <td style="text-align:right; padding-right:8px;">${incDisplay}</td>
+          <td style="text-align:right; padding-right:8px;">${expVal > 0 ? expVal.toLocaleString() : ''}</td>
           <td>${r.remark || ''}</td>
         </tr>
       `;
