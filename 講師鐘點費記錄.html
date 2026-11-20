@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>講師鐘點費記錄 - 老庄社區照顧關懷據點</title>
+  <title>講師鐘點費記錄</title>
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -46,21 +46,21 @@
     .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
-    .container { max-width: 1380px; margin: 20px auto 50px auto; padding: 0 16px; }
+    .container { max-width: 1420px; margin: 18px auto 50px auto; padding: 0 16px; }
     .card {
-      background: #fff; border-radius: 10px; padding: 18px 20px;
+      background: #fff; border-radius: 10px; padding: 16px 20px;
       border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
     .top-bar {
       display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
     }
-    .page-h1 { margin: 0; font-size: 1.25rem; color: var(--primary); }
+    .page-h1 { margin: 0; font-size: 1.3rem; color: var(--primary); }
 
-    .mode-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .mode-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .mode-tab {
-      padding: 9px 16px; border-radius: 7px; border: 1.5px solid var(--border);
+      padding: 8px 15px; border-radius: 7px; border: 1.5px solid var(--border);
       background: #f8fafc; color: #334155; font-weight: bold; cursor: pointer; font-size: 0.95rem;
     }
     .mode-tab.active {
@@ -69,15 +69,15 @@
 
     .controls-row {
       display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-      background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px;
-      margin-bottom: 14px;
+      background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px; border-radius: 8px;
+      margin-bottom: 12px;
     }
     select, input[type="text"], input[type="number"] {
-      padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.92rem;
+      padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem;
     }
     .btn {
-      padding: 8px 13px; border: none; border-radius: 6px; font-weight: bold;
-      cursor: pointer; font-size: 0.9rem; transition: background 0.15s;
+      padding: 7px 12px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.88rem; transition: background 0.15s;
     }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: var(--primary-dark); }
@@ -91,29 +91,16 @@
     .btn-danger:hover { background: #b91c1c; }
     .btn-sm { padding: 4px 8px; font-size: 0.8rem; }
 
-    .kpi-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;
-      margin-bottom: 14px;
-    }
-    .kpi-box {
-      border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; background: #f8fafc;
-    }
-    .kpi-box.actual-box { border-left: 4px solid #2563eb; background: #eff6ff; }
-    .kpi-box.claim-box { border-left: 4px solid #0f766e; background: #f0fdfa; }
-    .kpi-box.tax-box { border-left: 4px solid #b45309; background: #fffbeb; }
-    .kpi-label { font-size: 0.84rem; color: #475569; font-weight: bold; }
-    .kpi-val { font-size: 1.35rem; font-weight: bold; color: #0f172a; margin-top: 4px; }
-
     .sheet-title-banner {
-      text-align: center; font-size: 1.25rem; font-weight: bold;
-      color: #0f172a; padding: 8px 0 12px 0;
+      text-align: center; font-size: 1.2rem; font-weight: bold;
+      color: #0f172a; padding: 6px 0 10px 0;
     }
     .excel-table {
       width: 100%; border-collapse: collapse; font-size: 0.92rem; background: #fff;
     }
     .excel-table th {
       background: #cbd5e1; color: #0f172a; font-weight: bold;
-      border: 1px solid #64748b; padding: 8px 8px; text-align: center;
+      border: 1px solid #64748b; padding: 7px 8px; text-align: center;
     }
     .excel-table td {
       border: 1px solid #94a3b8; padding: 6px 8px; vertical-align: middle;
@@ -121,57 +108,43 @@
     .excel-table td.num-col { text-align: right; font-variant-numeric: tabular-nums; }
     .excel-table td.center-col { text-align: center; }
     .excel-table tr.total-row td {
-      background: #cbd5e1; font-weight: bold; font-size: 0.98rem; color: #0f172a;
-    }
-    .excel-table tr.warn-row td {
-      background: #fef2f2; color: #991b1b; font-weight: bold;
+      background: #cbd5e1; font-weight: bold; font-size: 0.96rem; color: #0f172a;
     }
     .excel-table input, .excel-table select {
       width: 100%; padding: 5px 7px; font-size: 0.88rem; border: 1px solid #cbd5e1; border-radius: 4px;
     }
     .excel-table input.num-input { text-align: right; }
 
-    .tax-alert-100k {
-      color: #b91c1c; font-weight: bold; font-size: 0.84rem;
+    .picker-dropdown-wrap {
+      position: relative; display: inline-block;
     }
-    .tax-ok-100k {
-      color: #166534; font-weight: bold; font-size: 0.84rem;
+    .picker-panel {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px; max-height: 320px; overflow-y: auto;
+      background: #fff; border: 1px solid #94a3b8; border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.16); padding: 10px; z-index: 400; margin-top: 4px;
     }
+    .picker-panel.open { display: block; }
+    .picker-item {
+      display: flex; align-items: center; gap: 6px; padding: 5px 6px;
+      border-radius: 5px; cursor: pointer; font-size: 0.88rem; font-weight: bold;
+    }
+    .picker-item:hover { background: #f1f5f9; }
 
-
-    .instructor-picker-box {
-      background: #f0fdfa; border: 1.5px solid #5eead4; border-radius: 8px;
-      padding: 10px 14px; margin-bottom: 14px;
+    .sub-box {
+      background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 12px;
     }
-    .instructor-picker-header {
-      display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
+    .sub-box-title {
+      font-weight: bold; font-size: 0.95rem; color: var(--primary); margin-bottom: 8px;
     }
-    .instructor-picker-title {
-      font-weight: bold; font-size: 0.94rem; color: #115e59;
-    }
-    .instructor-checkbox-grid {
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    }
-    .inst-chk-pill {
+    .chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .course-tag {
       display: inline-flex; align-items: center; gap: 5px;
-      padding: 5px 10px; border-radius: 16px; font-size: 0.86rem; font-weight: bold;
-      border: 1.5px solid #cbd5e1; background: #fff; color: #334155;
-      cursor: pointer; user-select: none; transition: all 0.12s;
+      background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc;
+      border-radius: 14px; padding: 3px 9px; font-size: 0.82rem; font-weight: bold;
     }
-    .inst-chk-pill:hover { border-color: var(--primary); }
-    .inst-chk-pill.is-checked {
-      background: #dcfce7; border-color: #16a34a; color: #166534;
-    }
-    .inst-chk-pill.is-paused {
-      opacity: 0.75;
-    }
-    .inst-status-tag {
-      font-size: 0.72rem; padding: 1px 5px; border-radius: 8px;
-      background: #e2e8f0; color: #475569; font-weight: normal;
-    }
-    .inst-chk-pill.is-checked .inst-status-tag {
-      background: #bbf7d0; color: #166534;
+    .course-tag button {
+      border: none; background: none; color: #075985; font-weight: bold; cursor: pointer; padding: 0;
     }
 
     @media print {
@@ -218,7 +191,7 @@
         <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
         <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
         <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
-        <a href="講師鐘點費記錄.html">講師鐘點費記錄（實際給付／各計畫核銷與所得稅累計）</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費記錄</a>
       </div>
     </div>
     <div class="nav-item">
@@ -236,6 +209,7 @@
         <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
         <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
         <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
       </div>
     </div>
     <div class="nav-item">
@@ -251,125 +225,132 @@
 <div class="container">
   <div class="card">
     <div class="top-bar">
-      <div>
-        <h1 class="page-h1">講師鐘點費記錄（實際給付薪資 ＋ 各計畫核銷領據／個人所得稅累計）</h1>
-      </div>
+      <h1 class="page-h1">講師鐘點費記錄</h1>
       <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <span id="statusText" style="font-size:0.88rem; font-weight:bold; color:#166534;"></span>
-        <button type="button" class="btn btn-outline" onclick="window.print()">列印 / 另存 PDF</button>
+        <span id="statusText" style="font-size:0.86rem; font-weight:bold; color:#166534;"></span>
+        <button type="button" class="btn btn-outline" onclick="window.print()">列印</button>
       </div>
     </div>
 
     <div class="mode-tabs no-print">
-      <button type="button" class="mode-tab active" id="tabActual" onclick="switchViewMode('actual')">
-        1. 實際鐘點費（依約定時數／金額每月給付薪資）
-      </button>
-      <button type="button" class="mode-tab" id="tabClaim" onclick="switchViewMode('claim')">
-        2. 各計畫核銷講師領據金額（個人所得稅累計）
-      </button>
-      <button type="button" class="mode-tab" id="tabSummary" onclick="switchViewMode('summary')">
-        3. 年度講師鐘點費統計表（各計畫／核銷金額／所得稅門檻檢核）
-      </button>
+      <button type="button" class="mode-tab active" id="tabFee" onclick="switchTab('fee')">1. 鐘點費計算</button>
+      <button type="button" class="mode-tab" id="tabTaxInstructor" onclick="switchTab('taxInstructor')">2. 個人所得稅計算-講師</button>
+      <button type="button" class="mode-tab" id="tabTaxTemp" onclick="switchTab('taxTemp')">3. 個人所得稅計算_臨時人員</button>
     </div>
 
-    <div class="controls-row no-print">
-      <label style="font-weight:bold;">民國年度：</label>
-      <select id="rocYearSelect" onchange="onFilterChange()">
-        <option value="115">115 年 (2026)</option>
-        <option value="116">116 年 (2027)</option>
-        <option value="117">117 年 (2028)</option>
-      </select>
-
-      <span id="singleInstructorControls" style="display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <label style="font-weight:bold;">講師：</label>
-        <select id="instructorSelect" onchange="onFilterChange()"></select>
-        <input type="text" id="customInstructorInput" placeholder="或輸入新講師姓名" style="width:140px;" onchange="onCustomInstructorChange()">
-
-        <label style="font-weight:bold;">月份篩選：</label>
-        <select id="monthFilterSelect" onchange="renderActiveView()">
-          <option value="ALL">全年度 (1-12月)</option>
-          <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
-          <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
-          <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
-          <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+    <!-- 1. 鐘點費計算 -->
+    <div id="panelFee">
+      <div class="controls-row no-print">
+        <label style="font-weight:bold;">年度：</label>
+        <select id="feeYearSelect" onchange="onFeeContextChange()">
+          <option value="115">115 年</option>
+          <option value="116">116 年</option>
+          <option value="117">117 年</option>
         </select>
 
-        <button type="button" class="btn btn-blue" onclick="addRow()">＋ 新增一筆課程記錄</button>
-        <button type="button" class="btn btn-teal" onclick="syncFromCalendar()">從行事曆帶入課程</button>
-        <button type="button" class="btn btn-primary" onclick="saveCurrentInstructorRecords()">儲存此講師記錄</button>
-      </span>
+        <label style="font-weight:bold;">講師姓名：</label>
+        <select id="feeInstructorSelect" onchange="onFeeContextChange()"></select>
 
-      <span id="summaryControls" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
-        <button type="button" class="btn btn-primary" onclick="saveSummaryMatrix()">儲存統計表變更</button>
-      </span>
-    </div>
+        <div class="picker-dropdown-wrap">
+          <button type="button" class="btn btn-outline btn-sm" onclick="togglePickerPanel('feeInstPickerPanel')">勾選本年度講師 ▾</button>
+          <div class="picker-panel" id="feeInstPickerPanel"></div>
+        </div>
 
-    <!-- 資料來源：人事資料「講師資料管理」勾選當年度授課講師 -->
-    <div class="instructor-picker-box no-print">
-      <div class="instructor-picker-header">
-        <div class="instructor-picker-title" id="pickerBoxTitle">勾選 115 年度要建立鐘點費資料的講師（來源：人事資料 ➔ 講師資料管理）</div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-          <button type="button" class="btn btn-outline btn-sm" onclick="checkActiveStatusInstructors()">僅勾選「服務中」講師</button>
-          <button type="button" class="btn btn-teal btn-sm" onclick="checkInstructorsFromCalendar()">自動勾選本年度行事曆有排課講師</button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="toggleAllInstructors(true)">全選</button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="toggleAllInstructors(false)">全部取消</button>
-          <a href="講師資料.html" class="btn btn-outline btn-sm" style="text-decoration:none;">前往講師資料管理 ➔</a>
+        <label style="font-weight:bold;">計畫課程名稱：</label>
+        <select id="feeCourseSelect"></select>
+        <input type="text" id="newFeeCourseInput" placeholder="新增課程名稱" style="width:130px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="addFeeCourseOption()">新增課程</button>
+        <button type="button" class="btn btn-blue btn-sm" onclick="addFeeRowFromToolbar()">＋ 加入一列</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveFeeRecords()">儲存</button>
+      </div>
+
+      <!-- 行事曆計算實際鐘點費切換區塊 -->
+      <div class="sub-box no-print">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
+          <label style="display:inline-flex; align-items:center; gap:6px; font-weight:bold; cursor:pointer;">
+            <input type="checkbox" id="useCalendarActualChk" onchange="onCalendarModeToggle()">
+            改用行事曆計算實際鐘點費
+          </label>
+          <div id="calendarCalcControls" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
+            <label style="font-size:0.86rem; font-weight:bold;">每日時數：</label>
+            <input type="number" id="calDefaultHoursInput" value="1" min="0.5" step="0.5" style="width:70px;">
+            <label style="font-size:0.86rem; font-weight:bold;">每小時費用：</label>
+            <input type="number" id="calDefaultRateInput" value="1000" min="0" step="50" style="width:90px;">
+            <button type="button" class="btn btn-teal btn-sm" onclick="calculateFromCalendar()">依行事曆帶入天數並計算</button>
+          </div>
         </div>
       </div>
-      <div class="instructor-checkbox-grid" id="instructorCheckboxGrid"></div>
-    </div>
 
-    <div class="kpi-grid" id="kpiGrid"></div>
-
-    <div id="viewActualPanel">
-      <div class="sheet-title-banner" id="actualSheetTitle">115年度 講師鐘點費（實際每月給付）</div>
+      <div class="sheet-title-banner" id="feeSheetTitle">115年度 講師鐘點費用</div>
       <div style="overflow-x:auto;">
-        <table class="excel-table" id="actualTable">
+        <table class="excel-table">
           <thead>
             <tr>
-              <th style="width:15%;">課程名稱</th>
+              <th style="width:17%;">課程名稱</th>
               <th style="width:20%;">課程期間</th>
-              <th style="width:8%;">天數</th>
-              <th style="width:8%;">時數</th>
+              <th style="width:9%;">天數</th>
+              <th style="width:9%;">時數</th>
               <th style="width:12%;">費用 / 1H</th>
               <th style="width:13%;">合計</th>
-              <th style="width:17%;">備註</th>
+              <th style="width:13%;">備註</th>
               <th class="no-print" style="width:7%;">操作</th>
             </tr>
           </thead>
-          <tbody id="actualTableBody"></tbody>
+          <tbody id="feeTableBody"></tbody>
         </table>
       </div>
     </div>
 
-    <div id="viewClaimPanel" style="display:none;">
-      <div class="sheet-title-banner" id="claimSheetTitle">115年度 講師鐘點費（各計畫核銷領據／個人所得稅累計）</div>
+    <!-- 2. 個人所得稅計算-講師 -->
+    <div id="panelTaxInstructor" style="display:none;">
+      <div class="controls-row no-print">
+        <label style="font-weight:bold;">年度：</label>
+        <select id="taxYearSelect" onchange="onTaxContextChange()">
+          <option value="115">115 年</option>
+          <option value="116">116 年</option>
+          <option value="117">117 年</option>
+        </select>
+
+        <div class="picker-dropdown-wrap">
+          <button type="button" class="btn btn-outline btn-sm" id="taxInstDropdownBtn" onclick="togglePickerPanel('taxInstPickerPanel')">勾選列出講師 ▾</button>
+          <div class="picker-panel" id="taxInstPickerPanel"></div>
+        </div>
+
+        <label style="font-weight:bold;">建立課程清單：</label>
+        <input type="text" id="newTaxCourseInput" placeholder="輸入課程名稱，如：延緩1期" style="width:150px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="addTaxCourseOption()">加入課程清單</button>
+        <button type="button" class="btn btn-blue btn-sm" onclick="addTaxMatrixRow()">＋ 新增一列</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="saveTaxInstructorData()">儲存</button>
+      </div>
+
+      <div class="chip-list no-print" id="taxCourseChipList" style="margin-bottom:12px;"></div>
+
+      <div class="sheet-title-banner" id="taxInstTitle">115年度講師鐘點費統計</div>
       <div style="overflow-x:auto;">
-        <table class="excel-table" id="claimTable">
-          <thead>
-            <tr>
-              <th style="width:11%;">核銷計畫</th>
-              <th style="width:14%;">課程名稱</th>
-              <th style="width:19%;">課程期間</th>
-              <th style="width:7%;">天數</th>
-              <th style="width:7%;">時數</th>
-              <th style="width:11%;">費用 / 1H</th>
-              <th style="width:12%;">領據合計</th>
-              <th style="width:14%;">備註</th>
-              <th class="no-print" style="width:7%;">操作</th>
-            </tr>
-          </thead>
-          <tbody id="claimTableBody"></tbody>
+        <table class="excel-table">
+          <thead id="taxInstHead"></thead>
+          <tbody id="taxInstBody"></tbody>
         </table>
       </div>
     </div>
 
-    <div id="viewSummaryPanel" style="display:none;">
-      <div class="sheet-title-banner" id="summarySheetTitle">115年度講師鐘點費統計</div>
+    <!-- 3. 個人所得稅計算_臨時人員 -->
+    <div id="panelTaxTemp" style="display:none;">
+      <div class="controls-row no-print">
+        <label style="font-weight:bold;">年度：</label>
+        <select id="tempYearSelect" onchange="loadTempStaffQuarterData()">
+          <option value="115">115 年</option>
+          <option value="116">116 年</option>
+          <option value="117">117 年</option>
+        </select>
+        <button type="button" class="btn btn-teal btn-sm" onclick="loadTempStaffQuarterData()">重新讀取關懷臨時人員時數</button>
+      </div>
+
+      <div class="sheet-title-banner" id="tempTaxTitle">115年度廚房臨時人員</div>
       <div style="overflow-x:auto;">
-        <table class="excel-table" id="summaryTable">
-          <thead id="summaryTableHead"></thead>
-          <tbody id="summaryTableBody"></tbody>
+        <table class="excel-table">
+          <thead id="tempTaxHead"></thead>
+          <tbody id="tempTaxBody"></tbody>
         </table>
       </div>
     </div>
@@ -379,28 +360,23 @@
 <script>
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  let currentMode = 'actual'; // 'actual' | 'claim' | 'summary'
-  let currentRocYear = 115;
-  let currentInstructor = '';
+  let activeTab = 'fee';
+  let currentYear = 115;
+  let masterInstructors = [];
+  let checkedInstructors = [];
+  let currentFeeInstructor = '';
 
-  // 從人事資料 `instructors` 讀取的完整講師名冊：[{ id, staff_number, name, status, hire_type }]
-  let allMasterInstructors = [];
-  // 當年度有勾選要建立資料的講師姓名清單
-  let selectedInstructorNames = [];
+  // 1. 鐘點費明細：[{ id, course_name, period_text, days, hours, rate, amount, remark }]
+  let feeRows = [];
+  let feeCourseOptions = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
 
-  // 每一筆明細：{ id, roc_year, instructor_name, entry_type ('actual'|'claim'), plan_name, course_name, period_text, days, hours, rate, amount, remark, sort_order }
-  let records = [];
-  // 統計表覆蓋／自訂資料：key = `${instructor_name}__${row_key}`, value = number or string
-  let summaryOverrides = {};
-  const SUMMARY_ROWS = [
-    { key: 'plan_tag', label: '', isText: true },
-    { key: '延緩1期', label: '延緩1期', isText: false },
-    { key: '延緩2期', label: '延緩2期', isText: false },
-    { key: '多元', label: '多元', isText: false },
-    { key: '伯公', label: '伯公', isText: false },
-    { key: '關懷', label: '關懷', isText: false },
-    { key: '上課次數', label: '上課次數', isText: true }
-  ];
+  // 2. 個人所得稅-講師：課程清單與矩陣 rows: [{ id, course_name, values: { [name]: numberOrText } }]
+  let taxCourseOptions = ['關懷1-3月', '關懷4-6月', '關懷7-9月', '關懷10-12月', '延緩1期', '延緩2期', '多元', '伯公', '上課次數'];
+  let taxMatrixRows = [];
+
+  // 3. 個人所得稅_臨時人員：從 temp_staff_hours 讀取
+  let tempStaffList = [];
+  let tempHoursRecords = [];
 
   function fmtNum(n) {
     const num = Number(n || 0);
@@ -413,204 +389,6 @@
     el.textContent = msg;
   }
 
-  function getSelectedInstStorageKey() {
-    return `lz_selected_instructors_${currentRocYear}`;
-  }
-
-  function saveSelectedInstructorsLocal() {
-    localStorage.setItem(getSelectedInstStorageKey(), JSON.stringify(selectedInstructorNames));
-  }
-
-  (async function init() {
-    const ySel = document.getElementById('rocYearSelect');
-    currentRocYear = parseInt(ySel.value, 10) || 115;
-
-    await loadMasterInstructors();
-    await loadYearData();
-  })();
-
-  async function loadMasterInstructors() {
-    try {
-      const { data: instRows, error } = await supabaseClient
-        .from('instructors')
-        .select('id, staff_number, name, status, hire_type')
-        .order('staff_number', { ascending: true })
-        .order('id', { ascending: true });
-
-      if (!error && Array.isArray(instRows) && instRows.length > 0) {
-        allMasterInstructors = instRows.filter(r => r.name && r.name.trim() !== '');
-      }
-    } catch (e) {}
-
-    if (allMasterInstructors.length === 0) {
-      allMasterInstructors = [
-        { staff_number: '001', name: '林熙鈴', status: '服務中', hire_type: '外聘' },
-        { staff_number: '002', name: '張國堂', status: '服務中', hire_type: '外聘' },
-        { staff_number: '003', name: '鄧美續', status: '服務中', hire_type: '內聘' },
-        { staff_number: '004', name: '蔡牡連', status: '服務中', hire_type: '內聘' },
-        { staff_number: '005', name: '吳佩珊', status: '暫停', hire_type: '外聘' },
-        { staff_number: '006', name: '黃仲慧', status: '服務中', hire_type: '外聘' },
-        { staff_number: '007', name: '吳貴英', status: '服務中', hire_type: '' },
-        { staff_number: '008', name: '詹細珍', status: '服務中', hire_type: '' },
-        { staff_number: '009', name: '詹益誠', status: '服務中', hire_type: '' },
-        { staff_number: '010', name: '張水潭', status: '暫停', hire_type: '內聘' },
-        { staff_number: '011', name: '詹偉倫', status: '暫停', hire_type: '外聘' },
-        { staff_number: '012', name: '張鳳玲', status: '應聘中', hire_type: '' }
-      ];
-    }
-  }
-
-  function renderInstructorPicker() {
-    document.getElementById('pickerBoxTitle').textContent =
-      `勾選 ${currentRocYear} 年度要建立鐘點費資料的講師（來源：人事資料 ➔ 講師資料管理，已選 ${selectedInstructorNames.length} 位）`;
-
-    const grid = document.getElementById('instructorCheckboxGrid');
-    grid.innerHTML = allMasterInstructors.map(inst => {
-      const name = inst.name.trim();
-      const checked = selectedInstructorNames.includes(name);
-      const statusText = inst.status || '服務中';
-      const isPaused = statusText !== '服務中';
-      const metaParts = [statusText, inst.hire_type].filter(Boolean).join('·');
-      return `
-        <label class="inst-chk-pill ${checked ? 'is-checked' : ''} ${isPaused ? 'is-paused' : ''}">
-          <input type="checkbox" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} onchange="onInstructorCheckboxToggle('${escapeAttr(name)}', this.checked)">
-          <span>${escapeHtml(name)}</span>
-          ${metaParts ? `<span class="inst-status-tag">${escapeHtml(metaParts)}</span>` : ''}
-        </label>
-      `;
-    }).join('');
-  }
-
-  function onInstructorCheckboxToggle(name, isChecked) {
-    if (isChecked) {
-      if (!selectedInstructorNames.includes(name)) {
-        selectedInstructorNames.push(name);
-      }
-      currentInstructor = name;
-    } else {
-      selectedInstructorNames = selectedInstructorNames.filter(n => n !== name);
-      if (currentInstructor === name) {
-        currentInstructor = selectedInstructorNames[0] || '';
-      }
-    }
-    const masterOrder = new Map(allMasterInstructors.map((item, i) => [item.name.trim(), i]));
-    selectedInstructorNames.sort((a, b) => (masterOrder.get(a) ?? 999) - (masterOrder.get(b) ?? 999));
-
-    saveSelectedInstructorsLocal();
-    renderInstructorPicker();
-    renderInstructorSelect();
-    renderActiveView();
-  }
-
-  function checkActiveStatusInstructors() {
-    selectedInstructorNames = allMasterInstructors
-      .filter(i => (i.status || '服務中') === '服務中')
-      .map(i => i.name.trim());
-    if (!selectedInstructorNames.includes(currentInstructor)) {
-      currentInstructor = selectedInstructorNames[0] || '';
-    }
-    saveSelectedInstructorsLocal();
-    renderInstructorPicker();
-    renderInstructorSelect();
-    renderActiveView();
-  }
-
-  function toggleAllInstructors(flag) {
-    if (flag) {
-      selectedInstructorNames = allMasterInstructors.map(i => i.name.trim());
-      if (!selectedInstructorNames.includes(currentInstructor)) {
-        currentInstructor = selectedInstructorNames[0] || '';
-      }
-    } else {
-      selectedInstructorNames = [];
-      currentInstructor = '';
-    }
-    saveSelectedInstructorsLocal();
-    renderInstructorPicker();
-    renderInstructorSelect();
-    renderActiveView();
-  }
-
-  async function checkInstructorsFromCalendar() {
-    const adYear = currentRocYear + 1911;
-    setStatus(`正在查詢 ${currentRocYear} 年度行事曆排課講師...`);
-    try {
-      const { data, error } = await supabaseClient
-        .from('course_schedules')
-        .select('instructor_name')
-        .gte('course_date', `${adYear}-01-01`)
-        .lte('course_date', `${adYear}-12-31`);
-
-      if (error || !data) {
-        setStatus('查詢行事曆講師失敗', true);
-        return;
-      }
-      const calNames = [...new Set(data.map(r => (r.instructor_name || '').trim()).filter(Boolean))];
-      if (calNames.length === 0) {
-        alert(`${currentRocYear} 年度行事曆目前尚無指定講師的排課記錄。`);
-        setStatus('');
-        return;
-      }
-      calNames.forEach(n => {
-        if (!allMasterInstructors.some(m => m.name.trim() === n)) {
-          allMasterInstructors.push({ staff_number: '999', name: n, status: '服務中', hire_type: '' });
-        }
-        if (!selectedInstructorNames.includes(n)) {
-          selectedInstructorNames.push(n);
-        }
-      });
-      const masterOrder = new Map(allMasterInstructors.map((item, i) => [item.name.trim(), i]));
-      selectedInstructorNames.sort((a, b) => (masterOrder.get(a) ?? 999) - (masterOrder.get(b) ?? 999));
-      if (!currentInstructor && selectedInstructorNames.length > 0) {
-        currentInstructor = selectedInstructorNames[0];
-      }
-      saveSelectedInstructorsLocal();
-      renderInstructorPicker();
-      renderInstructorSelect();
-      renderActiveView();
-      setStatus(`已自動勾選 ${calNames.length} 位行事曆有排課講師`);
-    } catch (e) {
-      setStatus('讀取行事曆失敗', true);
-    }
-  }
-
-  function renderInstructorSelect() {
-    const sel = document.getElementById('instructorSelect');
-    const prev = sel.value || currentInstructor;
-    if (selectedInstructorNames.length === 0) {
-      sel.innerHTML = `<option value="">（請先在下方勾選本年度講師）</option>`;
-      currentInstructor = '';
-      return;
-    }
-    sel.innerHTML = selectedInstructorNames.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
-    if ([...sel.options].some(o => o.value === prev)) {
-      sel.value = prev;
-      currentInstructor = prev;
-    } else {
-      currentInstructor = selectedInstructorNames[0];
-      sel.value = currentInstructor;
-    }
-  }
-
-  function onCustomInstructorChange() {
-    const inp = document.getElementById('customInstructorInput');
-    const val = inp.value.trim();
-    if (!val) return;
-    if (!allMasterInstructors.some(m => m.name.trim() === val)) {
-      allMasterInstructors.push({ staff_number: '999', name: val, status: '服務中', hire_type: '' });
-    }
-    if (!selectedInstructorNames.includes(val)) {
-      selectedInstructorNames.push(val);
-    }
-    saveSelectedInstructorsLocal();
-    renderInstructorPicker();
-    renderInstructorSelect();
-    document.getElementById('instructorSelect').value = val;
-    currentInstructor = val;
-    inp.value = '';
-    renderActiveView();
-  }
-
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   }
@@ -618,257 +396,354 @@
     return String(s || '').replace(/"/g, '&quot;');
   }
 
-  function switchViewMode(mode) {
-    currentMode = mode;
-    document.getElementById('tabActual').classList.toggle('active', mode === 'actual');
-    document.getElementById('tabClaim').classList.toggle('active', mode === 'claim');
-    document.getElementById('tabSummary').classList.toggle('active', mode === 'summary');
-
-    document.getElementById('viewActualPanel').style.display = (mode === 'actual') ? 'block' : 'none';
-    document.getElementById('viewClaimPanel').style.display = (mode === 'claim') ? 'block' : 'none';
-    document.getElementById('viewSummaryPanel').style.display = (mode === 'summary') ? 'block' : 'none';
-
-    document.getElementById('singleInstructorControls').style.display = (mode === 'summary') ? 'none' : 'inline-flex';
-    document.getElementById('summaryControls').style.display = (mode === 'summary') ? 'inline-flex' : 'none';
-
-    renderActiveView();
+  function togglePickerPanel(panelId) {
+    const panel = document.getElementById(panelId);
+    document.querySelectorAll('.picker-panel').forEach(p => {
+      if (p.id !== panelId) p.classList.remove('open');
+    });
+    if (panel) panel.classList.toggle('open');
   }
 
-  async function onFilterChange() {
-    const newYear = parseInt(document.getElementById('rocYearSelect').value, 10) || 115;
-    const yearChanged = (newYear !== currentRocYear);
-    currentRocYear = newYear;
-    currentInstructor = document.getElementById('instructorSelect').value || '';
-    if (yearChanged) {
-      await loadYearData();
-    } else {
-      renderActiveView();
+  document.addEventListener('click', (ev) => {
+    if (!ev.target.closest('.picker-dropdown-wrap')) {
+      document.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('open'));
+    }
+  });
+
+  (async function init() {
+    await loadInstructorsFromHr();
+    await onFeeContextChange();
+  })();
+
+  async function loadInstructorsFromHr() {
+    try {
+      const { data, error } = await supabaseClient
+        .from('instructors')
+        .select('id, staff_number, name, status, hire_type')
+        .order('staff_number', { ascending: true })
+        .order('id', { ascending: true });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        masterInstructors = data.filter(r => r.name && r.name.trim() !== '').map(r => ({
+          name: r.name.trim(),
+          status: r.status || '服務中',
+          hire_type: r.hire_type || ''
+        }));
+      }
+    } catch (e) {}
+
+    if (masterInstructors.length === 0) {
+      masterInstructors = [
+        { name: '林熙鈴', status: '服務中', hire_type: '外聘' },
+        { name: '張國堂', status: '服務中', hire_type: '外聘' },
+        { name: '鄧美續', status: '服務中', hire_type: '內聘' },
+        { name: '蔡牡連', status: '服務中', hire_type: '內聘' },
+        { name: '吳佩珊', status: '暫停', hire_type: '外聘' },
+        { name: '黃仲慧', status: '服務中', hire_type: '外聘' },
+        { name: '吳貴英', status: '服務中', hire_type: '' },
+        { name: '詹細珍', status: '服務中', hire_type: '' },
+        { name: '詹益誠', status: '服務中', hire_type: '' }
+      ];
     }
   }
 
-  function getLocalStorageKey() {
-    return `lz_instructor_fee_${currentRocYear}`;
-  }
-  function getSummaryStorageKey() {
-    return `lz_instructor_fee_summary_${currentRocYear}`;
+  function getCheckedInstKey() {
+    return `lz_fee_checked_inst_${currentYear}`;
   }
 
-  async function loadYearData() {
-    setStatus('正在讀取雲端講師鐘點費記錄...');
-    let loadedFromDb = false;
+  function loadCheckedInstructorsForYear() {
+    const saved = localStorage.getItem(getCheckedInstKey());
+    if (saved) {
+      try {
+        const arr = JSON.parse(saved);
+        if (Array.isArray(arr)) {
+          checkedInstructors = arr;
+          return;
+        }
+      } catch (e) {}
+    }
+    checkedInstructors = masterInstructors.filter(i => i.status === '服務中').map(i => i.name);
+    localStorage.setItem(getCheckedInstKey(), JSON.stringify(checkedInstructors));
+  }
+
+  function onInstructorCheckChange(name, isChecked) {
+    if (isChecked) {
+      if (!checkedInstructors.includes(name)) checkedInstructors.push(name);
+      if (!currentFeeInstructor) currentFeeInstructor = name;
+    } else {
+      checkedInstructors = checkedInstructors.filter(n => n !== name);
+      if (currentFeeInstructor === name) currentFeeInstructor = checkedInstructors[0] || '';
+    }
+    const orderMap = new Map(masterInstructors.map((m, idx) => [m.name, idx]));
+    checkedInstructors.sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
+    localStorage.setItem(getCheckedInstKey(), JSON.stringify(checkedInstructors));
+
+    renderPickerPanels();
+    renderFeeInstructorSelect();
+    if (activeTab === 'fee') {
+      loadFeeRecordsForInstructor();
+    } else if (activeTab === 'taxInstructor') {
+      renderTaxInstructorTable();
+    }
+  }
+
+  function renderPickerPanels() {
+    const itemsHtml = masterInstructors.map(m => {
+      const isChk = checkedInstructors.includes(m.name);
+      return `
+        <label class="picker-item">
+          <input type="checkbox" ${isChk ? 'checked' : ''} onchange="onInstructorCheckChange('${escapeAttr(m.name)}', this.checked)">
+          <span>${escapeHtml(m.name)}</span>
+          <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(${escapeHtml(m.status)})</span>
+        </label>
+      `;
+    }).join('');
+
+    const p1 = document.getElementById('feeInstPickerPanel');
+    const p2 = document.getElementById('taxInstPickerPanel');
+    if (p1) p1.innerHTML = itemsHtml;
+    if (p2) p2.innerHTML = itemsHtml;
+
+    const btn2 = document.getElementById('taxInstDropdownBtn');
+    if (btn2) btn2.textContent = `勾選列出講師 (${checkedInstructors.length}) ▾`;
+  }
+
+  function renderFeeInstructorSelect() {
+    const sel = document.getElementById('feeInstructorSelect');
+    if (checkedInstructors.length === 0) {
+      sel.innerHTML = `<option value="">請勾選講師</option>`;
+      currentFeeInstructor = '';
+      return;
+    }
+    const prev = sel.value || currentFeeInstructor;
+    sel.innerHTML = checkedInstructors.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
+    if ([...sel.options].some(o => o.value === prev)) {
+      sel.value = prev;
+      currentFeeInstructor = prev;
+    } else {
+      currentFeeInstructor = checkedInstructors[0];
+      sel.value = currentFeeInstructor;
+    }
+  }
+
+  function renderFeeCourseSelect() {
+    const sel = document.getElementById('feeCourseSelect');
+    sel.innerHTML = feeCourseOptions.map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
+  }
+
+  function addFeeCourseOption() {
+    const inp = document.getElementById('newFeeCourseInput');
+    const val = inp.value.trim();
+    if (!val) return;
+    if (!feeCourseOptions.includes(val)) {
+      feeCourseOptions.push(val);
+      renderFeeCourseSelect();
+    }
+    document.getElementById('feeCourseSelect').value = val;
+    inp.value = '';
+  }
+
+  function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById('tabFee').classList.toggle('active', tab === 'fee');
+    document.getElementById('tabTaxInstructor').classList.toggle('active', tab === 'taxInstructor');
+    document.getElementById('tabTaxTemp').classList.toggle('active', tab === 'taxTemp');
+
+    document.getElementById('panelFee').style.display = (tab === 'fee') ? 'block' : 'none';
+    document.getElementById('panelTaxInstructor').style.display = (tab === 'taxInstructor') ? 'block' : 'none';
+    document.getElementById('panelTaxTemp').style.display = (tab === 'taxTemp') ? 'block' : 'none';
+
+    if (tab === 'fee') {
+      document.getElementById('feeYearSelect').value = String(currentYear);
+      onFeeContextChange();
+    } else if (tab === 'taxInstructor') {
+      document.getElementById('taxYearSelect').value = String(currentYear);
+      onTaxContextChange();
+    } else if (tab === 'taxTemp') {
+      document.getElementById('tempYearSelect').value = String(currentYear);
+      loadTempStaffQuarterData();
+    }
+  }
+
+  async function onFeeContextChange() {
+    currentYear = parseInt(document.getElementById('feeYearSelect').value, 10) || 115;
+    loadCheckedInstructorsForYear();
+    renderPickerPanels();
+    renderFeeInstructorSelect();
+    renderFeeCourseSelect();
+    await loadFeeRecordsForInstructor();
+  }
+
+  function getFeeStorageKey() {
+    return `lz_fee_detail_${currentYear}_${currentFeeInstructor}`;
+  }
+
+  async function loadFeeRecordsForInstructor() {
+    document.getElementById('feeSheetTitle').textContent =
+      `${currentYear}年度 ${currentFeeInstructor || ''} 講師鐘點費用`;
+
+    if (!currentFeeInstructor) {
+      feeRows = [];
+      renderFeeTable();
+      return;
+    }
+
+    let loaded = false;
     try {
       const { data, error } = await supabaseClient
         .from('instructor_fee_records')
         .select('*')
-        .eq('roc_year', currentRocYear)
+        .eq('roc_year', currentYear)
+        .eq('instructor_name', currentFeeInstructor)
+        .eq('entry_type', 'actual')
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true });
-
-      if (!error && Array.isArray(data)) {
-        records = data;
-        loadedFromDb = true;
+      if (!error && Array.isArray(data) && data.length > 0) {
+        feeRows = data.map(r => ({
+          id: r.id,
+          course_name: r.course_name || '',
+          period_text: r.period_text || '',
+          days: r.days ?? '',
+          hours: r.hours ?? '',
+          rate: r.rate ?? '',
+          amount: Number(r.amount || 0),
+          remark: r.remark || ''
+        }));
+        loaded = true;
       }
     } catch (e) {}
 
-    if (!loadedFromDb) {
-      const raw = localStorage.getItem(getLocalStorageKey());
+    if (!loaded) {
+      const raw = localStorage.getItem(getFeeStorageKey());
       if (raw) {
-        try { records = JSON.parse(raw); } catch (e) { records = []; }
+        try { feeRows = JSON.parse(raw); } catch (e) { feeRows = []; }
       } else {
-        records = [];
+        feeRows = [];
       }
     }
-
-    const rawSum = localStorage.getItem(getSummaryStorageKey());
-    if (rawSum) {
-      try { summaryOverrides = JSON.parse(rawSum); } catch (e) { summaryOverrides = {}; }
-    } else {
-      summaryOverrides = {};
-    }
-
-    const savedChecked = localStorage.getItem(getSelectedInstStorageKey());
-    if (savedChecked) {
-      try {
-        selectedInstructorNames = JSON.parse(savedChecked);
-      } catch (e) {
-        selectedInstructorNames = [];
-      }
-    } else {
-      const fromRecords = [...new Set(records.map(r => (r.instructor_name || '').trim()).filter(Boolean))];
-      const activeFromMaster = allMasterInstructors
-        .filter(i => (i.status || '服務中') === '服務中')
-        .map(i => i.name.trim());
-      selectedInstructorNames = [...new Set([...activeFromMaster, ...fromRecords])];
-      saveSelectedInstructorsLocal();
-    }
-
-    records.forEach(r => {
-      const n = (r.instructor_name || '').trim();
-      if (n && !allMasterInstructors.some(m => m.name.trim() === n)) {
-        allMasterInstructors.push({ staff_number: '999', name: n, status: '服務中', hire_type: '' });
-      }
-    });
-
-    const masterOrder = new Map(allMasterInstructors.map((item, i) => [item.name.trim(), i]));
-    selectedInstructorNames.sort((a, b) => (masterOrder.get(a) ?? 999) - (masterOrder.get(b) ?? 999));
-
-    renderInstructorPicker();
-    renderInstructorSelect();
-
-    setStatus(loadedFromDb ? `已同步 ${currentRocYear} 年度雲端資料` : `已載入 ${currentRocYear} 年度本機資料`);
-    renderActiveView();
+    renderFeeTable();
   }
 
-  function getFilteredInstructorRows(entryType) {
-    const mVal = document.getElementById('monthFilterSelect').value;
-    return records.filter(r => {
-      if (Number(r.roc_year) !== Number(currentRocYear)) return false;
-      if (r.instructor_name !== currentInstructor) return false;
-      if (r.entry_type !== entryType) return false;
-      if (mVal && mVal !== 'ALL') {
-        const mPrefix = `${mVal}/`;
-        const pText = String(r.period_text || '');
-        if (!pText.startsWith(mPrefix) && !pText.includes(`、${mVal}/`) && !pText.includes(`-${mVal}/`)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }
-
-  function calcRowAmount(days, hours, rate) {
+  function calcFeeAmount(days, hours, rate) {
     const d = Number(days || 0);
     const h = Number(hours || 0);
     const r = Number(rate || 0);
-    if (!d && !h && !r) return 0;
-    const effectiveHours = (h > 0 && d > 0) ? (d * h) : (d > 0 ? d : h);
-    return Math.round(effectiveHours * r);
+    if (!d && !r) return 0;
+    const mult = (h > 0 && d > 0) ? (d * h) : d;
+    return Math.round(mult * r);
   }
 
-  function addRow() {
-    if (!currentInstructor) { alert('請先在上方勾選至少一位講師！'); return; }
-    const entryType = (currentMode === 'claim') ? 'claim' : 'actual';
-    const newItem = {
-      id: 'tmp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-      roc_year: currentRocYear,
-      instructor_name: currentInstructor,
-      entry_type: entryType,
-      plan_name: entryType === 'claim' ? '關懷' : '一般',
-      course_name: '',
+  function addFeeRowFromToolbar() {
+    if (!currentFeeInstructor) { alert('請先勾選講師'); return; }
+    const courseName = document.getElementById('feeCourseSelect').value || '關懷課程';
+    feeRows.push({
+      id: 'row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      course_name: courseName,
       period_text: '',
       days: '',
-      hours: '',
+      hours: 1,
       rate: '',
       amount: 0,
-      remark: '',
-      sort_order: records.length + 1
-    };
-    records.push(newItem);
-    renderActiveView();
+      remark: ''
+    });
+    renderFeeTable();
   }
 
-  function deleteRowByTempOrId(rowId) {
-    records = records.filter(r => String(r.id) !== String(rowId));
-    renderActiveView();
-  }
-
-  function onRowFieldChange(rowId, field, value) {
-    const item = records.find(r => String(r.id) === String(rowId));
+  function onFeeFieldChange(rowId, field, value) {
+    const item = feeRows.find(r => String(r.id) === String(rowId));
     if (!item) return;
     item[field] = value;
     if (['days', 'hours', 'rate'].includes(field)) {
-      const hasAnyNum = String(item.days ?? '').trim() !== '' || String(item.hours ?? '').trim() !== '' || String(item.rate ?? '').trim() !== '';
-      item.amount = hasAnyNum ? calcRowAmount(item.days, item.hours, item.rate) : 0;
+      const hasNum = String(item.days ?? '').trim() !== '' && String(item.rate ?? '').trim() !== '';
+      item.amount = hasNum ? calcFeeAmount(item.days, item.hours, item.rate) : 0;
     }
-    renderKpiAndTotalsOnly();
+    renderFeeTable();
   }
 
-  async function syncFromCalendar() {
-    if (!currentInstructor) { alert('請先在上方勾選至少一位講師！'); return; }
-    const adYear = currentRocYear + 1911;
-    setStatus('正在讀取行事曆課程...');
+  function deleteFeeRow(rowId) {
+    feeRows = feeRows.filter(r => String(r.id) !== String(rowId));
+    renderFeeTable();
+  }
+
+  function onCalendarModeToggle() {
+    const checked = document.getElementById('useCalendarActualChk').checked;
+    document.getElementById('calendarCalcControls').style.display = checked ? 'inline-flex' : 'none';
+  }
+
+  async function calculateFromCalendar() {
+    if (!currentFeeInstructor) { alert('請先選擇講師'); return; }
+    const adYear = currentYear + 1911;
+    const defHours = Number(document.getElementById('calDefaultHoursInput').value || 1);
+    const defRate = Number(document.getElementById('calDefaultRateInput').value || 0);
+    setStatus('讀取行事曆排課資料...');
+
     try {
       const { data, error } = await supabaseClient
         .from('course_schedules')
         .select('*')
         .gte('course_date', `${adYear}-01-01`)
         .lte('course_date', `${adYear}-12-31`)
-        .eq('instructor_name', currentInstructor)
+        .eq('instructor_name', currentFeeInstructor)
         .order('course_date', { ascending: true });
 
       if (error || !data || data.length === 0) {
-        alert(`查無 ${currentRocYear} 年行事曆中「${currentInstructor}」的排課資料，可直接點擊「＋ 新增一筆課程記錄」輸入。`);
+        alert(`行事曆中查無「${currentFeeInstructor}」${currentYear} 年排課記錄`);
         setStatus('');
         return;
       }
 
-      const grouped = new Map();
+      const map = new Map();
       data.forEach(c => {
-        const pType = c.plan_type || '關懷';
         const cName = c.course_name || '課程';
-        const key = `${pType}__${cName}`;
-        if (!grouped.has(key)) grouped.set(key, { plan_type: pType, course_name: cName, dates: [] });
-        const parts = String(c.course_date || '').split('-');
-        if (parts.length === 3) {
-          grouped.get(key).dates.push(`${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}`);
-        }
+        if (!map.has(cName)) map.set(cName, []);
+        const p = String(c.course_date || '').split('-');
+        if (p.length === 3) map.get(cName).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
       });
 
-      const entryType = (currentMode === 'claim') ? 'claim' : 'actual';
-      grouped.forEach(g => {
-        const periodStr = g.dates.length > 1
-          ? `${g.dates[0]}-${g.dates[g.dates.length - 1]}`
-          : (g.dates[0] || '');
-        records.push({
-          id: 'tmp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-          roc_year: currentRocYear,
-          instructor_name: currentInstructor,
-          entry_type: entryType,
-          plan_name: g.plan_type,
-          course_name: g.course_name,
-          period_text: periodStr,
-          days: g.dates.length,
-          hours: 1,
-          rate: 0,
-          amount: 0,
-          remark: '自年度行事曆帶入',
-          sort_order: records.length + 1
+      feeRows = [];
+      map.forEach((dates, cName) => {
+        const days = dates.length;
+        const period = dates.length > 1 ? `${dates[0]}-${dates[dates.length - 1]}` : (dates[0] || '');
+        feeRows.push({
+          id: 'cal_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+          course_name: cName,
+          period_text: period,
+          days,
+          hours: defHours,
+          rate: defRate,
+          amount: calcFeeAmount(days, defHours, defRate),
+          remark: '行事曆自動計算'
         });
       });
 
-      setStatus(`已帶入 ${grouped.size} 筆「${currentInstructor}」課程記錄`);
-      renderActiveView();
+      setStatus(`已依行事曆計算 ${feeRows.length} 筆課程鐘點費`);
+      renderFeeTable();
     } catch (e) {
-      alert('帶入行事曆失敗：' + e.message);
+      setStatus('讀取行事曆失敗', true);
     }
   }
 
-  async function saveCurrentInstructorRecords() {
-    if (!currentInstructor) { alert('請先在上方勾選至少一位講師！'); return; }
-    localStorage.setItem(getLocalStorageKey(), JSON.stringify(records));
-
-    const instRows = records.filter(
-      r => Number(r.roc_year) === Number(currentRocYear) && r.instructor_name === currentInstructor
-    );
-
+  async function saveFeeRecords() {
+    if (!currentFeeInstructor) { alert('請先選擇講師'); return; }
+    localStorage.setItem(getFeeStorageKey(), JSON.stringify(feeRows));
     try {
       await supabaseClient
         .from('instructor_fee_records')
         .delete()
-        .eq('roc_year', currentRocYear)
-        .eq('instructor_name', currentInstructor);
+        .eq('roc_year', currentYear)
+        .eq('instructor_name', currentFeeInstructor)
+        .eq('entry_type', 'actual');
 
-      if (instRows.length > 0) {
-        const payload = instRows.map((r, idx) => ({
-          roc_year: Number(currentRocYear),
-          instructor_name: currentInstructor,
-          entry_type: r.entry_type || 'actual',
-          plan_name: r.plan_name || null,
+      if (feeRows.length > 0) {
+        const payload = feeRows.map((r, idx) => ({
+          roc_year: currentYear,
+          instructor_name: currentFeeInstructor,
+          entry_type: 'actual',
+          plan_name: null,
           course_name: r.course_name || '',
           period_text: r.period_text || '',
-          days: r.days === '' || r.days === null || r.days === undefined ? null : Number(r.days),
-          hours: r.hours === '' || r.hours === null || r.hours === undefined ? null : Number(r.hours),
-          rate: r.rate === '' || r.rate === null || r.rate === undefined ? null : Number(r.rate),
+          days: r.days === '' ? null : Number(r.days),
+          hours: r.hours === '' ? null : Number(r.hours),
+          rate: r.rate === '' ? null : Number(r.rate),
           amount: Number(r.amount || 0),
           remark: r.remark || '',
           sort_order: idx + 1
@@ -876,281 +751,279 @@
         const { error } = await supabaseClient.from('instructor_fee_records').insert(payload);
         if (error) throw error;
       }
-      setStatus(`已儲存 ${currentRocYear} 年「${currentInstructor}」講師鐘點費記錄`);
+      setStatus(`已儲存 ${currentYear} 年 ${currentFeeInstructor} 鐘點費`);
     } catch (e) {
-      setStatus(`已存至本機（雲端資料表尚未建立或連線中）`, true);
-    }
-    renderActiveView();
-  }
-
-  function getInstructorClaimTotal(name) {
-    const claimRows = records.filter(
-      r => Number(r.roc_year) === Number(currentRocYear) && r.instructor_name === name && r.entry_type === 'claim'
-    );
-    return claimRows.reduce((acc, r) => acc + Number(r.amount || 0), 0);
-  }
-
-  function getInstructorActualTotal(name) {
-    const actRows = records.filter(
-      r => Number(r.roc_year) === Number(currentRocYear) && r.instructor_name === name && r.entry_type === 'actual'
-    );
-    return actRows.reduce((acc, r) => acc + Number(r.amount || 0), 0);
-  }
-
-  function renderKpiAndTotalsOnly() {
-    const actualTotalAll = records
-      .filter(r => Number(r.roc_year) === Number(currentRocYear) && r.entry_type === 'actual')
-      .reduce((s, r) => s + Number(r.amount || 0), 0);
-
-    const claimTotalAll = records
-      .filter(r => Number(r.roc_year) === Number(currentRocYear) && r.entry_type === 'claim')
-      .reduce((s, r) => s + Number(r.amount || 0), 0);
-
-    const instActual = getInstructorActualTotal(currentInstructor);
-    const instClaim = getInstructorClaimTotal(currentInstructor);
-
-    document.getElementById('kpiGrid').innerHTML = `
-      <div class="kpi-box actual-box">
-        <div class="kpi-label">1. 實際鐘點費（${escapeHtml(currentInstructor)}／全年度）</div>
-        <div class="kpi-val">${fmtNum(instActual)} 元 <span style="font-size:0.82rem; font-weight:normal; color:#475569;">（全師資合計 ${fmtNum(actualTotalAll)} 元）</span></div>
-      </div>
-      <div class="kpi-box claim-box">
-        <div class="kpi-label">2. 各計畫核銷講師領據金額（${escapeHtml(currentInstructor)}／全年度）</div>
-        <div class="kpi-val">${fmtNum(instClaim)} 元 <span style="font-size:0.82rem; font-weight:normal; color:#475569;">（全師資合計 ${fmtNum(claimTotalAll)} 元）</span></div>
-      </div>
-      <div class="kpi-box tax-box">
-        <div class="kpi-label">個人所得稅累計金額（${escapeHtml(currentInstructor)} 核銷領據累計）</div>
-        <div class="kpi-val">${fmtNum(instClaim)} 元</div>
-        <div style="margin-top:4px;">
-          ${instClaim >= 100000
-            ? `<span class="tax-alert-100k">已達／超過 100,000 元門檻</span>`
-            : `<span class="tax-ok-100k">未滿 100,000 元（距 10 萬尚差 ${fmtNum(100000 - instClaim)} 元）</span>`}
-        </div>
-      </div>
-    `;
-
-    // 更新目前表格的總計列
-    if (currentMode === 'actual') {
-      const rows = getFilteredInstructorRows('actual');
-      const totalDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
-      const totalAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
-      const dCell = document.getElementById('actualTotalDays');
-      const aCell = document.getElementById('actualTotalAmount');
-      if (dCell) dCell.textContent = totalDays > 0 ? fmtNum(totalDays) : '';
-      if (aCell) aCell.textContent = fmtNum(totalAmt);
-    } else if (currentMode === 'claim') {
-      const rows = getFilteredInstructorRows('claim');
-      const totalDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
-      const totalAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
-      const dCell = document.getElementById('claimTotalDays');
-      const aCell = document.getElementById('claimTotalAmount');
-      if (dCell) dCell.textContent = totalDays > 0 ? fmtNum(totalDays) : '';
-      if (aCell) aCell.textContent = fmtNum(totalAmt);
+      setStatus('已儲存至本機');
     }
   }
 
-  function renderActiveView() {
-    renderKpiAndTotalsOnly();
-    if (currentMode === 'actual') {
-      renderActualTable();
-    } else if (currentMode === 'claim') {
-      renderClaimTable();
-    } else {
-      renderSummaryTable();
-    }
-  }
+  function renderFeeTable() {
+    const tbody = document.getElementById('feeTableBody');
+    const totalDays = feeRows.reduce((s, r) => s + (Number(r.days) || 0), 0);
+    const totalAmt = feeRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
-  function renderActualTable() {
-    document.getElementById('actualSheetTitle').textContent = `${currentRocYear}年度 ${currentInstructor} 講師鐘點費`;
-    const rows = getFilteredInstructorRows('actual');
-    const tbody = document.getElementById('actualTableBody');
-
-    const totalDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
-    const totalAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
-
-    let html = rows.map(r => {
-      const hasAmount = (Number(r.amount) > 0) || (String(r.days ?? '').trim() !== '' && String(r.rate ?? '').trim() !== '');
-      const amtDisplay = hasAmount ? fmtNum(r.amount) : '—';
-      return `
-        <tr>
-          <td><input type="text" value="${escapeAttr(r.course_name)}" oninput="onRowFieldChange('${r.id}', 'course_name', this.value)" placeholder="如：關懷課程"></td>
-          <td><input type="text" value="${escapeAttr(r.period_text)}" oninput="onRowFieldChange('${r.id}', 'period_text', this.value)" placeholder="如：1/5-4/13"></td>
-          <td><input type="number" class="num-input" value="${r.days ?? ''}" oninput="onRowFieldChange('${r.id}', 'days', this.value)" placeholder=""></td>
-          <td><input type="number" class="num-input" value="${r.hours ?? ''}" oninput="onRowFieldChange('${r.id}', 'hours', this.value)" placeholder=""></td>
-          <td><input type="number" class="num-input" value="${r.rate ?? ''}" oninput="onRowFieldChange('${r.id}', 'rate', this.value)" placeholder=""></td>
-          <td class="num-col" style="font-weight:bold;">${amtDisplay}</td>
-          <td><input type="text" value="${escapeAttr(r.remark)}" oninput="onRowFieldChange('${r.id}', 'remark', this.value)" placeholder="如：已匯款"></td>
-          <td class="center-col no-print">
-            <button type="button" class="btn btn-danger btn-sm" onclick="deleteRowByTempOrId('${r.id}')">刪除</button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    let html = feeRows.map(r => `
+      <tr>
+        <td><input type="text" value="${escapeAttr(r.course_name)}" oninput="onFeeFieldChange('${r.id}', 'course_name', this.value)"></td>
+        <td><input type="text" value="${escapeAttr(r.period_text)}" oninput="onFeeFieldChange('${r.id}', 'period_text', this.value)" placeholder="如：1/5-4/13"></td>
+        <td><input type="number" class="num-input" value="${r.days ?? ''}" oninput="onFeeFieldChange('${r.id}', 'days', this.value)"></td>
+        <td><input type="number" class="num-input" value="${r.hours ?? ''}" oninput="onFeeFieldChange('${r.id}', 'hours', this.value)"></td>
+        <td><input type="number" class="num-input" value="${r.rate ?? ''}" oninput="onFeeFieldChange('${r.id}', 'rate', this.value)"></td>
+        <td class="num-col" style="font-weight:bold;">${fmtNum(r.amount)}</td>
+        <td><input type="text" value="${escapeAttr(r.remark)}" oninput="onFeeFieldChange('${r.id}', 'remark', this.value)"></td>
+        <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteFeeRow('${r.id}')">刪除</button></td>
+      </tr>
+    `).join('');
 
     html += `
       <tr class="total-row">
         <td class="center-col">總計</td>
         <td></td>
-        <td class="num-col" id="actualTotalDays">${totalDays > 0 ? fmtNum(totalDays) : ''}</td>
+        <td class="num-col">${totalDays > 0 ? fmtNum(totalDays) : ''}</td>
         <td></td>
         <td></td>
-        <td class="num-col" id="actualTotalAmount">${fmtNum(totalAmt)}</td>
+        <td class="num-col">${fmtNum(totalAmt)}</td>
         <td></td>
         <td class="no-print"></td>
       </tr>
     `;
-
     tbody.innerHTML = html;
   }
 
-  function renderClaimTable() {
-    document.getElementById('claimSheetTitle').textContent = `${currentRocYear}年度 ${currentInstructor} 各計畫核銷講師領據金額（個人所得稅累計）`;
-    const rows = getFilteredInstructorRows('claim');
-    const tbody = document.getElementById('claimTableBody');
-
-    const totalDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
-    const totalAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
-
-    let html = rows.map(r => {
-      const hasAmount = (Number(r.amount) > 0) || (String(r.days ?? '').trim() !== '' && String(r.rate ?? '').trim() !== '');
-      const amtDisplay = hasAmount ? fmtNum(r.amount) : '—';
-      return `
-        <tr>
-          <td>
-            <select onchange="onRowFieldChange('${r.id}', 'plan_name', this.value)">
-              ${['關懷', '長照', '延緩', '多元', '伯公', '樂齡'].map(p =>
-                `<option value="${p}" ${r.plan_name === p ? 'selected' : ''}>${p}</option>`
-              ).join('')}
-            </select>
-          </td>
-          <td><input type="text" value="${escapeAttr(r.course_name)}" oninput="onRowFieldChange('${r.id}', 'course_name', this.value)" placeholder="課程名稱"></td>
-          <td><input type="text" value="${escapeAttr(r.period_text)}" oninput="onRowFieldChange('${r.id}', 'period_text', this.value)" placeholder="如：1/5-4/13"></td>
-          <td><input type="number" class="num-input" value="${r.days ?? ''}" oninput="onRowFieldChange('${r.id}', 'days', this.value)" placeholder=""></td>
-          <td><input type="number" class="num-input" value="${r.hours ?? ''}" oninput="onRowFieldChange('${r.id}', 'hours', this.value)" placeholder=""></td>
-          <td><input type="number" class="num-input" value="${r.rate ?? ''}" oninput="onRowFieldChange('${r.id}', 'rate', this.value)" placeholder=""></td>
-          <td class="num-col" style="font-weight:bold;">${amtDisplay}</td>
-          <td><input type="text" value="${escapeAttr(r.remark)}" oninput="onRowFieldChange('${r.id}', 'remark', this.value)" placeholder="核銷備註"></td>
-          <td class="center-col no-print">
-            <button type="button" class="btn btn-danger btn-sm" onclick="deleteRowByTempOrId('${r.id}')">刪除</button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    html += `
-      <tr class="total-row">
-        <td class="center-col">總計</td>
-        <td></td>
-        <td></td>
-        <td class="num-col" id="claimTotalDays">${totalDays > 0 ? fmtNum(totalDays) : ''}</td>
-        <td></td>
-        <td></td>
-        <td class="num-col" id="claimTotalAmount">${fmtNum(totalAmt)}</td>
-        <td style="font-size:0.84rem;">個人所得稅累計：${fmtNum(totalAmt)} 元</td>
-        <td class="no-print"></td>
-      </tr>
-    `;
-
-    tbody.innerHTML = html;
+  // 2. 個人所得稅計算-講師
+  function getTaxCoursesKey() {
+    return `lz_tax_courses_${currentYear}`;
+  }
+  function getTaxMatrixKey() {
+    return `lz_tax_matrix_${currentYear}`;
   }
 
-  function getSummaryCellValue(instructorName, rowKey) {
-    const k = `${instructorName}__${rowKey}`;
-    if (k in summaryOverrides) return summaryOverrides[k];
+  async function onTaxContextChange() {
+    currentYear = parseInt(document.getElementById('taxYearSelect').value, 10) || 115;
+    loadCheckedInstructorsForYear();
+    renderPickerPanels();
 
-    // 若未手動覆蓋，自動從 claim 記錄中按計畫加總
-    if (['延緩1期', '延緩2期', '多元', '伯公', '關懷'].includes(rowKey)) {
-      const sum = records
-        .filter(r =>
-          Number(r.roc_year) === Number(currentRocYear) &&
-          r.instructor_name === instructorName &&
-          r.entry_type === 'claim' &&
-          (r.plan_name === rowKey || String(r.course_name || '').includes(rowKey))
-        )
-        .reduce((acc, r) => acc + Number(r.amount || 0), 0);
-      return sum > 0 ? sum : '';
+    const savedC = localStorage.getItem(getTaxCoursesKey());
+    if (savedC) {
+      try { taxCourseOptions = JSON.parse(savedC); } catch (e) {}
     }
-    return '';
-  }
+    renderTaxCourseChips();
 
-  function onSummaryCellInput(instructorName, rowKey, val, isText) {
-    const k = `${instructorName}__${rowKey}`;
-    if (isText) {
-      summaryOverrides[k] = val;
+    const savedM = localStorage.getItem(getTaxMatrixKey());
+    if (savedM) {
+      try { taxMatrixRows = JSON.parse(savedM); } catch (e) { taxMatrixRows = []; }
     } else {
-      const cleaned = String(val).replace(/,/g, '').trim();
-      summaryOverrides[k] = cleaned === '' ? '' : Number(cleaned);
+      taxMatrixRows = [];
     }
-    localStorage.setItem(getSummaryStorageKey(), JSON.stringify(summaryOverrides));
-    renderSummaryTable();
+    renderTaxInstructorTable();
   }
 
-  function saveSummaryMatrix() {
-    localStorage.setItem(getSummaryStorageKey(), JSON.stringify(summaryOverrides));
-    setStatus(`已儲存 ${currentRocYear} 年度講師鐘點費統計表`);
-    renderSummaryTable();
+  function renderTaxCourseChips() {
+    const wrap = document.getElementById('taxCourseChipList');
+    wrap.innerHTML = taxCourseOptions.map((c, idx) => `
+      <span class="course-tag">
+        <span>${escapeHtml(c)}</span>
+        <button type="button" onclick="removeTaxCourseOption(${idx})" title="移除">×</button>
+      </span>
+    `).join('');
   }
 
-  function renderSummaryTable() {
-    document.getElementById('summarySheetTitle').textContent = `${currentRocYear}年度講師鐘點費統計`;
-    const cols = selectedInstructorNames;
+  function addTaxCourseOption() {
+    const inp = document.getElementById('newTaxCourseInput');
+    const val = inp.value.trim();
+    if (!val) return;
+    if (!taxCourseOptions.includes(val)) {
+      taxCourseOptions.push(val);
+      localStorage.setItem(getTaxCoursesKey(), JSON.stringify(taxCourseOptions));
+      renderTaxCourseChips();
+    }
+    if (taxMatrixRows.length > 0) {
+      taxMatrixRows[taxMatrixRows.length - 1].course_name = val;
+      renderTaxInstructorTable();
+    }
+    inp.value = '';
+  }
+
+  function removeTaxCourseOption(idx) {
+    taxCourseOptions.splice(idx, 1);
+    localStorage.setItem(getTaxCoursesKey(), JSON.stringify(taxCourseOptions));
+    renderTaxCourseChips();
+    renderTaxInstructorTable();
+  }
+
+  function addTaxMatrixRow() {
+    taxMatrixRows.push({
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      course_name: taxCourseOptions[0] || '',
+      values: {}
+    });
+    renderTaxInstructorTable();
+  }
+
+  function deleteTaxMatrixRow(rowId) {
+    taxMatrixRows = taxMatrixRows.filter(r => String(r.id) !== String(rowId));
+    renderTaxInstructorTable();
+  }
+
+  function onTaxRowCourseChange(rowId, val) {
+    const row = taxMatrixRows.find(r => String(r.id) === String(rowId));
+    if (row) row.course_name = val;
+  }
+
+  function onTaxCellChange(rowId, instName, val) {
+    const row = taxMatrixRows.find(r => String(r.id) === String(rowId));
+    if (!row) return;
+    const cleaned = String(val).replace(/,/g, '').trim();
+    row.values[instName] = cleaned;
+    renderTaxInstructorTable();
+  }
+
+  function saveTaxInstructorData() {
+    localStorage.setItem(getTaxCoursesKey(), JSON.stringify(taxCourseOptions));
+    localStorage.setItem(getTaxMatrixKey(), JSON.stringify(taxMatrixRows));
+    setStatus(`已儲存 ${currentYear} 年度個人所得稅計算-講師資料`);
+  }
+
+  function renderTaxInstructorTable() {
+    document.getElementById('taxInstTitle').textContent = `${currentYear}年度講師鐘點費統計`;
+    const cols = checkedInstructors;
+
+    const headEl = document.getElementById('taxInstHead');
+    const bodyEl = document.getElementById('taxInstBody');
+
     if (cols.length === 0) {
-      document.getElementById('summaryTableHead').innerHTML = '';
-      document.getElementById('summaryTableBody').innerHTML =
-        '<tr><td class="center-col" style="padding:18px; color:#64748b;">請先在上方「勾選本年度要建立鐘點費資料的講師」區塊勾選授課老師。</td></tr>';
+      headEl.innerHTML = '';
+      bodyEl.innerHTML = '<tr><td class="center-col" style="padding:16px; color:#64748b;">請先勾選要列出的講師</td></tr>';
       return;
     }
 
-    const thead = document.getElementById('summaryTableHead');
-    thead.innerHTML = `
+    headEl.innerHTML = `
       <tr>
-        <th style="width:130px;">計畫／項目</th>
+        <th style="width:160px;">課程名稱</th>
+        ${cols.map(n => `<th>${escapeHtml(n)}</th>`).join('')}
+        <th class="no-print" style="width:70px;">操作</th>
+      </tr>
+    `;
+
+    const colSums = {};
+    cols.forEach(n => { colSums[n] = 0; });
+
+    const rowsHtml = taxMatrixRows.map(row => {
+      const courseOptsHtml = taxCourseOptions.map(c =>
+        `<option value="${escapeAttr(c)}" ${row.course_name === c ? 'selected' : ''}>${escapeHtml(c)}</option>`
+      ).join('');
+
+      const tds = cols.map(n => {
+        const raw = row.values ? (row.values[n] ?? '') : '';
+        const numVal = Number(String(raw).replace(/,/g, ''));
+        if (String(raw).trim() !== '' && Number.isFinite(numVal) && row.course_name !== '上課次數') {
+          colSums[n] += numVal;
+        }
+        const disp = (String(raw).trim() !== '' && Number.isFinite(numVal)) ? fmtNum(numVal) : raw;
+        return `<td><input type="text" class="num-input" value="${escapeAttr(disp)}" onchange="onTaxCellChange('${row.id}', '${escapeAttr(n)}', this.value)"></td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td><select onchange="onTaxRowCourseChange('${row.id}', this.value)">${courseOptsHtml}</select></td>
+          ${tds}
+          <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteTaxMatrixRow('${row.id}')">刪除</button></td>
+        </tr>
+      `;
+    }).join('');
+
+    const totalTds = cols.map(n => `<td class="num-col">${fmtNum(colSums[n])}</td>`).join('');
+
+    bodyEl.innerHTML = `
+      ${rowsHtml}
+      <tr class="total-row">
+        <td class="center-col">核銷金額</td>
+        ${totalTds}
+        <td class="no-print"></td>
+      </tr>
+    `;
+  }
+
+  // 3. 個人所得稅計算_臨時人員（連動關懷核銷 3. 臨時人員時數記錄，每季累計：關懷1-3月、關懷4-6月、關懷7-9月、關懷10-12月）
+  async function loadTempStaffQuarterData() {
+    currentYear = parseInt(document.getElementById('tempYearSelect').value, 10) || 115;
+    document.getElementById('tempTaxTitle').textContent = `${currentYear}年度廚房臨時人員`;
+    setStatus('讀取關懷臨時人員時數記錄...');
+
+    try {
+      const [staffRes, hoursRes] = await Promise.all([
+        supabaseClient.from('temp_staff').select('name, status').order('staff_number', { ascending: true }),
+        supabaseClient.from('temp_staff_hours').select('*').eq('roc_year', currentYear)
+      ]);
+      tempHoursRecords = hoursRes.data || [];
+      const dbStaffNames = (staffRes.data || []).map(s => (s.name || '').trim()).filter(Boolean);
+      const recStaffNames = [...new Set(tempHoursRecords.map(r => (r.staff_name || '').trim()).filter(Boolean))];
+      tempStaffList = [...new Set([...dbStaffNames, ...recStaffNames])];
+      if (tempStaffList.length === 0) {
+        tempStaffList = ['施汶浬', '徐邱鳳嬌', '邱鳳廷', '張瑞合', '邱和妹'];
+      }
+      setStatus(`已同步 ${currentYear} 年度關懷臨時人員時數`);
+    } catch (e) {
+      setStatus('讀取臨時人員資料失敗', true);
+    }
+
+    renderTempStaffQuarterTable();
+  }
+
+  function calcTempPayAmount(rec) {
+    const days = Number(rec.work_days || 0);
+    const hrs = Number(rec.hours_per_day || 3);
+    const rate = Number(rec.hourly_rate || 196);
+    return Math.round(days * hrs * rate);
+  }
+
+  function renderTempStaffQuarterTable() {
+    const headEl = document.getElementById('tempTaxHead');
+    const bodyEl = document.getElementById('tempTaxBody');
+    const cols = tempStaffList;
+
+    headEl.innerHTML = `
+      <tr>
+        <th style="width:140px;">關懷季別</th>
         ${cols.map(n => `<th>${escapeHtml(n)}</th>`).join('')}
       </tr>
     `;
 
-    const tbody = document.getElementById('summaryTableBody');
-    let bodyHtml = '';
+    const quarters = [
+      { label: '關懷1-3月', months: [1, 2, 3] },
+      { label: '關懷4-6月', months: [4, 5, 6] },
+      { label: '關懷7-9月', months: [7, 8, 9] },
+      { label: '關懷10-12月', months: [10, 11, 12] }
+    ];
 
-    SUMMARY_ROWS.forEach(rowDef => {
-      let tds = `<td class="center-col" style="font-weight:bold;">${escapeHtml(rowDef.label)}</td>`;
-      cols.forEach(name => {
-        const rawVal = getSummaryCellValue(name, rowDef.key);
-        if (rowDef.isText) {
-          tds += `<td><input type="text" value="${escapeAttr(rawVal)}" onchange="onSummaryCellInput('${escapeAttr(name)}', '${rowDef.key}', this.value, true)"></td>`;
-        } else {
-          const dispVal = rawVal === '' ? '' : fmtNum(rawVal);
-          tds += `<td><input type="text" class="num-input" value="${escapeAttr(dispVal)}" onchange="onSummaryCellInput('${escapeAttr(name)}', '${rowDef.key}', this.value, false)"></td>`;
-        }
-      });
-      bodyHtml += `<tr>${tds}</tr>`;
-    });
+    const colGrandTotals = {};
+    cols.forEach(n => { colGrandTotals[n] = 0; });
 
-    // 核銷金額列（優先使用記錄中的核銷領據總計，若無記錄則加總上方各計畫數字）
-    let claimRowTds = `<td class="center-col">核銷金額</td>`;
-    const claimTotalsByInst = {};
-    cols.forEach(name => {
-      const recClaim = getInstructorClaimTotal(name);
-      const matrixSum = ['延緩1期', '延緩2期', '多元', '伯公', '關懷'].reduce((acc, rk) => {
-        const v = getSummaryCellValue(name, rk);
-        return acc + (Number(v) || 0);
-      }, 0);
-      const finalClaim = recClaim > 0 ? recClaim : matrixSum;
-      claimTotalsByInst[name] = finalClaim;
-      claimRowTds += `<td class="num-col">${finalClaim > 0 ? fmtNum(finalClaim) : ''}</td>`;
-    });
-    bodyHtml += `<tr class="total-row">${claimRowTds}</tr>`;
+    const rowsHtml = quarters.map(q => {
+      const tds = cols.map(name => {
+        const sum = tempHoursRecords
+          .filter(r => (r.staff_name || '').trim() === name && q.months.includes(Number(r.month)))
+          .reduce((acc, r) => acc + calcTempPayAmount(r), 0);
+        colGrandTotals[name] += sum;
+        return `<td class="num-col">${sum > 0 ? fmtNum(sum) : ''}</td>`;
+      }).join('');
+      return `
+        <tr>
+          <td class="center-col" style="font-weight:bold;">${q.label}</td>
+          ${tds}
+        </tr>
+      `;
+    }).join('');
 
-    // 個人所得稅累計／10萬門檻檢核列
-    let taxRowTds = `<td class="center-col">所得稅累計</td>`;
-    cols.forEach(name => {
-      const amt = claimTotalsByInst[name] || 0;
-      const isOver = amt >= 100000;
-      taxRowTds += `<td class="num-col" style="color:${isOver ? '#b91c1c' : '#1e293b'}; font-weight:bold;">${amt > 0 ? fmtNum(amt) : '0'}${isOver ? ' (逾10萬)' : ''}</td>`;
-    });
-    bodyHtml += `<tr>${taxRowTds}</tr>`;
+    const totalTds = cols.map(n => `<td class="num-col">${colGrandTotals[n] > 0 ? fmtNum(colGrandTotals[n]) : ''}</td>`).join('');
 
-    tbody.innerHTML = bodyHtml;
+    bodyEl.innerHTML = `
+      ${rowsHtml}
+      <tr class="total-row">
+        <td class="center-col">核銷金額</td>
+        ${totalTds}
+      </tr>
+    `;
   }
 </script>
 
