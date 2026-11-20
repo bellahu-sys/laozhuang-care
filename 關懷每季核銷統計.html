@@ -722,45 +722,6 @@
     copyTextToClipboard(zh, `已複製實際支出大寫國字金額：${zh}`);
   }
 
-    const tbody = document.getElementById('assessmentBody');
-    let sumApproved = 0, sumSubsidy = 0, sumSelf = 0, sumActual = 0;
-
-    let html = assessmentItems.map((it, idx) => {
-      const sp = calcSplit(it.approved, it.actualTotal);
-      sumApproved += sp.approved;
-      sumSubsidy += sp.subsidySpent;
-      sumSelf += sp.selfSpent;
-      sumActual += sp.actualTotal;
-
-      return `
-        <tr>
-          <td style="font-weight:bold;">${it.label}</td>
-          <td><input type="text" class="num-input" value="${fmtNum(sp.approved)}" onchange="onAssessmentInput(${idx}, 'approved', this.value)"></td>
-          <td class="num-col" style="font-weight:bold; color:#0f766e;">${fmtNum(sp.subsidySpent)}</td>
-          <td class="num-col" style="font-weight:bold; color:${sp.selfSpent > 0 ? '#b91c1c' : '#475569'};">${fmtNum(sp.selfSpent)}</td>
-          <td><input type="text" class="num-input" value="${fmtNum(sp.actualTotal)}" onchange="onAssessmentInput(${idx}, 'actualTotal', this.value)"></td>
-          <td class="center-col">
-            <button type="button" class="btn btn-outline btn-sm" onclick="copySingleRow(${idx})">複製此列</button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    html += `
-      <tr class="total-row">
-        <td class="center-col">合計</td>
-        <td class="num-col">${fmtNum(sumApproved)}</td>
-        <td class="num-col">${fmtNum(sumSubsidy)}</td>
-        <td class="num-col">${fmtNum(sumSelf)}</td>
-        <td class="num-col">${fmtNum(sumActual)}</td>
-        <td class="center-col">
-          <button type="button" class="btn btn-primary btn-sm" onclick="copyAssessmentTable()">複製整表</button>
-        </td>
-      </tr>
-    `;
-
-    tbody.innerHTML = html;
-  }
 
   function renderByMonthTable() {
     const mRangeStr = selectedMonths.length > 1
