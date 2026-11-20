@@ -645,6 +645,12 @@
       document.getElementById('instructorDatalist').innerHTML = instData.map(i => `<option value="${i.name}">`).join('');
     }
 
+    // 先用本機畫面立即繪製 1-12 月分頁與當月月曆格子，避免網路延遲或連線異常時畫面空白
+    renderMonthTabs();
+    renderCalendar();
+    renderDragPool();
+    renderScheduleSummary();
+
     await loadYearCourses();
   })();
 
