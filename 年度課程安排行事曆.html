@@ -112,6 +112,7 @@
     .drag-token.plan-伯公 { border-color: #d97706; background: #fffbeb; }
     .drag-token.plan-樂齡 { border-color: #7c3aed; background: #f5f3ff; }
     .drag-token.plan-關懷 { border-color: #16a34a; background: #f0fdf4; }
+    .drag-token.plan-長照 { border-color: #0284c7; background: #f0f9ff; }
 
     .drag-token.is-single { border-style: solid; border-width: 1.5px; }
     .drag-token.is-placed {
@@ -270,6 +271,7 @@
     .plan-pill.p-多元 { background: #dbeafe; color: #1e40af; }
     .plan-pill.p-伯公 { background: #fef3c7; color: #92400e; }
     .plan-pill.p-樂齡 { background: #ede9fe; color: #5b21b6; }
+    .plan-pill.p-長照 { background: #e0f2fe; color: #075985; }
     .dates-text-box {
       font-weight: bold; color: #0f172a; line-height: 1.5; word-break: break-word;
     }
@@ -356,6 +358,7 @@
     .course-chip.type-伯公 { border-left-color: #d97706; background: #fffbeb; }
     .course-chip.type-樂齡 { border-left-color: #7c3aed; background: #f5f3ff; }
     .course-chip.type-關懷 { border-left-color: #16a34a; background: #f0fdf4; }
+    .course-chip.type-長照 { border-left-color: #0284c7; background: #f0f9ff; }
 
     .chip-plan-badge {
       display: inline-block; font-size: 0.7rem; font-weight: bold;
@@ -451,13 +454,11 @@
     <h3>1. 建立可拖曳課程積木</h3>
     <div class="form-row-2 form-group">
       <div>
-        <label>計畫類別</label>
-        <select id="planTypeInput">
-          <option value="多元">多元計畫</option>
-          <option value="伯公">伯公計畫</option>
-          <option value="樂齡">樂齡計畫</option>
-          <option value="關懷">關懷固定課</option>
-        </select>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <label style="margin:0;">計畫類別</label>
+          <button type="button" class="token-mini-btn" onclick="openPlanManagerModal()" style="border-color:#2c5e4f; color:#2c5e4f; font-weight:bold;" title="新增或刪除年度課程計畫">新增/刪除計畫</button>
+        </div>
+        <select id="planTypeInput"></select>
       </div>
       <div>
         <label>課程名稱前綴</label>
@@ -583,10 +584,6 @@
         <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
           <select id="summaryPlanFilter" style="width:auto; padding:4px 8px; font-size:0.84rem;" onchange="renderScheduleSummary()">
             <option value="ALL">全部計畫</option>
-            <option value="關懷">僅看：關懷</option>
-            <option value="多元">僅看：多元</option>
-            <option value="伯公">僅看：伯公</option>
-            <option value="樂齡">僅看：樂齡</option>
           </select>
           <select id="summaryQuarterFilter" style="width:auto; padding:4px 8px; font-size:0.84rem;" onchange="renderScheduleSummary()">
             <option value="ALL">全年度 (1-12月)</option>
@@ -649,13 +646,7 @@
     <div class="form-row-2 form-group">
       <div>
         <label>項目類別</label>
-        <select id="modalPlanType" onchange="onModalPlanTypeChange()">
-          <option value="關懷">關懷固定課</option>
-          <option value="多元">多元計畫</option>
-          <option value="伯公">伯公計畫</option>
-          <option value="樂齡">樂齡計畫</option>
-          <option value="提醒">📌 行事曆提醒事項（不印簽到表）</option>
-        </select>
+        <select id="modalPlanType" onchange="onModalPlanTypeChange()"></select>
       </div>
       <div>
         <label id="modalNameLabel">課程名稱（將顯示於簽到表）</label>
@@ -762,6 +753,16 @@
 
   let reminderPresets = [];
 
+  const DEFAULT_COURSE_PLANS = [
+    { value: '多元', label: '多元計畫', color: '#2563eb' },
+    { value: '長照', label: '長照計畫', color: '#0284c7' },
+    { value: '伯公', label: '伯公計畫', color: '#d97706' },
+    { value: '樂齡', label: '樂齡計畫', color: '#7c3aed' },
+    { value: '關懷', label: '關懷固定課', color: '#16a34a' }
+  ];
+
+  let coursePlans = [];
+
   function pad2(n) { return String(n).padStart(2, '0'); }
 
   function setStatus(msg, isErr = false) {
@@ -789,6 +790,17 @@
       try { dragBlocks = JSON.parse(savedBlocks); } catch (e) { dragBlocks = []; }
     }
 
+    const savedPlans = localStorage.getItem('lz_course_plans_v1');
+    if (savedPlans) {
+      try { coursePlans = JSON.parse(savedPlans); } catch (e) { coursePlans = [...DEFAULT_COURSE_PLANS]; }
+    } else {
+      coursePlans = [...DEFAULT_COURSE_PLANS];
+    }
+    if (!Array.isArray(coursePlans) || coursePlans.length === 0) {
+      coursePlans = [...DEFAULT_COURSE_PLANS];
+    }
+    renderPlanSelectOptions();
+
     const savedPresets = localStorage.getItem('lz_reminder_presets_v1');
     if (savedPresets) {
       try { reminderPresets = JSON.parse(savedPresets); } catch (e) { reminderPresets = [...DEFAULT_REMINDER_PRESETS]; }
@@ -809,6 +821,7 @@
     }
 
     // 先用本機畫面立即繪製 1-12 月分頁與當月月曆格子，避免網路延遲或連線異常時畫面空白
+    renderPlanSelectOptions();
     renderMonthTabs();
     renderCalendar();
     renderDragPool();
@@ -818,6 +831,132 @@
 
     await loadYearCourses();
   })();
+
+  function saveCoursePlansLocal() {
+    localStorage.setItem('lz_course_plans_v1', JSON.stringify(coursePlans));
+  }
+
+  function getPlanColor(planVal) {
+    const found = coursePlans.find(p => p.value === planVal);
+    if (found && found.color) return found.color;
+    const fallbackMap = { '關懷': '#16a34a', '多元': '#2563eb', '長照': '#0284c7', '伯公': '#d97706', '樂齡': '#7c3aed' };
+    return fallbackMap[planVal] || '#0f766e';
+  }
+
+  function renderPlanSelectOptions() {
+    const planSel = document.getElementById('planTypeInput');
+    if (planSel) {
+      const prev = planSel.value;
+      planSel.innerHTML = coursePlans.map(p => `<option value="${escapeHtml(p.value)}">${escapeHtml(p.label)}</option>`).join('');
+      if ([...planSel.options].some(o => o.value === prev)) planSel.value = prev;
+    }
+
+    const sumSel = document.getElementById('summaryPlanFilter');
+    if (sumSel) {
+      const prevSum = sumSel.value || 'ALL';
+      const allVals = new Map();
+      coursePlans.forEach(p => allVals.set(p.value, p.value));
+      yearCourses.forEach(c => {
+        if (c.plan_type && c.plan_type !== '提醒' && !allVals.has(c.plan_type)) {
+          allVals.set(c.plan_type, c.plan_type);
+        }
+      });
+      sumSel.innerHTML = `<option value="ALL">全部計畫</option>` +
+        [...allVals.keys()].map(v => `<option value="${escapeHtml(v)}">僅看：${escapeHtml(v)}</option>`).join('');
+      if ([...sumSel.options].some(o => o.value === prevSum)) sumSel.value = prevSum;
+    }
+
+    const modalSel = document.getElementById('modalPlanType');
+    if (modalSel) {
+      const prevModal = modalSel.value;
+      const allModalPlans = new Map();
+      coursePlans.forEach(p => allModalPlans.set(p.value, p.label));
+      yearCourses.forEach(c => {
+        if (c.plan_type && c.plan_type !== '提醒' && !allModalPlans.has(c.plan_type)) {
+          allModalPlans.set(c.plan_type, c.plan_type + '計畫');
+        }
+      });
+      modalSel.innerHTML = [...allModalPlans.entries()]
+        .map(([val, lbl]) => `<option value="${escapeHtml(val)}">${escapeHtml(lbl)}</option>`)
+        .join('') + `<option value="提醒">行事曆提醒事項（不印簽到表）</option>`;
+      if ([...modalSel.options].some(o => o.value === prevModal)) modalSel.value = prevModal;
+    }
+  }
+
+  function openPlanManagerModal() {
+    renderPlanManageList();
+    document.getElementById('planManagerModal').classList.add('open');
+  }
+
+  function closePlanManagerModal() {
+    document.getElementById('planManagerModal').classList.remove('open');
+    renderPlanSelectOptions();
+    renderDragPool();
+    renderCalendar();
+    renderScheduleSummary();
+  }
+
+  function renderPlanManageList() {
+    const listEl = document.getElementById('planManageList');
+    if (!listEl) return;
+    listEl.innerHTML = coursePlans.map((p, idx) => `
+      <div class="preset-manage-row">
+        <input type="color" value="${escapeHtml(p.color || '#0284c7')}" onchange="updateCoursePlanItem(${idx}, 'color', this.value)" style="width:30px; height:28px; padding:0; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;" title="代表色彩">
+        <input type="text" value="${escapeHtml(p.value)}" onchange="updateCoursePlanItem(${idx}, 'value', this.value)" placeholder="簡稱" style="width:90px; padding:5px 7px; font-size:0.85rem; font-weight:bold;">
+        <input type="text" value="${escapeHtml(p.label)}" onchange="updateCoursePlanItem(${idx}, 'label', this.value)" placeholder="選單顯示名稱" style="flex:1; padding:5px 7px; font-size:0.85rem;">
+        <button type="button" class="token-del" onclick="deleteCoursePlanItem(${idx})" title="刪除此計畫">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function addCoursePlanFromModal() {
+    const shortVal = document.getElementById('newPlanShortInput').value.trim();
+    let labelVal = document.getElementById('newPlanLabelInput').value.trim();
+    const colorVal = document.getElementById('newPlanColorInput').value || '#0284c7';
+    if (!shortVal) { alert('請輸入計畫簡稱（例如：長照、延緩）！'); return; }
+    if (!labelVal) labelVal = shortVal + '計畫';
+    if (coursePlans.some(p => p.value === shortVal)) {
+      alert(`「${shortVal}」已經在計畫清單中了！`);
+      return;
+    }
+    coursePlans.push({ value: shortVal, label: labelVal, color: colorVal });
+    document.getElementById('newPlanShortInput').value = '';
+    document.getElementById('newPlanLabelInput').value = '';
+    saveCoursePlansLocal();
+    renderPlanManageList();
+    renderPlanSelectOptions();
+  }
+
+  function updateCoursePlanItem(idx, field, val) {
+    const item = coursePlans[idx];
+    if (!item) return;
+    const trimmed = val.trim();
+    if (!trimmed) return;
+    item[field] = trimmed;
+    saveCoursePlansLocal();
+    renderPlanSelectOptions();
+  }
+
+  function deleteCoursePlanItem(idx) {
+    if (coursePlans.length <= 1) {
+      alert('至少需保留一個課程計畫類別！');
+      return;
+    }
+    const target = coursePlans[idx];
+    if (!confirm(`確定要從選單中刪除「${target.label}」嗎？（已排入行事曆的歷史課程資料不會被刪除）`)) return;
+    coursePlans.splice(idx, 1);
+    saveCoursePlansLocal();
+    renderPlanManageList();
+    renderPlanSelectOptions();
+  }
+
+  function resetDefaultCoursePlans() {
+    if (!confirm('確定要恢復為預設的 5 種計畫（多元、長照、伯公、樂齡、關懷）嗎？')) return;
+    coursePlans = [...DEFAULT_COURSE_PLANS];
+    saveCoursePlansLocal();
+    renderPlanManageList();
+    renderPlanSelectOptions();
+  }
 
   function saveDragBlocksLocal() {
     localStorage.setItem('lz_drag_blocks_v3', JSON.stringify(dragBlocks));
@@ -937,6 +1076,7 @@
 
       return `
         <div class="drag-token plan-${b.planType} ${isSingle ? 'is-single' : ''}"
+             style="border-color:${escapeHtml(getPlanColor(b.planType))}; background:${hexToRgbaBg(getPlanColor(b.planType), 0.09)};"
              draggable="true"
              ondragstart="onBlockDragStart(event, '${b.id}')">
           <div class="token-header">
@@ -1238,6 +1378,7 @@
     }
     yearCourses = data || [];
     setStatus(`已同步 ${currentRocYear} 年度雲端課表（共 ${yearCourses.length} 堂）`);
+    renderPlanSelectOptions();
     renderMonthTabs();
     renderCalendar();
     renderDragPool();
@@ -1267,6 +1408,7 @@
   function switchMonth(m) {
     currentMonth = m;
     localStorage.setItem('lz_cal_month', String(currentMonth));
+    renderPlanSelectOptions();
     renderMonthTabs();
     renderCalendar();
   }
@@ -1322,7 +1464,7 @@
             `;
           }
           return `
-            <div class="course-chip type-${pType}" onclick="openEditModal(${c.id}); event.stopPropagation();">
+            <div class="course-chip type-${pType}" style="border-left-color:${escapeHtml(getPlanColor(pType))}; background:${hexToRgbaBg(getPlanColor(pType), 0.1)};" onclick="openEditModal(${c.id}); event.stopPropagation();">
               <div><span class="chip-plan-badge">${pType}</span><span class="chip-title">${escapeHtml(c.course_name)}</span></div>
               ${c.time_slot ? `<div class="chip-reimburse-time">核銷：${escapeHtml(c.time_slot)}</div>` : ''}
               ${c.actual_time_slot ? `<div class="chip-actual-time">實際：${escapeHtml(c.actual_time_slot)}</div>` : ''}
@@ -1525,10 +1667,13 @@
       if (c.instructor_name) grp.instructors.add(c.instructor_name);
     });
 
-    const planOrder = { '關懷': 1, '多元': 2, '伯公': 3, '樂齡': 4 };
+    const planOrder = { '關懷': 1 };
+    coursePlans.forEach((p, i) => {
+      if (!(p.value in planOrder)) planOrder[p.value] = i + 2;
+    });
     lastSummaryGroups = [...groupMap.values()].sort((a, b) => {
-      const pa = planOrder[a.plan] || 9;
-      const pb = planOrder[b.plan] || 9;
+      const pa = planOrder[a.plan] || 99;
+      const pb = planOrder[b.plan] || 99;
       if (pa !== pb) return pa - pb;
       return a.items[0].course_date.localeCompare(b.items[0].course_date);
     });
@@ -1580,7 +1725,7 @@
           <div class="plan-accordion-header" onclick="togglePlanCard('${planName}')">
             <div class="plan-accordion-left">
               <span class="plan-arrow">▶</span>
-              <span class="plan-pill p-${planName}">${planName}計畫</span>
+              <span class="plan-pill p-${planName}" style="background:${hexToRgbaBg(getPlanColor(planName), 0.16)}; color:${escapeHtml(getPlanColor(planName))};">${escapeHtml(planName)}計畫</span>
               <span style="color:#334155; font-size:0.85rem;">共 ${groups.length} 門課 ／ ${totalLessons} 堂</span>
             </div>
             <div onclick="event.stopPropagation();">
@@ -1899,6 +2044,27 @@
     await loadYearCourses();
   }
 </script>
+<!-- 管理「課程計畫類別」彈窗（可新增或刪除年度申請計畫） -->
+<div class="modal-backdrop" id="planManagerModal">
+  <div class="modal-box" style="max-width: 480px;">
+    <h4>管理課程計畫類別（新增／刪除）</h4>
+    <div style="font-size:0.82rem; color:#475569; margin-bottom:10px;">
+      因應每年申請核定的計畫不同，您可在此自由新增計畫名稱（如：長照計畫、失智據點、預防延緩）或刪除不使用的計畫。
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr auto auto; gap:6px; align-items:center; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+      <input type="text" id="newPlanShortInput" placeholder="簡稱，如：長照">
+      <input type="text" id="newPlanLabelInput" placeholder="顯示名稱，如：長照計畫">
+      <input type="color" id="newPlanColorInput" value="#0284c7" style="width:34px; height:32px; padding:1px; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;" title="選擇代表色">
+      <button type="button" class="btn btn-primary" style="padding:7px 10px;" onclick="addCoursePlanFromModal()">＋ 新增</button>
+    </div>
+    <div class="preset-manage-list" id="planManageList"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="resetDefaultCoursePlans()">恢復預設 5 種計畫</button>
+      <button type="button" class="btn btn-primary" onclick="closePlanManagerModal()">完成關閉</button>
+    </div>
+  </div>
+</div>
+
 <!-- 管理「常用提醒名稱與色彩綁定清單」彈窗 -->
 <div class="modal-backdrop" id="presetManagerModal">
   <div class="modal-box" style="max-width: 500px;">
