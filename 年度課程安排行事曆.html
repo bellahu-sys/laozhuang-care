@@ -46,11 +46,46 @@
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
     .page-wrap {
-      max-width: 1460px; margin: 18px auto 40px auto; padding: 0 16px;
-      display: grid; grid-template-columns: 345px 1fr; gap: 18px; align-items: start;
+      max-width: 1680px; margin: 14px auto 40px auto; padding: 0 14px;
+      display: grid; grid-template-columns: 340px 1fr; gap: 14px; align-items: start;
+      transition: grid-template-columns 0.2s ease;
+    }
+    .page-wrap.left-collapsed {
+      grid-template-columns: 44px 1fr; gap: 10px;
+    }
+    .left-dock-panel {
+      position: relative;
+      background: #fff; border-radius: 10px; padding: 14px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      transition: padding 0.2s ease;
+    }
+    .page-wrap.left-collapsed .left-dock-panel {
+      padding: 10px 6px;
+    }
+    .left-collapse-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1;
+      background: #f8fafc; color: #1e293b; font-size: 0.78rem; font-weight: bold;
+      cursor: pointer; white-space: nowrap;
+    }
+    .left-collapse-btn:hover { background: #e2e8f0; }
+    .left-collapsed-rail {
+      display: none; flex-direction: column; align-items: center; gap: 12px;
+      padding-top: 4px;
+    }
+    .page-wrap.left-collapsed .left-dock-content {
+      display: none;
+    }
+    .page-wrap.left-collapsed .left-collapsed-rail {
+      display: flex;
+    }
+    .rail-vertical-label {
+      writing-mode: vertical-rl; text-orientation: mixed;
+      font-size: 0.82rem; font-weight: bold; color: var(--primary);
+      letter-spacing: 2px; cursor: pointer; padding: 6px 2px;
     }
     @media (max-width: 1024px) {
-      .page-wrap { grid-template-columns: 1fr; }
+      .page-wrap, .page-wrap.left-collapsed { grid-template-columns: 1fr; }
     }
 
     .panel {
@@ -183,24 +218,13 @@
     }
     .reminder-section-header {
       display: flex; justify-content: space-between; align-items: center;
-      cursor: pointer; user-select: none; padding-bottom: 7px;
-      border-bottom: 2px solid #d97706; margin-bottom: 0;
+      padding-bottom: 7px; border-bottom: 2px solid #d97706; margin-bottom: 10px;
     }
     .reminder-section-header h3 {
       color: #b45309; border-bottom: none; padding-bottom: 0; margin: 0;
       display: flex; align-items: center; gap: 6px; font-size: 1.02rem;
     }
-    .reminder-toggle-arrow {
-      display: inline-block; width: 14px; text-align: center; font-size: 0.8rem;
-      transition: transform 0.15s; color: #b45309;
-    }
-    .reminder-section.is-open .reminder-toggle-arrow {
-      transform: rotate(90deg);
-    }
     .reminder-section-body {
-      display: none; margin-top: 12px;
-    }
-    .reminder-section.is-open .reminder-section-body {
       display: block;
     }
     .color-picker-row {
@@ -247,44 +271,50 @@
       font-weight: bold; font-size: 0.98rem; color: #115e59;
     }
     .plan-accordion-list {
-      margin-top: 10px; display: flex; flex-direction: column; gap: 7px;
+      margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;
     }
     .plan-accordion-card {
       background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; overflow: hidden;
+      flex: 0 1 auto; min-width: 240px; max-width: 100%;
+    }
+    .plan-accordion-card.is-open {
+      flex: 1 1 100%; width: 100%;
     }
     .plan-accordion-header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 12px; background: #f8fafc; cursor: pointer; user-select: none;
-      transition: background 0.15s; flex-wrap: wrap; gap: 6px;
+      padding: 6px 10px; background: #f8fafc; cursor: pointer; user-select: none;
+      transition: background 0.15s; gap: 8px;
     }
     .plan-accordion-header:hover { background: #f1f5f9; }
     .plan-accordion-left {
-      display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 0.9rem;
+      display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 0.86rem;
     }
     .plan-arrow {
-      display: inline-block; width: 16px; text-align: center;
-      color: #475569; font-size: 0.82rem; transition: transform 0.15s;
+      display: inline-block; width: 14px; text-align: center;
+      color: #475569; font-size: 0.78rem; transition: transform 0.15s;
     }
     .plan-accordion-card.is-open .plan-arrow { transform: rotate(90deg); }
     .plan-accordion-body {
-      display: none; border-top: 1px solid #e2e8f0;
+      display: none; border-top: 1px solid #e2e8f0; padding: 6px 8px; background: #f8fafc;
     }
     .plan-accordion-card.is-open .plan-accordion-body { display: block; }
 
-    .summary-table {
-      width: 100%; border-collapse: collapse; font-size: 0.86rem; background: #fff;
+    .horizontal-course-strip {
+      display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px;
+      padding-bottom: 4px; align-items: stretch;
     }
-    .summary-table th {
-      background: #ccfbf1; color: #115e59; text-align: left;
-      padding: 6px 10px; border-bottom: 1px solid #99f6e4; font-size: 0.82rem;
+    .horizontal-course-item {
+      flex: 0 0 auto; min-width: 220px; max-width: 340px;
+      background: #fff; border: 1px solid #cbd5e1; border-radius: 6px;
+      padding: 6px 9px; display: flex; flex-direction: column; justify-content: space-between; gap: 4px;
     }
-    .summary-table td {
-      padding: 7px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;
+    .horizontal-course-top {
+      display: flex; justify-content: space-between; align-items: center; gap: 6px;
+      font-size: 0.84rem;
     }
-    .summary-table tr:last-child td { border-bottom: none; }
     .plan-pill {
-      display: inline-block; padding: 2px 9px; border-radius: 12px;
-      font-size: 0.8rem; font-weight: bold;
+      display: inline-block; padding: 2px 8px; border-radius: 12px;
+      font-size: 0.78rem; font-weight: bold;
     }
     .plan-pill.p-關懷 { background: #dcfce7; color: #166534; }
     .plan-pill.p-多元 { background: #dbeafe; color: #1e40af; }
@@ -292,12 +322,17 @@
     .plan-pill.p-樂齡 { background: #ede9fe; color: #5b21b6; }
     .plan-pill.p-長照 { background: #e0f2fe; color: #075985; }
     .dates-text-box {
-      font-weight: bold; color: #0f172a; line-height: 1.5; word-break: break-word;
+      font-weight: bold; color: #0f172a; font-size: 0.81rem; line-height: 1.35;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .copy-btn-group { display: flex; flex-wrap: wrap; gap: 5px; }
+    .dates-text-box:hover {
+      white-space: normal; overflow: visible;
+    }
+    .copy-btn-group { display: flex; flex-wrap: nowrap; gap: 4px; }
     .btn-copy-sm {
-      padding: 4px 8px; border-radius: 5px; font-size: 0.78rem; font-weight: bold;
+      padding: 3px 7px; border-radius: 5px; font-size: 0.75rem; font-weight: bold;
       border: 1px solid #cbd5e1; background: #fff; color: #1e293b; cursor: pointer;
+      white-space: nowrap;
     }
     .btn-copy-sm:hover { background: #f0fdfa; border-color: var(--primary); color: var(--primary); }
     .btn-copy-sm.primary-copy {
@@ -481,10 +516,18 @@
   </div>
 </nav>
 
-<div class="page-wrap">
-  <!-- 左側：建立「連續週排」或「單堂獨立」課程積木 -->
-  <div class="panel">
-    <h3>1. 建立可拖曳課程積木</h3>
+<div class="page-wrap" id="pageWrap">
+  <!-- 左側：建立可拖曳課程積木＆提醒事項積木區（支援往左收合，增加行事曆空間） -->
+  <div class="left-dock-panel" id="leftDockPanel">
+    <div class="left-collapsed-rail" id="leftCollapsedRail">
+      <button type="button" class="left-collapse-btn" onclick="toggleLeftDock(false)" title="展開課程與提醒積木區">⇥</button>
+      <span class="rail-vertical-label" onclick="toggleLeftDock(false)" title="點擊展開課程積木與提醒積木區">課程＆提醒積木</span>
+    </div>
+    <div class="left-dock-content" id="leftDockContent">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--primary); padding-bottom:7px; margin-bottom:12px;">
+        <h3 style="margin:0; border:none; padding:0;">1. 建立可拖曳課程積木</h3>
+        <button type="button" class="left-collapse-btn" onclick="toggleLeftDock(true)" title="往左收合課程與提醒積木區，放大行事曆">⇤ 往左收合</button>
+      </div>
     <div class="form-row-2 form-group">
       <div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -551,11 +594,11 @@
 
         <div class="drag-pool" id="dragPool"></div>
 
-    <!-- 新增：提醒事項積木區塊（可收合展開，預設收合節省版面） -->
+    <!-- 提醒事項積木區塊（取消原垂直收合，直接利用整區往左收合） -->
     <div class="reminder-section" id="reminderSectionBox">
-      <div class="reminder-section-header" onclick="toggleReminderSection()" title="點擊展開或收合提醒事項積木">
-        <h3><span class="reminder-toggle-arrow">▶</span> 2. 提醒事項積木（可自訂色彩）</h3>
-        <button type="button" class="token-mini-btn" id="toggleReminderBtn" style="border-color:#d97706; color:#92400e; font-weight:bold;">展開</button>
+      <div class="reminder-section-header">
+        <h3>2. 提醒事項積木（可自訂色彩）</h3>
+        <button type="button" class="left-collapse-btn" onclick="toggleLeftDock(true)" title="往左收合，增加行事曆空間">⇤ 往左收合</button>
       </div>
       <div class="reminder-section-body" id="reminderSectionBody">
 
@@ -595,6 +638,7 @@
         • 直接按住上方彩色標籤拖進右側日曆即可（可重複多次拖曳，不會取代當日課程）。
       </div>
       </div>
+    </div>
     </div>
   </div>
 
@@ -865,6 +909,9 @@
     }
 
     // 先用本機畫面立即繪製 1-12 月分頁與當月月曆格子，避免網路延遲或連線異常時畫面空白
+    if (localStorage.getItem('lz_left_dock_collapsed') === '1') {
+      document.getElementById('pageWrap')?.classList.add('left-collapsed');
+    }
     renderPlanSelectOptions();
     renderMonthTabs();
     renderCalendar();
@@ -1140,12 +1187,13 @@
     }).join('');
   }
 
-  function toggleReminderSection() {
-    const box = document.getElementById('reminderSectionBox');
-    const btn = document.getElementById('toggleReminderBtn');
-    if (!box) return;
-    const isOpen = box.classList.toggle('is-open');
-    if (btn) btn.textContent = isOpen ? '收合' : '展開';
+  function toggleLeftDock(collapse) {
+    const wrap = document.getElementById('pageWrap');
+    if (!wrap) return;
+    const nextState = (typeof collapse === 'boolean') ? collapse : !wrap.classList.contains('left-collapsed');
+    wrap.classList.toggle('left-collapsed', nextState);
+    localStorage.setItem('lz_left_dock_collapsed', nextState ? '1' : '0');
+    requestAnimationFrame(updateStickyOffsets);
   }
 
   function saveReminderPresetsLocal() {
@@ -1430,6 +1478,9 @@
     }
     yearCourses = data || [];
     setStatus(`已同步 ${currentRocYear} 年度雲端課表（共 ${yearCourses.length} 堂）`);
+    if (localStorage.getItem('lz_left_dock_collapsed') === '1') {
+      document.getElementById('pageWrap')?.classList.add('left-collapsed');
+    }
     renderPlanSelectOptions();
     renderMonthTabs();
     renderCalendar();
@@ -1477,6 +1528,9 @@
   function switchMonth(m) {
     currentMonth = m;
     localStorage.setItem('lz_cal_month', String(currentMonth));
+    if (localStorage.getItem('lz_left_dock_collapsed') === '1') {
+      document.getElementById('pageWrap')?.classList.add('left-collapsed');
+    }
     renderPlanSelectOptions();
     renderMonthTabs();
     renderCalendar();
@@ -1765,27 +1819,30 @@
       const totalLessons = groups.reduce((sum, g) => sum + g.items.length, 0);
       const isOpen = Boolean(planOpenState[planName]);
 
-      const rowsHtml = groups.map(g => {
+      const stripItemsHtml = groups.map(g => {
         const shortDates = g.items.map(it => {
           const p = it.course_date.split('-');
           return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
         }).join('、');
 
-        const instStr = [...g.instructors].join('、') || '-';
+        const instStr = [...g.instructors].join('、');
 
         return `
-          <tr>
-            <td style="width:24%;"><strong>${escapeHtml(g.title)}</strong> <span style="color:#64748b; font-size:0.8rem;">(${g.items.length}堂)</span></td>
-            <td style="width:13%; font-size:0.84rem; color:#475569;">${escapeHtml(instStr)}</td>
-            <td style="width:39%;"><div class="dates-text-box">${escapeHtml(shortDates)}</div></td>
-            <td style="width:24%;">
-              <div class="copy-btn-group">
-                <button type="button" class="btn-copy-sm primary-copy" onclick="copyGroupDates(${g.globalIdx}, 'short')">複製課程日期</button>
-                <button type="button" class="btn-copy-sm" onclick="copyGroupDates(${g.globalIdx}, 'roc')" title="複製為 116年01月06日 換行格式">民國日期</button>
-                <button type="button" class="btn-copy-sm" onclick="copyGroupDates(${g.globalIdx}, 'full')" title="複製計畫＋課程名稱＋日期">含標題</button>
+          <div class="horizontal-course-item">
+            <div class="horizontal-course-top">
+              <div>
+                <strong>${escapeHtml(g.title)}</strong>
+                <span style="color:#64748b; font-size:0.76rem;">(${g.items.length}堂)</span>
+                ${instStr ? `<span style="color:#475569; font-size:0.75rem;">· ${escapeHtml(instStr)}</span>` : ''}
               </div>
-            </td>
-          </tr>
+            </div>
+            <div class="dates-text-box" title="${escapeHtml(shortDates)}">${escapeHtml(shortDates)}</div>
+            <div class="copy-btn-group">
+              <button type="button" class="btn-copy-sm primary-copy" onclick="copyGroupDates(${g.globalIdx}, 'short')">複製課程日期</button>
+              <button type="button" class="btn-copy-sm" onclick="copyGroupDates(${g.globalIdx}, 'roc')" title="複製為 116年01月06日 換行格式">民國日期</button>
+              <button type="button" class="btn-copy-sm" onclick="copyGroupDates(${g.globalIdx}, 'full')" title="複製計畫＋課程名稱＋日期">含標題</button>
+            </div>
+          </div>
         `;
       }).join('');
 
@@ -1795,24 +1852,14 @@
             <div class="plan-accordion-left">
               <span class="plan-arrow">▶</span>
               <span class="plan-pill p-${planName}" style="background:${hexToRgbaBg(getPlanColor(planName), 0.16)}; color:${escapeHtml(getPlanColor(planName))};">${escapeHtml(planName)}計畫</span>
-              <span style="color:#334155; font-size:0.85rem;">共 ${groups.length} 門課 ／ ${totalLessons} 堂</span>
+              <span style="color:#334155; font-size:0.82rem;">${groups.length}課／${totalLessons}堂</span>
             </div>
             <div onclick="event.stopPropagation();">
-              <button type="button" class="btn-copy-sm" onclick="copyPlanSummary('${planName}')">複製「${planName}」全部課程日期</button>
+              <button type="button" class="btn-copy-sm" onclick="copyPlanSummary('${planName}')">複製${escapeHtml(planName)}日期</button>
             </div>
           </div>
           <div class="plan-accordion-body">
-            <table class="summary-table">
-              <thead>
-                <tr>
-                  <th>課程名稱</th>
-                  <th>講師</th>
-                  <th>已排定日期總覽</th>
-                  <th>一鍵複製（核銷用）</th>
-                </tr>
-              </thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
+            <div class="horizontal-course-strip">${stripItemsHtml}</div>
           </div>
         </div>
       `;
