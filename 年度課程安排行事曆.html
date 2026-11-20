@@ -463,6 +463,19 @@
     }
     .modal-box h4 { margin: 0 0 14px 0; color: var(--primary); font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+    @media print {
+      @page { size: A4 landscape; margin: 8mm; }
+      nav.topbar, .left-dock-panel, .summary-top-box, .sticky-cal-nav, .batch-bar,
+      .no-print, .add-day-btn, .btn-link-report { display: none !important; }
+      body { background: #fff !important; }
+      .page-wrap, .page-wrap.left-collapsed {
+        display: block !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important;
+      }
+      .panel { border: none !important; box-shadow: none !important; padding: 0 !important; }
+      .calendar-grid thead th { position: static !important; }
+      .calendar-grid td { height: auto !important; min-height: 82px !important; break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
@@ -648,7 +661,10 @@
         </select>
         <span id="syncStatus" style="font-size:0.86rem; font-weight:bold; color:#166534;"></span>
       </div>
-      <div style="display:flex; gap:8px; align-items:center;">
+      <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" onclick="printCalendarNow()">列印課程行事曆</button>
+        <button type="button" class="btn btn-blue" onclick="downloadCalendarPdfPrint()">列印成 1 份 PDF</button>
+        <button type="button" class="btn btn-outline" onclick="downloadCalendarWordDoc()">下載 Word (.doc)</button>
         <a href="月報表套印中心.html" class="btn-link-report">前往核銷 5 份簽到表套印 ➔</a>
       </div>
     </div>
@@ -2155,6 +2171,49 @@
     if (error) { alert('清除失敗：' + error.message); return; }
     await loadYearCourses();
   }
+
+  function printCalendarNow() {
+    window.print();
+  }
+
+  function downloadCalendarPdfPrint() {
+    alert('即將開啟列印視窗，請在「目的地／印表機」選擇「另存為 PDF」即可存成 1 份 PDF 檔。');
+    window.print();
+  }
+
+  function downloadCalendarWordDoc() {
+    const adYear = currentRocYear + 1911;
+    const calTableHtml = document.querySelector('.calendar-grid')?.outerHTML || '';
+    const titleText = `${currentRocYear} 年 (${adYear}) ${currentMonth} 月課程安排行事曆`;
+    const docContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>${escapeHtml(titleText)}</title>
+      <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; }
+        h2 { text-align: center; color: #2c5e4f; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th, td { border: 1px solid #94a3b8; padding: 6px; vertical-align: top; font-size: 10pt; }
+        th { background: #2c5e4f; color: #fff; text-align: center; }
+        .add-day-btn { display: none; }
+        .course-chip, .reminder-chip { margin-bottom: 4px; padding: 3px 5px; border-left: 3px solid #2c5e4f; background: #f8fafc; }
+      </style></head>
+      <body>
+        <h2>${escapeHtml(titleText)}</h2>
+        ${calTableHtml}
+      </body></html>
+    `;
+    const blob = new Blob(['\ufeff', docContent], { type: 'application/msword;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentRocYear}年${pad2(currentMonth)}月_課程安排行事曆.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setStatus(`已下載 ${currentRocYear} 年 ${currentMonth} 月課程行事曆 Word 檔`);
+  }
+
 </script>
 <!-- 管理「課程計畫類別」彈窗（可新增或刪除年度申請計畫） -->
 <div class="modal-backdrop" id="planManagerModal">
