@@ -144,6 +144,38 @@
     .token-del:hover { color: #dc2626; }
 
     /* 左側：提醒事項積木區塊（支援自訂色彩） */
+    .preset-quick-bar {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 7px;
+      padding: 8px 9px; margin-bottom: 10px;
+    }
+    .preset-quick-header {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.8rem; font-weight: bold; color: #92400e; margin-bottom: 6px;
+    }
+    .preset-chip-wrap {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .preset-chip-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 14px; font-size: 0.78rem; font-weight: bold;
+      border: 1px solid #cbd5e1; background: #fff; color: #1e293b; cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .preset-chip-btn:hover {
+      transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .preset-dot {
+      width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+    }
+    .preset-manage-list {
+      max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+      margin: 10px 0;
+    }
+    .preset-manage-row {
+      display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+    }
+
     .reminder-section {
       margin-top: 18px; padding-top: 14px; border-top: 2px dashed #cbd5e1;
     }
@@ -484,47 +516,55 @@
 
         <div class="drag-pool" id="dragPool"></div>
 
-    <!-- 新增：提醒事項積木區塊（可自訂色彩） -->
+    <!-- 新增：提醒事項積木區塊（常用名稱＋色彩綁定清單） -->
     <div class="reminder-section">
       <h3>2. 建立提醒事項積木（可自訂色彩）</h3>
+
+      <!-- 常用提醒名稱＆色彩綁定快速選單 -->
+      <div class="preset-quick-bar">
+        <div class="preset-quick-header">
+          <span>⚡ 常用提醒清單（點選自動帶入名稱與綁定色）</span>
+          <button type="button" class="token-mini-btn" onclick="openPresetManagerModal()" style="border-color:#d97706; color:#92400e;">⚙ 管理清單</button>
+        </div>
+        <div class="preset-chip-wrap" id="reminderPresetChips"></div>
+      </div>
+
       <div class="form-group">
-        <label>提醒標題（核銷／課程提醒／每月固定事項）</label>
-        <input type="text" id="reminderTitleInput" list="reminderPresetsDatalist" placeholder="如：關懷核銷、長照核銷、延緩核銷、每月固定會議">
-        <datalist id="reminderPresetsDatalist">
-          <option value="關懷核銷">
-          <option value="長照核銷">
-          <option value="延緩核銷">
-          <option value="多元核銷">
-          <option value="伯公核銷">
-          <option value="樂齡核銷">
-          <option value="課程提醒">
-          <option value="每月固定盤點／會議">
-        </datalist>
+        <label>提醒標題（可點上方快速選取或自行輸入）</label>
+        <input type="text" id="reminderTitleInput" oninput="autoMatchPresetColor(this.value)" placeholder="如：關懷核銷、長照核銷、課程提醒、每月固定會議">
       </div>
       <div class="form-group">
         <label>備註或時間提醒（選填）</label>
         <input type="text" id="reminderNoteInput" placeholder="如：每月5日前送件、需附照片">
       </div>
       <div class="form-group">
-        <label>積木與行事曆標籤色彩（可點選預設色或自訂）</label>
+        <label>綁定標籤色彩（計畫核銷類統一玫紅，其餘自由選色）</label>
         <div class="color-picker-row">
           <input type="color" id="reminderColorInput" value="#e11d48" style="width:36px; height:28px; padding:1px; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;">
-          <button type="button" class="color-swatch" style="background:#e11d48;" onclick="setReminderColor('#e11d48')" title="玫紅（關懷核銷）"></button>
-          <button type="button" class="color-swatch" style="background:#0284c7;" onclick="setReminderColor('#0284c7')" title="天藍（長照核銷）"></button>
-          <button type="button" class="color-swatch" style="background:#7c3aed;" onclick="setReminderColor('#7c3aed')" title="紫羅蘭（延緩核銷）"></button>
-          <button type="button" class="color-swatch" style="background:#2563eb;" onclick="setReminderColor('#2563eb')" title="寶藍（多元核銷）"></button>
-          <button type="button" class="color-swatch" style="background:#d97706;" onclick="setReminderColor('#d97706')" title="琥珀橘（伯公核銷）"></button>
-          <button type="button" class="color-swatch" style="background:#0d9488;" onclick="setReminderColor('#0d9488')" title="青綠（課程提醒）"></button>
-          <button type="button" class="color-swatch" style="background:#475569;" onclick="setReminderColor('#475569')" title="深灰（每月固定事）"></button>
+          <button type="button" class="color-swatch" style="background:#e11d48;" onclick="setReminderColor('#e11d48')" title="玫紅（計畫核銷類統一色）"></button>
+          <button type="button" class="color-swatch" style="background:#0284c7;" onclick="setReminderColor('#0284c7')" title="天藍（課程提醒）"></button>
+          <button type="button" class="color-swatch" style="background:#0d9488;" onclick="setReminderColor('#0d9488')" title="青綠（活動／訪視）"></button>
+          <button type="button" class="color-swatch" style="background:#7c3aed;" onclick="setReminderColor('#7c3aed')" title="紫羅蘭（評鑑／會議）"></button>
+          <button type="button" class="color-swatch" style="background:#d97706;" onclick="setReminderColor('#d97706')" title="琥珀橘（採購／盤點）"></button>
+          <button type="button" class="color-swatch" style="background:#16a34a;" onclick="setReminderColor('#16a34a')" title="翠綠（健康量測）"></button>
+          <button type="button" class="color-swatch" style="background:#475569;" onclick="setReminderColor('#475569')" title="深灰（每月固定事項）"></button>
         </div>
       </div>
-      <button type="button" class="btn btn-amber" style="width:100%;" onclick="createReminderBlock()">＋ 新增提醒積木</button>
+
+      <div class="form-group" style="background:#f8fafc; padding:6px 8px; border-radius:5px; border:1px solid #e2e8f0;">
+        <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer; font-size:0.81rem; color:#334155;">
+          <input type="checkbox" id="saveToPresetCheckbox" checked>
+          同時儲存／更新至上方「常用提醒名稱＋色彩綁定清單」
+        </label>
+      </div>
+
+      <button type="button" class="btn btn-amber" style="width:100%;" onclick="createReminderBlock()">＋ 產生提醒積木</button>
       <div style="margin-top:6px; font-size:0.79rem; color:#64748b;">
-        • 提醒積木可<strong>重複多次拖曳</strong>至行事曆任意日期（不會自動消失，也不會取代當日課程）。
+        • 提醒積木可<strong>重複多次拖曳</strong>至行事曆任意日期（不會消失，也不會取代當日課程）。
       </div>
       <div class="pool-toolbar">
         <span>待拖曳提醒積木池</span>
-        <button type="button" class="token-mini-btn" onclick="resetDefaultReminders()">恢復常用核銷預設</button>
+        <button type="button" class="token-mini-btn" onclick="resetDefaultReminders()">恢復核銷統一色預設</button>
       </div>
       <div class="reminder-pool" id="reminderPool"></div>
     </div>
@@ -713,12 +753,25 @@
   let planOpenState = {};
 
   const DEFAULT_REMINDER_BLOCKS = [
-    { id: 'rem_def_1', title: '關懷核銷', note: '每月核銷送件提醒', color: '#e11d48' },
-    { id: 'rem_def_2', title: '長照核銷', note: '每月核銷送件提醒', color: '#0284c7' },
-    { id: 'rem_def_3', title: '延緩核銷', note: '期程／核銷送件提醒', color: '#7c3aed' },
-    { id: 'rem_def_4', title: '多元核銷', note: '方案核銷送件提醒', color: '#2563eb' },
-    { id: 'rem_def_5', title: '伯公核銷', note: '照護站核銷送件提醒', color: '#d97706' }
+    { id: 'rem_def_1', title: '關懷核銷', note: '計畫核銷提醒', color: '#e11d48' },
+    { id: 'rem_def_2', title: '長照核銷', note: '計畫核銷提醒', color: '#e11d48' },
+    { id: 'rem_def_3', title: '延緩核銷', note: '計畫核銷提醒', color: '#e11d48' },
+    { id: 'rem_def_4', title: '多元核銷', note: '計畫核銷提醒', color: '#e11d48' },
+    { id: 'rem_def_5', title: '伯公核銷', note: '計畫核銷提醒', color: '#e11d48' }
   ];
+
+  const DEFAULT_REMINDER_PRESETS = [
+    { id: 'pre_1', title: '關懷核銷', note: '計畫核銷提醒', color: '#e11d48' },
+    { id: 'pre_2', title: '長照核銷', note: '計畫核銷提醒', color: '#e11d48' },
+    { id: 'pre_3', title: '延緩核銷', note: '計畫核銷提醒', color: '#e11d48' },
+    { id: 'pre_4', title: '多元核銷', note: '計畫核銷提醒', color: '#e11d48' },
+    { id: 'pre_5', title: '伯公核銷', note: '計畫核銷提醒', color: '#e11d48' },
+    { id: 'pre_6', title: '課程提醒', note: '課前準備／講師確認', color: '#0284c7' },
+    { id: 'pre_7', title: '每月固定盤點', note: '零用金與物資清點', color: '#d97706' },
+    { id: 'pre_8', title: '工作會議', note: '據點定期會議', color: '#7c3aed' }
+  ];
+
+  let reminderPresets = [];
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -747,7 +800,14 @@
       try { dragBlocks = JSON.parse(savedBlocks); } catch (e) { dragBlocks = []; }
     }
 
-    const savedReminders = localStorage.getItem('lz_reminder_blocks_v1');
+    const savedPresets = localStorage.getItem('lz_reminder_presets_v1');
+    if (savedPresets) {
+      try { reminderPresets = JSON.parse(savedPresets); } catch (e) { reminderPresets = [...DEFAULT_REMINDER_PRESETS]; }
+    } else {
+      reminderPresets = [...DEFAULT_REMINDER_PRESETS];
+    }
+
+    const savedReminders = localStorage.getItem('lz_reminder_blocks_v2');
     if (savedReminders) {
       try { reminderBlocks = JSON.parse(savedReminders); } catch (e) { reminderBlocks = [...DEFAULT_REMINDER_BLOCKS]; }
     } else {
@@ -763,6 +823,7 @@
     renderMonthTabs();
     renderCalendar();
     renderDragPool();
+    renderReminderPresets();
     renderReminderPool();
     renderScheduleSummary();
 
@@ -906,8 +967,114 @@
     }).join('');
   }
 
+  function saveReminderPresetsLocal() {
+    localStorage.setItem('lz_reminder_presets_v1', JSON.stringify(reminderPresets));
+  }
+
+  function renderReminderPresets() {
+    const wrap = document.getElementById('reminderPresetChips');
+    if (!wrap) return;
+    if (reminderPresets.length === 0) {
+      wrap.innerHTML = '<span style="font-size:0.78rem; color:#92400e;">尚無常用清單，點右上角「管理清單」新增</span>';
+      return;
+    }
+    wrap.innerHTML = reminderPresets.map(p => `
+      <button type="button" class="preset-chip-btn"
+              style="border-color:${escapeHtml(p.color)}; background:${hexToRgbaBg(p.color, 0.08)};"
+              onclick="applyReminderPreset('${p.id}')"
+              title="點選帶入「${escapeHtml(p.title)}」與綁定色彩">
+        <span class="preset-dot" style="background:${escapeHtml(p.color)};"></span>
+        <span>${escapeHtml(p.title)}</span>
+      </button>
+    `).join('');
+  }
+
+  function applyReminderPreset(presetId) {
+    const p = reminderPresets.find(item => item.id === presetId);
+    if (!p) return;
+    document.getElementById('reminderTitleInput').value = p.title;
+    document.getElementById('reminderNoteInput').value = p.note || '';
+    document.getElementById('reminderColorInput').value = p.color || '#e11d48';
+  }
+
+  function autoMatchPresetColor(typedTitle) {
+    const t = String(typedTitle || '').trim();
+    if (!t) return;
+    const found = reminderPresets.find(p => p.title === t);
+    if (found) {
+      document.getElementById('reminderColorInput').value = found.color;
+      if (!document.getElementById('reminderNoteInput').value.trim() && found.note) {
+        document.getElementById('reminderNoteInput').value = found.note;
+      }
+    }
+  }
+
+  function openPresetManagerModal() {
+    renderPresetManageList();
+    document.getElementById('presetManagerModal').classList.add('open');
+  }
+
+  function closePresetManagerModal() {
+    document.getElementById('presetManagerModal').classList.remove('open');
+    renderReminderPresets();
+  }
+
+  function renderPresetManageList() {
+    const listEl = document.getElementById('presetManageList');
+    if (!listEl) return;
+    listEl.innerHTML = reminderPresets.map(p => `
+      <div class="preset-manage-row">
+        <input type="color" value="${escapeHtml(p.color)}" onchange="updatePresetItem('${p.id}', 'color', this.value)" style="width:30px; height:28px; padding:0; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;" title="修改綁定色彩">
+        <input type="text" value="${escapeHtml(p.title)}" onchange="updatePresetItem('${p.id}', 'title', this.value)" style="flex:1; padding:5px 7px; font-size:0.85rem; font-weight:bold;">
+        <input type="text" value="${escapeHtml(p.note || '')}" onchange="updatePresetItem('${p.id}', 'note', this.value)" placeholder="備註" style="flex:1; padding:5px 7px; font-size:0.83rem;">
+        <button type="button" class="token-del" onclick="deletePresetItem('${p.id}')" title="刪除此常用項目">✕</button>
+      </div>
+    `).join('');
+  }
+
+  function addPresetItemFromModal() {
+    const title = document.getElementById('newPresetTitleInput').value.trim();
+    const note = document.getElementById('newPresetNoteInput').value.trim();
+    const color = document.getElementById('newPresetColorInput').value || '#0284c7';
+    if (!title) { alert('請輸入常用提醒名稱！'); return; }
+    reminderPresets.push({
+      id: 'pre_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      title,
+      note,
+      color
+    });
+    document.getElementById('newPresetTitleInput').value = '';
+    document.getElementById('newPresetNoteInput').value = '';
+    saveReminderPresetsLocal();
+    renderPresetManageList();
+    renderReminderPresets();
+  }
+
+  function updatePresetItem(id, field, val) {
+    const item = reminderPresets.find(p => p.id === id);
+    if (!item) return;
+    item[field] = val.trim();
+    saveReminderPresetsLocal();
+    renderReminderPresets();
+  }
+
+  function deletePresetItem(id) {
+    reminderPresets = reminderPresets.filter(p => p.id !== id);
+    saveReminderPresetsLocal();
+    renderPresetManageList();
+    renderReminderPresets();
+  }
+
+  function resetDefaultPresets() {
+    if (!confirm('確定要將常用提醒清單恢復為預設值嗎？')) return;
+    reminderPresets = [...DEFAULT_REMINDER_PRESETS];
+    saveReminderPresetsLocal();
+    renderPresetManageList();
+    renderReminderPresets();
+  }
+
   function saveReminderBlocksLocal() {
-    localStorage.setItem('lz_reminder_blocks_v1', JSON.stringify(reminderBlocks));
+    localStorage.setItem('lz_reminder_blocks_v2', JSON.stringify(reminderBlocks));
   }
 
   function setReminderColor(hex) {
@@ -929,6 +1096,23 @@
     const color = document.getElementById('reminderColorInput').value || '#e11d48';
     if (!title) { alert('請輸入提醒標題（例如：關懷核銷、課程提醒）！'); return; }
 
+    if (document.getElementById('saveToPresetCheckbox').checked) {
+      const existingPreset = reminderPresets.find(p => p.title === title);
+      if (existingPreset) {
+        existingPreset.color = color;
+        if (note) existingPreset.note = note;
+      } else {
+        reminderPresets.push({
+          id: 'pre_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+          title,
+          note,
+          color
+        });
+      }
+      saveReminderPresetsLocal();
+      renderReminderPresets();
+    }
+
     reminderBlocks.unshift({
       id: 'rem_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
       title,
@@ -944,6 +1128,7 @@
   function removeReminderBlock(id) {
     reminderBlocks = reminderBlocks.filter(r => r.id !== id);
     saveReminderBlocksLocal();
+    renderReminderPresets();
     renderReminderPool();
   }
 
@@ -951,6 +1136,7 @@
     if (!confirm('確定要將提醒積木池恢復為預設的 5 種核銷提醒嗎？')) return;
     reminderBlocks = [...DEFAULT_REMINDER_BLOCKS];
     saveReminderBlocksLocal();
+    renderReminderPresets();
     renderReminderPool();
   }
 
@@ -986,6 +1172,7 @@
     if (!item) return;
     item.color = newColor;
     saveReminderBlocksLocal();
+    renderReminderPresets();
     renderReminderPool();
   }
 
@@ -1030,6 +1217,7 @@
     renderMonthTabs();
     renderCalendar();
     renderDragPool();
+    renderReminderPresets();
     renderReminderPool();
     renderScheduleSummary();
   }
@@ -1687,5 +1875,26 @@
     await loadYearCourses();
   }
 </script>
+<!-- 管理「常用提醒名稱與色彩綁定清單」彈窗 -->
+<div class="modal-backdrop" id="presetManagerModal">
+  <div class="modal-box" style="max-width: 500px;">
+    <h4>⚙ 管理常用提醒名稱＆色彩綁定清單</h4>
+    <div style="font-size:0.82rem; color:#475569; margin-bottom:10px;">
+      在此設定常用提醒項目與對應色彩（例如：計畫核銷類統一設為玫紅色），之後點選名稱就會自動帶入綁定顏色。
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr auto auto; gap:6px; align-items:center; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+      <input type="text" id="newPresetTitleInput" placeholder="名稱，如：每月零用金盤點">
+      <input type="text" id="newPresetNoteInput" placeholder="預設備註（選填）">
+      <input type="color" id="newPresetColorInput" value="#0284c7" style="width:34px; height:32px; padding:1px; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;" title="選擇綁定色彩">
+      <button type="button" class="btn btn-primary" style="padding:7px 10px;" onclick="addPresetItemFromModal()">＋ 新增</button>
+    </div>
+    <div class="preset-manage-list" id="presetManageList"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="resetDefaultPresets()">恢復預設清單</button>
+      <button type="button" class="btn btn-primary" onclick="closePresetManagerModal()">完成關閉</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
