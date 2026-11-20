@@ -310,9 +310,22 @@
       display: flex; justify-content: space-between; align-items: center;
       flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
     }
+    .sticky-cal-nav {
+      position: sticky; top: 0; z-index: 300;
+      background: rgba(255, 255, 255, 0.97);
+      padding: 8px 0 8px 0;
+      margin-bottom: 8px;
+      border-bottom: 1.5px solid #cbd5e1;
+      backdrop-filter: blur(4px);
+    }
+    .sticky-month-banner {
+      display: flex; justify-content: space-between; align-items: center;
+      background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 6px;
+      padding: 5px 12px; margin-bottom: 7px; font-size: 0.92rem; color: #115e59;
+    }
     .month-tabs {
       display: grid; grid-template-columns: repeat(12, 1fr); gap: 5px;
-      margin-bottom: 12px;
+      margin-bottom: 0;
     }
     @media (max-width: 900px) {
       .month-tabs { grid-template-columns: repeat(6, 1fr); }
@@ -335,7 +348,8 @@
     .calendar-grid {
       width: 100%; border-collapse: collapse; table-layout: fixed;
     }
-    .calendar-grid th {
+    .calendar-grid thead th {
+      position: sticky; top: 100px; z-index: 250;
       background: #2c5e4f; color: #fff; padding: 9px 4px;
       font-size: 0.92rem; border: 1px solid #1e4237; text-align: center;
     }
@@ -628,8 +642,14 @@
       <div id="scheduleSummaryContainer"></div>
     </div>
 
-    <!-- 1-12月分頁切換 -->
-    <div class="month-tabs" id="monthTabs"></div>
+    <!-- 1-12月分頁切換（捲動時固定置頂，隨時看清目前排課月份並快速切換） -->
+    <div class="sticky-cal-nav" id="stickyCalNav">
+      <div class="sticky-month-banner">
+        <div>目前排課月份：<strong id="currentViewingMonthLabel" style="font-size:1.05rem; color:#0f766e;">115 年 1 月</strong></div>
+        <div style="font-size:0.82rem; color:#475569;">往下捲動排課時，上方月份列會自動固定，點擊即可跨月切換</div>
+      </div>
+      <div class="month-tabs" id="monthTabs"></div>
+    </div>
 
     <!-- 關懷固定課預設與清除重排工具列 -->
     <div class="batch-bar">
@@ -1419,8 +1439,23 @@
     renderScheduleSummary();
   }
 
+  function updateStickyOffsets() {
+    const navEl = document.getElementById('stickyCalNav');
+    if (!navEl) return;
+    const h = navEl.offsetHeight;
+    document.querySelectorAll('.calendar-grid thead th').forEach(th => {
+      th.style.top = h + 'px';
+    });
+  }
+
   function renderMonthTabs() {
     const adYear = currentRocYear + 1911;
+    const lblEl = document.getElementById('currentViewingMonthLabel');
+    if (lblEl) {
+      const mPrefix = `${adYear}-${pad2(currentMonth)}-`;
+      const mCnt = yearCourses.filter(c => c.plan_type !== '提醒' && c.course_date.startsWith(mPrefix)).length;
+      lblEl.textContent = `${currentRocYear} 年 (${adYear}) ${currentMonth} 月（本月已排 ${mCnt} 堂）`;
+    }
     const tabsEl = document.getElementById('monthTabs');
     let html = '';
     for (let m = 1; m <= 12; m++) {
@@ -1435,7 +1470,9 @@
       `;
     }
     tabsEl.innerHTML = html;
+    requestAnimationFrame(updateStickyOffsets);
   }
+  window.addEventListener('resize', updateStickyOffsets);
 
   function switchMonth(m) {
     currentMonth = m;
