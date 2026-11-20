@@ -467,7 +467,7 @@
     <!-- 直接放在月曆最上方的「各計畫排定日期總覽＆一鍵複製盒（依計畫展開收合）」 -->
     <div class="summary-top-box">
       <div class="summary-top-header">
-        <div class="summary-top-title">各計畫課程排定日期總覽（核銷專用一鍵複製）</div>
+        <div class="summary-top-title">各計畫課程排定日期總覽（核銷專用一鍵複製・點擊計畫展開）</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
           <select id="summaryPlanFilter" style="width:auto; padding:4px 8px; font-size:0.84rem;" onchange="renderScheduleSummary()">
             <option value="ALL">全部計畫</option>
@@ -799,6 +799,7 @@
 
   async function onYearChange() {
     currentRocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    planOpenState = {};
     localStorage.setItem('lz_cal_roc_year', String(currentRocYear));
     await loadYearCourses();
   }
@@ -1083,8 +1084,8 @@
 
     const planKeys = [...byPlan.keys()];
     planKeys.forEach(p => {
-      if (!(p in planOpenState)) {
-        planOpenState[p] = false; // 預設所有計畫皆為收合狀態，不擋住下方排課行事曆
+      if (planOpenState[p] !== true) {
+        planOpenState[p] = false; // 嚴格預設所有計畫（含關懷計畫）皆為收合狀態
       }
     });
 
