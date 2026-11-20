@@ -1082,9 +1082,11 @@
     });
 
     const planKeys = [...byPlan.keys()];
-    if (Object.keys(planOpenState).length === 0 && planKeys.length > 0) {
-      planKeys.forEach((p, i) => { planOpenState[p] = (i === 0); });
-    }
+    planKeys.forEach(p => {
+      if (!(p in planOpenState)) {
+        planOpenState[p] = false; // 預設所有計畫皆為收合狀態，不擋住下方排課行事曆
+      }
+    });
 
     const cardsHtml = planKeys.map(planName => {
       const groups = byPlan.get(planName);
