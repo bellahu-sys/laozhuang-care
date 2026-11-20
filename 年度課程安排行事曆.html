@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>年度計畫排課行事曆 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --bg: #f1f5f9;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 255px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .page-wrap {
+      max-width: 1440px; margin: 18px auto 40px auto; padding: 0 16px;
+      display: grid; grid-template-columns: 325px 1fr; gap: 18px; align-items: start;
+    }
+    @media (max-width: 1024px) {
+      .page-wrap { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: #fff; border-radius: 10px; padding: 16px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .panel h3 {
+      margin: 0 0 12px 0; font-size: 1.05rem; color: var(--primary);
+      border-bottom: 2px solid var(--primary); padding-bottom: 7px;
+    }
+
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 0.86rem; font-weight: bold; margin-bottom: 4px; color: #334155; }
+    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    input[type="text"], input[type="number"], select {
+      width: 100%; padding: 7px 9px; border: 1px solid var(--border);
+      border-radius: 5px; font-size: 0.9rem;
+    }
+
+    .btn {
+      padding: 8px 12px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.88rem; transition: background 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; width: 100%; }
+    .btn-primary:hover { background: #1e4237; }
+    .btn-outline { background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-link-report {
+      background: #0f766e; color: #fff; text-decoration: none;
+      padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 0.9rem;
+      display: inline-block;
+    }
+    .btn-link-report:hover { background: #115e59; }
+
+    /* 可拖曳課程積木池 */
+    .drag-pool {
+      margin-top: 12px; display: flex; flex-direction: column; gap: 8px;
+      max-height: 360px; overflow-y: auto; padding-right: 2px;
+    }
+    .drag-token {
+      padding: 10px 12px; border-radius: 8px; border: 2px dashed #64748b;
+      background: #f8fafc; cursor: grab; user-select: none;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .drag-token:active { cursor: grabbing; }
+    .drag-token:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .drag-token.plan-多元 { border-color: #2563eb; background: #eff6ff; }
+    .drag-token.plan-伯公 { border-color: #d97706; background: #fffbeb; }
+    .drag-token.plan-樂齡 { border-color: #7c3aed; background: #f5f3ff; }
+    .drag-token.plan-關懷 { border-color: #16a34a; background: #f0fdf4; }
+    .token-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.95rem; }
+    .token-meta { font-size: 0.82rem; color: #334155; margin-top: 4px; }
+    .token-actual { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; }
+    .token-del {
+      background: none; border: none; color: #94a3b8; font-weight: bold;
+      cursor: pointer; font-size: 0.95rem; padding: 0 4px;
+    }
+    .token-del:hover { color: #dc2626; }
+
+    /* 1-12月分頁與工具列 */
+    .cal-header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+    }
+    .month-tabs {
+      display: grid; grid-template-columns: repeat(12, 1fr); gap: 5px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 900px) {
+      .month-tabs { grid-template-columns: repeat(6, 1fr); }
+    }
+    .month-tab {
+      padding: 8px 4px; text-align: center; border-radius: 6px;
+      border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;
+      font-weight: bold; cursor: pointer; font-size: 0.92rem;
+    }
+    .month-tab:hover { background: #e2e8f0; }
+    .month-tab.active {
+      background: var(--primary); color: #fff; border-color: var(--primary);
+      box-shadow: 0 2px 6px rgba(44,94,79,0.25);
+    }
+    .month-tab .m-count {
+      display: block; font-size: 0.72rem; font-weight: normal; opacity: 0.85; margin-top: 1px;
+    }
+
+    /* 行事曆格子（星期一排第一、六日排最後） */
+    .calendar-grid {
+      width: 100%; border-collapse: collapse; table-layout: fixed;
+    }
+    .calendar-grid th {
+      background: #2c5e4f; color: #fff; padding: 9px 4px;
+      font-size: 0.92rem; border: 1px solid #1e4237; text-align: center;
+    }
+    .calendar-grid th.weekend-th { background: #475569; }
+    .calendar-grid td {
+      border: 1px solid #cbd5e1; vertical-align: top; height: 126px;
+      padding: 6px; background: #fff; transition: background 0.12s;
+    }
+    .calendar-grid td.other-month { background: #f8fafc; color: #cbd5e1; }
+    .calendar-grid td.weekend-cell { background: #f8fafc; }
+    .calendar-grid td.holiday-cell { background: #fef2f2; }
+    .calendar-grid td.drag-over {
+      background: #dbeafe !important; outline: 2px dashed #2563eb; outline-offset: -3px;
+    }
+
+    .day-top {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 5px;
+    }
+    .day-num { font-weight: bold; font-size: 0.95rem; color: #1e293b; }
+    .holiday-tag {
+      font-size: 0.72rem; background: #fee2e2; color: #b91c1c;
+      padding: 1px 5px; border-radius: 4px; font-weight: bold;
+    }
+    .add-day-btn {
+      background: none; border: 1px solid transparent; color: #94a3b8;
+      border-radius: 4px; cursor: pointer; font-size: 0.82rem; padding: 0 4px;
+    }
+    .calendar-grid td:hover .add-day-btn { color: var(--primary); border-color: #cbd5e1; }
+
+    /* 單堂課程卡片（核銷時間為主視覺、實際上課時間灰色提醒） */
+    .course-chip {
+      border-radius: 6px; padding: 5px 7px; margin-bottom: 5px;
+      font-size: 0.82rem; line-height: 1.32; position: relative;
+      border-left: 4px solid #16a34a; background: #f0fdf4;
+      cursor: pointer;
+    }
+    .course-chip.type-多元 { border-left-color: #2563eb; background: #eff6ff; }
+    .course-chip.type-伯公 { border-left-color: #d97706; background: #fffbeb; }
+    .course-chip.type-樂齡 { border-left-color: #7c3aed; background: #f5f3ff; }
+    .course-chip.type-關懷 { border-left-color: #16a34a; background: #f0fdf4; }
+
+    .chip-plan-badge {
+      display: inline-block; font-size: 0.7rem; font-weight: bold;
+      padding: 0 4px; border-radius: 3px; margin-right: 3px;
+      background: rgba(0,0,0,0.07); color: #1e293b;
+    }
+    .chip-title { font-weight: bold; color: #0f172a; }
+    .chip-reimburse-time {
+      font-size: 0.78rem; font-weight: bold; color: #1e3a8a; margin-top: 2px;
+    }
+    .chip-actual-time {
+      font-size: 0.73rem; color: #94a3b8; margin-top: 1px;
+    }
+    .chip-instructor {
+      font-size: 0.74rem; color: #475569; margin-top: 1px;
+    }
+
+    .batch-bar {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px 12px;
+      border-radius: 8px; margin-bottom: 12px;
+    }
+
+    /* 彈窗編輯單堂課程 */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45);
+      z-index: 900; justify-content: center; align-items: center; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 10px; width: 100%; max-width: 440px;
+      padding: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.22);
+    }
+    .modal-box h4 { margin: 0 0 14px 0; color: var(--primary); font-size: 1.1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">每月核銷 5 份簽到/出勤表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度計畫排課行事曆（1-12月跨月拖曳）</a>
+        <a href="月報表套印中心.html">前往核銷 5 份簽到表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <!-- 左側：建立可跨月拖曳的課程堂數區塊 -->
+  <div class="panel">
+    <h3>1. 建立可拖曳課程積木</h3>
+    <div class="form-row-2 form-group">
+      <div>
+        <label>計畫類別</label>
+        <select id="planTypeInput">
+          <option value="多元">多元計畫</option>
+          <option value="伯公">伯公計畫</option>
+          <option value="樂齡">樂齡計畫</option>
+          <option value="關懷">關懷固定課</option>
+        </select>
+      </div>
+      <div>
+        <label>課程名稱前綴</label>
+        <input type="text" id="coursePrefixInput" value="多元1" placeholder="如：多元1、伯公體適能">
+      </div>
+    </div>
+
+    <div class="form-row-2 form-group">
+      <div>
+        <label>起始編號</label>
+        <input type="number" id="startNumInput" value="1" min="1" max="99">
+      </div>
+      <div>
+        <label>總堂數（自動跨月）</label>
+        <input type="number" id="totalCountInput" value="12" min="1" max="52">
+      </div>
+    </div>
+
+    <div class="form-row-2 form-group">
+      <div>
+        <label>核銷時間（主顯示）</label>
+        <input type="text" id="reimburseTimeInput" value="09:00-11:00" placeholder="如：09:00-11:00">
+      </div>
+      <div>
+        <label>實際上課時間（灰色提醒）</label>
+        <input type="text" id="actualTimeInput" value="09:30-11:30" placeholder="選填，如：09:30-11:30">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>授課講師（可選填，連動簽到表）</label>
+      <input type="text" id="instructorInput" list="instructorDatalist" placeholder="輸入或選擇講師姓名">
+      <datalist id="instructorDatalist"></datalist>
+    </div>
+
+    <div class="form-group" style="background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0;">
+      <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer; font-size:0.84rem;">
+        <input type="checkbox" id="replaceCareCheckbox" checked>
+        拖曳放入時，自動取代該日「關懷」課程
+      </label>
+    </div>
+
+    <button type="button" class="btn btn-primary" onclick="createDragBlock()">＋ 產生可拖曳課程區塊</button>
+
+    <div style="margin-top:14px; font-size:0.83rem; color:#475569; line-height:1.45;">
+      <strong>使用方式：</strong>將下方產生的方塊直接<strong>按住拖曳到右側行事曆的任一天</strong>（例如 3 月某個週一），系統會自動每週同日<strong>跨月份連續排滿全部堂數</strong>，並自動跳過國定假日！
+    </div>
+
+    <div class="drag-pool" id="dragPool"></div>
+  </div>
+
+  <!-- 右側：1-12月行事曆與批次重排工具 -->
+  <div class="panel">
+    <div class="cal-header-bar">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <h3 style="margin:0; border:none; padding:0;">2. 年度課程安排行事曆</h3>
+        <select id="rocYearSelect" style="width:auto; font-weight:bold;" onchange="onYearChange()">
+          <option value="115">115 年 (2026)</option>
+          <option value="116">116 年 (2027)</option>
+          <option value="117">117 年 (2028)</option>
+        </select>
+        <span id="syncStatus" style="font-size:0.86rem; font-weight:bold; color:#166534;"></span>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <a href="月報表套印中心.html" class="btn-link-report">前往核銷 5 份簽到表套印 ➔</a>
+      </div>
+    </div>
+
+    <!-- 1-12月分頁切換 -->
+    <div class="month-tabs" id="monthTabs"></div>
+
+    <!-- 關懷固定課預設與清除重排工具列 -->
+    <div class="batch-bar">
+      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForMonth()">＋ 鋪設本月固定「關懷」課（週一至週五）</button>
+      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForYear()">＋ 鋪設全年 1-12 月固定「關懷」課</button>
+      <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <input type="text" id="clearPrefixInput" placeholder="輸入前綴如：多元1" style="width:125px; padding:6px 8px;">
+        <button type="button" class="btn btn-amber" onclick="clearByPrefix()">清除指定計畫重排</button>
+        <button type="button" class="btn btn-outline" style="color:#b91c1c; border-color:#fca5a5;" onclick="clearCurrentMonth()">清除本月重排</button>
+        <button type="button" class="btn btn-danger" onclick="clearWholeYear()">清除全年度重排</button>
+      </div>
+    </div>
+
+    <!-- 月曆主體（星期一排第一、六日排最後） -->
+    <table class="calendar-grid">
+      <thead>
+        <tr>
+          <th>星期一</th>
+          <th>星期二</th>
+          <th>星期三</th>
+          <th>星期四</th>
+          <th>星期五</th>
+          <th class="weekend-th">星期六</th>
+          <th class="weekend-th">星期日</th>
+        </tr>
+      </thead>
+      <tbody id="calendarBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 單日新增 / 編輯課程彈窗 -->
+<div class="modal-backdrop" id="courseModal">
+  <div class="modal-box">
+    <h4 id="modalTitle">編輯課程</h4>
+    <input type="hidden" id="modalCourseId">
+    <input type="hidden" id="modalDateIso">
+    <div class="form-row-2 form-group">
+      <div>
+        <label>計畫類別</label>
+        <select id="modalPlanType">
+          <option value="關懷">關懷固定課</option>
+          <option value="多元">多元計畫</option>
+          <option value="伯公">伯公計畫</option>
+          <option value="樂齡">樂齡計畫</option>
+        </select>
+      </div>
+      <div>
+        <label>課程名稱（將顯示於簽到表）</label>
+        <input type="text" id="modalCourseName" placeholder="如：多元1-1 或 肌力訓練">
+      </div>
+    </div>
+    <div class="form-row-2 form-group">
+      <div>
+        <label>核銷時間（主視覺）</label>
+        <input type="text" id="modalReimburseTime" value="09:00-11:00">
+      </div>
+      <div>
+        <label>實際上課時間（灰色提醒）</label>
+        <input type="text" id="modalActualTime" placeholder="選填">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>授課講師</label>
+      <input type="text" id="modalInstructor" list="instructorDatalist" placeholder="選填">
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-danger" id="modalDeleteBtn" style="margin-right:auto;" onclick="deleteSingleCourse()">刪除此堂</button>
+      <button type="button" class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button type="button" class="btn btn-primary" style="width:auto;" onclick="saveModalCourse()">儲存變更</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // 內建台灣國定假日（不含農曆，介面清爽）
+  const TW_HOLIDAYS = {
+    '2026-01-01': '元旦',
+    '2026-02-16': '除夕', '2026-02-17': '春節', '2026-02-18': '初二', '2026-02-19': '初三', '2026-02-20': '春節補假',
+    '2026-02-27': '228補假', '2026-02-28': '和平紀念日',
+    '2026-04-03': '兒童節補假', '2026-04-04': '兒童節', '2026-04-05': '清明節', '2026-04-06': '清明補假',
+    '2026-05-01': '勞動節',
+    '2026-06-19': '端午節',
+    '2026-09-25': '中秋節', '2026-09-28': '教師節',
+    '2026-10-09': '國慶補假', '2026-10-10': '國慶日',
+    '2026-10-26': '光復節補假',
+    '2026-12-25': '行憲紀念日',
+    '2027-01-01': '元旦',
+    '2027-02-05': '除夕', '2027-02-06': '春節', '2027-02-07': '初二', '2027-02-08': '初三', '2027-02-09': '春節補假', '2027-02-10': '春節補假',
+    '2027-02-28': '和平紀念日', '2027-03-01': '228補假',
+    '2027-04-04': '兒童節', '2027-04-05': '清明節',
+    '2027-05-01': '勞動節',
+    '2027-06-09': '端午節',
+    '2027-09-15': '中秋節',
+    '2027-10-10': '國慶日', '2027-10-11': '國慶補假'
+  };
+
+  let currentRocYear = 115;
+  let currentMonth = new Date().getMonth() + 1;
+  let yearCourses = []; // 當年度全部課程資料
+  let dragBlocks = [];  // 左側待拖曳課程積木池
+  let activeDraggedBlock = null;
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('syncStatus');
+    el.style.color = isErr ? '#dc2626' : '#166534';
+    el.textContent = msg;
+  }
+
+  // 初始化預設積木與讀取講師名單
+  (async function initPage() {
+    const now = new Date();
+    const rocNow = now.getFullYear() - 1911;
+    const ySel = document.getElementById('rocYearSelect');
+    if ([...ySel.options].some(o => o.value === String(rocNow))) {
+      ySel.value = String(rocNow);
+      currentRocYear = rocNow;
+    }
+
+    // 載入已儲存的積木模板
+    const savedBlocks = localStorage.getItem('lz_drag_blocks_v1');
+    if (savedBlocks) {
+      try { dragBlocks = JSON.parse(savedBlocks); } catch (e) { dragBlocks = []; }
+    }
+    if (dragBlocks.length === 0) {
+      dragBlocks = [
+        { id: 'b1', planType: '多元', prefix: '多元1', startNum: 1, count: 12, reimburseTime: '09:00-11:00', actualTime: '09:30-11:30', instructor: '' },
+        { id: 'b2', planType: '伯公', prefix: '伯公1', startNum: 1, count: 8, reimburseTime: '09:00-11:00', actualTime: '', instructor: '' },
+        { id: 'b3', planType: '樂齡', prefix: '樂齡1', startNum: 1, count: 10, reimburseTime: '09:00-11:00', actualTime: '', instructor: '' }
+      ];
+    }
+    renderDragPool();
+
+    // 從資料庫載入講師名單供快速選擇
+    const { data: instData } = await supabaseClient.from('instructors').select('name').eq('status', '服務中');
+    if (instData) {
+      document.getElementById('instructorDatalist').innerHTML = instData.map(i => `<option value="${i.name}">`).join('');
+    }
+
+    await loadYearCourses();
+  })();
+
+  function saveDragBlocksLocal() {
+    localStorage.setItem('lz_drag_blocks_v1', JSON.stringify(dragBlocks));
+  }
+
+  function createDragBlock() {
+    const planType = document.getElementById('planTypeInput').value;
+    const prefix = document.getElementById('coursePrefixInput').value.trim();
+    const startNum = parseInt(document.getElementById('startNumInput').value, 10) || 1;
+    const count = parseInt(document.getElementById('totalCountInput').value, 10) || 1;
+    const reimburseTime = document.getElementById('reimburseTimeInput').value.trim() || '09:00-11:00';
+    const actualTime = document.getElementById('actualTimeInput').value.trim();
+    const instructor = document.getElementById('instructorInput').value.trim();
+
+    if (!prefix) { alert('請輸入課程名稱前綴（例如：多元1）！'); return; }
+
+    dragBlocks.unshift({
+      id: 'blk_' + Date.now(),
+      planType,
+      prefix,
+      startNum,
+      count,
+      reimburseTime,
+      actualTime,
+      instructor
+    });
+    saveDragBlocksLocal();
+    renderDragPool();
+  }
+
+  function removeDragBlock(id) {
+    dragBlocks = dragBlocks.filter(b => b.id !== id);
+    saveDragBlocksLocal();
+    renderDragPool();
+  }
+
+  function renderDragPool() {
+    const pool = document.getElementById('dragPool');
+    pool.innerHTML = dragBlocks.map(b => {
+      const endNum = b.startNum + b.count - 1;
+      const rangeLabel = b.count > 1 ? `${b.prefix}-${b.startNum} ~ ${b.prefix}-${endNum}` : `${b.prefix}-${b.startNum}`;
+      return `
+        <div class="drag-token plan-${b.planType}" draggable="true"
+             ondragstart="onBlockDragStart(event, '${b.id}')">
+          <div class="token-header">
+            <span>[${b.planType}] ${rangeLabel}（共 ${b.count} 堂）</span>
+            <button type="button" class="token-del" onclick="removeDragBlock('${b.id}')" title="移除此積木">✕</button>
+          </div>
+          <div class="token-meta">核銷時間：${b.reimburseTime} ${b.instructor ? `｜ 講師：${b.instructor}` : ''}</div>
+          ${b.actualTime ? `<div class="token-actual">實際上課提醒：${b.actualTime}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function onBlockDragStart(ev, blockId) {
+    activeDraggedBlock = dragBlocks.find(b => b.id === blockId) || null;
+    ev.dataTransfer.effectAllowed = 'copy';
+    ev.dataTransfer.setData('text/plain', blockId);
+  }
+
+  async function onYearChange() {
+    currentRocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    await loadYearCourses();
+  }
+
+  async function loadYearCourses() {
+    const adYear = currentRocYear + 1911;
+    setStatus('正在讀取雲端課表...');
+    const { data, error } = await supabaseClient
+      .from('course_schedules')
+      .select('*')
+      .gte('course_date', `${adYear}-01-01`)
+      .lte('course_date', `${adYear}-12-31`)
+      .order('course_date', { ascending: true })
+      .order('id', { ascending: true });
+
+    if (error) {
+      setStatus('讀取失敗（請確認已執行步驟 1 SQL）：' + error.message, true);
+      return;
+    }
+    yearCourses = data || [];
+    setStatus(`已同步 ${currentRocYear} 年度課表（共 ${yearCourses.length} 堂）`);
+    renderMonthTabs();
+    renderCalendar();
+  }
+
+  function renderMonthTabs() {
+    const adYear = currentRocYear + 1911;
+    const tabsEl = document.getElementById('monthTabs');
+    let html = '';
+    for (let m = 1; m <= 12; m++) {
+      const prefix = `${adYear}-${pad2(m)}-`;
+      const cnt = yearCourses.filter(c => c.course_date.startsWith(prefix)).length;
+      const activeCls = (m === currentMonth) ? 'active' : '';
+      html += `
+        <button type="button" class="month-tab ${activeCls}" onclick="switchMonth(${m})">
+          ${m} 月
+          <span class="m-count">${cnt} 堂</span>
+        </button>
+      `;
+    }
+    tabsEl.innerHTML = html;
+  }
+
+  function switchMonth(m) {
+    currentMonth = m;
+    renderMonthTabs();
+    renderCalendar();
+  }
+
+  // 渲染單月月曆（星期一在最左，星期六、日在最右）
+  function renderCalendar() {
+    const adYear = currentRocYear + 1911;
+    const firstDay = new Date(adYear, currentMonth - 1, 1);
+    const daysInMonth = new Date(adYear, currentMonth, 0).getDate();
+
+    // 轉換 JS getDay() (0=週日, 1=週一...6=週六) 為「週一=0, 週二=1 ... 週日=6」
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+    const courseMap = {};
+    yearCourses.forEach(c => {
+      if (!courseMap[c.course_date]) courseMap[c.course_date] = [];
+      courseMap[c.course_date].push(c);
+    });
+
+    let rowsHtml = '';
+    for (let idx = 0; idx < totalCells; idx++) {
+      if (idx % 7 === 0) rowsHtml += '<tr>';
+
+      const dayNum = idx - startOffset + 1;
+      const colIdx = idx % 7; // 0~4 為週一~週五，5~6 為週六~週日
+      const isWeekend = colIdx >= 5;
+
+      if (dayNum < 1 || dayNum > daysInMonth) {
+        rowsHtml += `<td class="other-month"></td>`;
+      } else {
+        const isoDate = `${adYear}-${pad2(currentMonth)}-${pad2(dayNum)}`;
+        const holidayName = TW_HOLIDAYS[isoDate] || '';
+        const tdClasses = [
+          isWeekend ? 'weekend-cell' : '',
+          holidayName ? 'holiday-cell' : ''
+        ].filter(Boolean).join(' ');
+
+        const dayCourses = courseMap[isoDate] || [];
+        const chipsHtml = dayCourses.map(c => {
+          const pType = c.plan_type || '關懷';
+          return `
+            <div class="course-chip type-${pType}" onclick="openEditModal(${c.id}); event.stopPropagation();">
+              <div><span class="chip-plan-badge">${pType}</span><span class="chip-title">${escapeHtml(c.course_name)}</span></div>
+              ${c.time_slot ? `<div class="chip-reimburse-time">核銷：${escapeHtml(c.time_slot)}</div>` : ''}
+              ${c.actual_time_slot ? `<div class="chip-actual-time">實際：${escapeHtml(c.actual_time_slot)}</div>` : ''}
+              ${c.instructor_name ? `<div class="chip-instructor">講師：${escapeHtml(c.instructor_name)}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+
+        rowsHtml += `
+          <td class="${tdClasses}"
+              ondragover="onCellDragOver(event)"
+              ondragleave="onCellDragLeave(event)"
+              ondrop="onCellDrop(event, '${isoDate}')"
+              onclick="openNewModal('${isoDate}')">
+            <div class="day-top">
+              <div>
+                <span class="day-num">${dayNum}</span>
+                ${holidayName ? `<span class="holiday-tag">${holidayName}</span>` : ''}
+              </div>
+              <button type="button" class="add-day-btn" title="手動新增單堂課程">＋</button>
+            </div>
+            ${chipsHtml}
+          </td>
+        `;
+      }
+
+      if (idx % 7 === 6) rowsHtml += '</tr>';
+    }
+    document.getElementById('calendarBody').innerHTML = rowsHtml;
+  }
+
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s]));
+  }
+
+  function onCellDragOver(ev) {
+    ev.preventDefault();
+    ev.currentTarget.classList.add('drag-over');
+  }
+
+  function onCellDragLeave(ev) {
+    ev.currentTarget.classList.remove('drag-over');
+  }
+
+  // 跨月份自動連續排課核心邏輯
+  async function onCellDrop(ev, startIsoDate) {
+    ev.preventDefault();
+    ev.currentTarget.classList.remove('drag-over');
+    if (!activeDraggedBlock) return;
+
+    const blk = activeDraggedBlock;
+    const replaceCare = document.getElementById('replaceCareCheckbox').checked;
+    const adYear = currentRocYear + 1911;
+    const yearEndIso = `${adYear}-12-31`;
+
+    // 從放下當天開始，每週同一天往後推算直到排滿 blk.count 堂（自動跨月、自動跳過國定假日）
+    const parts = startIsoDate.split('-').map(Number);
+    let cursor = new Date(parts[0], parts[1] - 1, parts[2]);
+    const scheduledDates = [];
+
+    while (scheduledDates.length < blk.count) {
+      const iso = `${cursor.getFullYear()}-${pad2(cursor.getMonth() + 1)}-${pad2(cursor.getDate())}`;
+      if (iso > yearEndIso) break; // 不超過當年度 12/31
+
+      // 若遇國定假日則自動順延至下週同一天
+      if (!TW_HOLIDAYS[iso]) {
+        scheduledDates.push(iso);
+      }
+      cursor.setDate(cursor.getDate() + 7);
+    }
+
+    if (scheduledDates.length === 0) return;
+
+    setStatus('正在跨月排入課程並寫入雲端...');
+
+    // 若勾選「取代關懷課程」且本次拖入的是多元/伯公/樂齡，先刪除這些日期原有的關懷課程
+    if (replaceCare && blk.planType !== '關懷') {
+      await supabaseClient
+        .from('course_schedules')
+        .delete()
+        .in('course_date', scheduledDates)
+        .eq('plan_type', '關懷');
+    }
+
+    const insertRows = scheduledDates.map((dIso, idx) => {
+      const seq = blk.startNum + idx;
+      const cName = blk.count > 1 ? `${blk.prefix}-${seq}` : (blk.startNum > 1 ? `${blk.prefix}-${seq}` : blk.prefix);
+      return {
+        course_date: dIso,
+        plan_type: blk.planType,
+        course_name: cName,
+        time_slot: blk.reimburseTime,
+        actual_time_slot: blk.actualTime || null,
+        instructor_name: blk.instructor || null
+      };
+    });
+
+    const { error } = await supabaseClient.from('course_schedules').insert(insertRows);
+    if (error) {
+      alert('排課寫入失敗：' + error.message);
+      setStatus('寫入失敗', true);
+      return;
+    }
+
+    await loadYearCourses();
+    const firstM = parseInt(scheduledDates[0].split('-')[1], 10);
+    const lastM = parseInt(scheduledDates[scheduledDates.length - 1].split('-')[1], 10);
+    setStatus(`已成功跨月排入 ${scheduledDates.length} 堂（${firstM}月～${lastM}月），並已同步至簽到表！`);
+  }
+
+  // 鋪設單月固定「關懷」課程（週一至週五，排除國定假日與已有課程的日期）
+  async function fillDefaultCareForMonth() {
+    const adYear = currentRocYear + 1911;
+    const daysInMonth = new Date(adYear, currentMonth, 0).getDate();
+    const existingDates = new Set(yearCourses.map(c => c.course_date));
+    const rows = [];
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dow = new Date(adYear, currentMonth - 1, d).getDay();
+      if (dow === 0 || dow === 6) continue;
+      const iso = `${adYear}-${pad2(currentMonth)}-${pad2(d)}`;
+      if (TW_HOLIDAYS[iso] || existingDates.has(iso)) continue;
+
+      rows.push({
+        course_date: iso,
+        plan_type: '關懷',
+        course_name: '關懷健康促進活動',
+        time_slot: '09:00-11:00',
+        actual_time_slot: null,
+        instructor_name: null
+      });
+    }
+
+    if (rows.length === 0) {
+      alert('本月所有平日皆已排有課程或為國定假日！');
+      return;
+    }
+    setStatus('正在鋪設本月固定關懷課程...');
+    await supabaseClient.from('course_schedules').insert(rows);
+    await loadYearCourses();
+  }
+
+  // 鋪設全年度 1-12 月固定「關懷」課程
+  async function fillDefaultCareForYear() {
+    if (!confirm(`確定要為 ${currentRocYear} 年 1～12 月所有尚未排課的平日（週一至週五）自動鋪設固定「關懷」課程嗎？`)) return;
+    const adYear = currentRocYear + 1911;
+    const existingDates = new Set(yearCourses.map(c => c.course_date));
+    const rows = [];
+
+    for (let m = 1; m <= 12; m++) {
+      const daysInMonth = new Date(adYear, m, 0).getDate();
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dow = new Date(adYear, m - 1, d).getDay();
+        if (dow === 0 || dow === 6) continue;
+        const iso = `${adYear}-${pad2(m)}-${pad2(d)}`;
+        if (TW_HOLIDAYS[iso] || existingDates.has(iso)) continue;
+
+        rows.push({
+          course_date: iso,
+          plan_type: '關懷',
+          course_name: '關懷健康促進活動',
+          time_slot: '09:00-11:00',
+          actual_time_slot: null,
+          instructor_name: null
+        });
+      }
+    }
+
+    if (rows.length === 0) {
+      alert('全年度所有平日皆已排課完成！');
+      return;
+    }
+    setStatus('正在鋪設全年度關懷課程...');
+    await supabaseClient.from('course_schedules').insert(rows);
+    await loadYearCourses();
+  }
+
+  // 依計畫名稱前綴整批清除（例如一次清掉跨月的多元1-1~多元1-12）
+  async function clearByPrefix() {
+    const prefix = document.getElementById('clearPrefixInput').value.trim();
+    if (!prefix) {
+      alert('請先在左側輸入框輸入要清除的課程前綴（例如：多元1）！');
+      return;
+    }
+    const adYear = currentRocYear + 1911;
+    const matched = yearCourses.filter(c => c.course_name.startsWith(prefix));
+    if (matched.length === 0) {
+      alert(`找不到名稱以「${prefix}」開頭的課程！`);
+      return;
+    }
+    if (!confirm(`確定要整批清除 ${currentRocYear} 年度所有「${prefix}*」課程（共 ${matched.length} 堂，跨月份同步刪除）嗎？`)) return;
+
+    const ids = matched.map(c => c.id);
+    await supabaseClient.from('course_schedules').delete().in('id', ids);
+    await loadYearCourses();
+    setStatus(`已整批清除「${prefix}」共 ${matched.length} 堂課程！`);
+  }
+
+  // 清除當月全部課程重新排課
+  async function clearCurrentMonth() {
+    if (!confirm(`確定要清除 ${currentRocYear} 年 ${currentMonth} 月的所有已排課程嗎？`)) return;
+    const adYear = currentRocYear + 1911;
+    const startIso = `${adYear}-${pad2(currentMonth)}-01`;
+    const endIso = `${adYear}-${pad2(currentMonth)}-${pad2(new Date(adYear, currentMonth, 0).getDate())}`;
+
+    await supabaseClient.from('course_schedules').delete().gte('course_date', startIso).lte('course_date', endIso);
+    await loadYearCourses();
+    setStatus(`已清除 ${currentMonth} 月課表，可重新排課！`);
+  }
+
+  // 清除全年度課程重新排課
+  async function clearWholeYear() {
+    if (!confirm(`警告：確定要清除「${currentRocYear} 全年度 1-12 月」的所有課程資料重新排課嗎？`)) return;
+    const adYear = currentRocYear + 1911;
+    await supabaseClient.from('course_schedules').delete().gte('course_date', `${adYear}-01-01`).lte('course_date', `${adYear}-12-31`);
+    await loadYearCourses();
+    setStatus(`已清空 ${currentRocYear} 全年度課表！`);
+  }
+
+  // 彈窗：新增單日課程
+  function openNewModal(isoDate) {
+    document.getElementById('modalTitle').textContent = `新增課程（${isoDate}）`;
+    document.getElementById('modalCourseId').value = '';
+    document.getElementById('modalDateIso').value = isoDate;
+    document.getElementById('modalPlanType').value = '多元';
+    document.getElementById('modalCourseName').value = '';
+    document.getElementById('modalReimburseTime').value = '09:00-11:00';
+    document.getElementById('modalActualTime').value = '';
+    document.getElementById('modalInstructor').value = '';
+    document.getElementById('modalDeleteBtn').style.display = 'none';
+    document.getElementById('courseModal').classList.add('open');
+  }
+
+  // 彈窗：編輯既有單堂課程
+  function openEditModal(courseId) {
+    const c = yearCourses.find(item => item.id === courseId);
+    if (!c) return;
+    document.getElementById('modalTitle').textContent = `編輯課程（${c.course_date}）`;
+    document.getElementById('modalCourseId').value = c.id;
+    document.getElementById('modalDateIso').value = c.course_date;
+    document.getElementById('modalPlanType').value = c.plan_type || '關懷';
+    document.getElementById('modalCourseName').value = c.course_name || '';
+    document.getElementById('modalReimburseTime').value = c.time_slot || '09:00-11:00';
+    document.getElementById('modalActualTime').value = c.actual_time_slot || '';
+    document.getElementById('modalInstructor').value = c.instructor_name || '';
+    document.getElementById('modalDeleteBtn').style.display = 'inline-block';
+    document.getElementById('courseModal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('courseModal').classList.remove('open');
+  }
+
+  async function saveModalCourse() {
+    const id = document.getElementById('modalCourseId').value;
+    const isoDate = document.getElementById('modalDateIso').value;
+    const planType = document.getElementById('modalPlanType').value;
+    const courseName = document.getElementById('modalCourseName').value.trim();
+    const reimburseTime = document.getElementById('modalReimburseTime').value.trim();
+    const actualTime = document.getElementById('modalActualTime').value.trim();
+    const instructor = document.getElementById('modalInstructor').value.trim();
+
+    if (!courseName) { alert('請輸入課程名稱！'); return; }
+
+    const payload = {
+      course_date: isoDate,
+      plan_type: planType,
+      course_name: courseName,
+      time_slot: reimburseTime || null,
+      actual_time_slot: actualTime || null,
+      instructor_name: instructor || null
+    };
+
+    if (id) {
+      await supabaseClient.from('course_schedules').update(payload).eq('id', id);
+    } else {
+      await supabaseClient.from('course_schedules').insert([payload]);
+    }
+    closeModal();
+    await loadYearCourses();
+  }
+
+  async function deleteSingleCourse() {
+    const id = document.getElementById('modalCourseId').value;
+    if (!id) return;
+    await supabaseClient.from('course_schedules').delete().eq('id', id);
+    closeModal();
+    await loadYearCourses();
+  }
+</script>
+</body>
+</html>
