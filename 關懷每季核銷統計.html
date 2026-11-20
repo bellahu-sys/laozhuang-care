@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4. 關懷每季核銷統計 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --bg: #f1f5f9;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 265px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1320px; margin: 20px auto 50px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 10px; padding: 18px 20px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 18px;
+    }
+    .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+    }
+    .page-h1 { margin: 0; font-size: 1.25rem; color: var(--primary); }
+
+    .controls-row {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px;
+      margin-bottom: 14px;
+    }
+    select, input[type="text"], input[type="number"] {
+      padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.92rem;
+    }
+    .btn {
+      padding: 8px 13px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.88rem; transition: background 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-teal { background: #0f766e; color: #fff; }
+    .btn-teal:hover { background: #115e59; }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-sm { padding: 4px 9px; font-size: 0.8rem; }
+
+    .section-header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 8px; margin-bottom: 10px;
+      border-bottom: 2px solid var(--primary); padding-bottom: 7px;
+    }
+    .section-header-bar h2 {
+      margin: 0; font-size: 1.08rem; color: var(--primary);
+    }
+
+    .doc-table {
+      width: 100%; border-collapse: collapse; font-size: 0.92rem; background: #fff;
+    }
+    .doc-table th {
+      background: #e2e8f0; color: #0f172a; font-weight: bold;
+      border: 1px solid #64748b; padding: 7px 8px; text-align: center;
+    }
+    .doc-table td {
+      border: 1px solid #94a3b8; padding: 6px 8px; vertical-align: middle;
+    }
+    .doc-table td.num-col { text-align: right; font-variant-numeric: tabular-nums; }
+    .doc-table td.center-col { text-align: center; }
+    .doc-table tr.total-row td {
+      background: #f1f5f9; font-weight: bold; font-size: 0.98rem; color: #0f172a;
+    }
+    .doc-table input.num-input {
+      width: 100%; padding: 5px 7px; font-size: 0.9rem;
+      border: 1px solid #94a3b8; border-radius: 4px; text-align: right;
+      font-weight: bold; background: #fffbeb;
+    }
+    .doc-table input.text-input {
+      width: 100%; padding: 5px 7px; font-size: 0.88rem;
+      border: 1px solid #cbd5e1; border-radius: 4px;
+    }
+
+    .grid-2 {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    @media (max-width: 960px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .month-check-group {
+      display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      background: #fff; border: 1px solid #cbd5e1; padding: 5px 10px; border-radius: 6px;
+    }
+    .month-check-group label {
+      display: inline-flex; align-items: center; gap: 3px; font-size: 0.86rem; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費記錄（實際給付／各計畫核銷與所得稅累計）</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">每月核銷 5 份簽到/出勤表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度計畫排課行事曆（1-12月跨月拖曳）</a>
+        <a href="月報表套印中心.html">前往核銷 5 份簽到表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <div class="top-bar">
+      <h1 class="page-h1">4. 關懷每季核銷統計（執行概況考核表 ＋ 支出明細表一鍵複製）</h1>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span id="statusText" style="font-size:0.88rem; font-weight:bold; color:#166534;"></span>
+        <button type="button" class="btn btn-teal" onclick="loadAllData()">重新同步雲端記錄</button>
+        <button type="button" class="btn btn-primary" onclick="saveAssessmentState()">儲存核定與支出設定</button>
+      </div>
+    </div>
+
+    <div class="controls-row">
+      <label style="font-weight:bold;">民國年度：</label>
+      <select id="rocYearSelect" onchange="onPeriodPresetChange()">
+        <option value="115">115 年 (2026)</option>
+        <option value="116">116 年 (2027)</option>
+        <option value="117">117 年 (2028)</option>
+      </select>
+
+      <label style="font-weight:bold;">核銷期別預設：</label>
+      <select id="periodPresetSelect" onchange="onPeriodPresetChange()">
+        <option value="Q1">第 1 季 (1-3月)</option>
+        <option value="Q2">第 2 季 (4-6月)</option>
+        <option value="M7_8" selected>7-8 月份（當期核銷）</option>
+        <option value="Q3">第 3 季 (7-9月)</option>
+        <option value="Q4">第 4 季 (10-12月)</option>
+        <option value="ALL">全年度 (1-12月)</option>
+      </select>
+
+      <div class="month-check-group" id="monthCheckboxes"></div>
+    </div>
+  </div>
+
+  <!-- 區塊一：對應《04 據點執行概況考核表》 -->
+  <div class="card">
+    <div class="section-header-bar">
+      <h2 id="assessmentHeading">一、執行概況考核表試算（核定補助經費 vs. 累計實支數・自動算自籌款）</h2>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="fillDefaultBudget78()">帶入 7-8 月標準核定補助 (176,000)</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="fillDefaultBudgetQ()">帶入單季 3 個月標準核定補助 (267,000)</button>
+        <button type="button" class="btn btn-blue btn-sm" onclick="syncActualFromRecords()">從業務費＆專職薪資帶入「實際支出合計」</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyAssessmentTable()">複製考核表數據 (貼上 Word/Excel)</button>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:24%;">獎助項目</th>
+            <th rowspan="2" style="width:15%;">核定補助經費<br><span style="font-size:0.76rem; font-weight:normal;">（可輸入修改）</span></th>
+            <th colspan="3">累計實支數</th>
+            <th rowspan="2" style="width:16%;">備註 / 一鍵複製</th>
+          </tr>
+          <tr>
+            <th style="width:15%;">補助經費支出<br><span style="font-size:0.75rem; font-weight:normal;">（自動取兩者較小值）</span></th>
+            <th style="width:15%;">自籌經費支出<br><span style="font-size:0.75rem; font-weight:normal;">（超出補助自動計入）</span></th>
+            <th style="width:15%;">合計（實際支出金額）<br><span style="font-size:0.75rem; font-weight:normal;">（可手動修改或帶入）</span></th>
+          </tr>
+        </thead>
+        <tbody id="assessmentBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 區塊二：對應《09 當期業務費支出總額》與《09 當期業務項目支出總額》 -->
+  <div class="grid-2">
+    <!-- 左表：按月份彙總 (對應 09 當期業務費支出總額.doc) -->
+    <div class="card">
+      <div class="section-header-bar">
+        <h2 id="byMonthTitle">二、當期業務費支出總額（依月份彙總）</h2>
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyByMonthTable()">複製月份支出明細</button>
+      </div>
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th style="width:12%;">年</th>
+            <th style="width:12%;">月</th>
+            <th style="width:52%;">項目別（自動列出有金額之細項）</th>
+            <th style="width:24%;">金額</th>
+          </tr>
+        </thead>
+        <tbody id="byMonthBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 右表：按 7 大項目彙總 (對應 09 當期業務項目支出總額.doc) -->
+    <div class="card">
+      <div class="section-header-bar">
+        <h2 id="byItemTitle">三、當期業務項目支出總額（依項目彙總）</h2>
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyByItemTable()">複製項目支出明細</button>
+      </div>
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th style="width:14%;">年</th>
+            <th style="width:18%;">月</th>
+            <th style="width:42%;">項目別</th>
+            <th style="width:26%;">金額</th>
+          </tr>
+        </thead>
+        <tbody id="byItemBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentRocYear = 115;
+  let selectedMonths = [7, 8];
+  let expenseRows = []; // monthly_business_expenses
+  let payrollRows = []; // fulltime_payroll_records
+  let tempHoursRows = []; // temp_staff_hours
+
+  const ITEM_DEFS = [
+    { field: 'food_fee', label: '食材費' },
+    { field: 'gas_fee', label: '瓦斯費' },
+    { field: 'internet_fee', label: '網路費' },
+    { field: 'phone_fee', label: '電話費' },
+    { field: 'electricity_fee', label: '電費' },
+    { field: 'water_fee', label: '水費' },
+    { field: 'temp_labor_fee', label: '臨時酬勞費' }
+  ];
+
+  // 考核表 6 大獎助項目（對應 04 據點執行概況考核表.doc）
+  let assessmentItems = [
+    { key: 'biz', label: '1.業務費', approved: 30000, actualTotal: 35404, remark: '' },
+    { key: 'meal_bonus', label: '2.餐飲加值費', approved: 14000, actualTotal: 14000, remark: '' },
+    { key: 'tier_bonus', label: '3.第 2 級/第 3 級據點加值費', approved: 50000, actualTotal: 50000, remark: '' },
+    { key: 'fulltime', label: '4.專職人員服務費（含勞、健保等雇主應負擔費用）', approved: 82000, actualTotal: 84342, remark: '' },
+    { key: 'equip_curr', label: '5-1.設備費-經常門（物品）', approved: 0, actualTotal: 0, remark: '' },
+    { key: 'equip_cap', label: '5-2.設備費-資本門（財產）', approved: 0, actualTotal: 0, remark: '' }
+  ];
+
+  function fmtNum(n) {
+    const num = Math.round(Number(n || 0));
+    return num.toLocaleString('en-US');
+  }
+
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('statusText');
+    el.style.color = isErr ? '#dc2626' : '#166534';
+    el.textContent = msg;
+  }
+
+  (async function init() {
+    renderMonthCheckboxes();
+    loadAssessmentStateFromLocal();
+    await loadAllData();
+  })();
+
+  function renderMonthCheckboxes() {
+    const container = document.getElementById('monthCheckboxes');
+    let html = '<span style="font-size:0.84rem; font-weight:bold; color:#475569;">統計月份：</span>';
+    for (let m = 1; m <= 12; m++) {
+      const chk = selectedMonths.includes(m) ? 'checked' : '';
+      html += `<label><input type="checkbox" value="${m}" ${chk} onchange="onMonthCheckToggle()">${m}月</label>`;
+    }
+    container.innerHTML = html;
+  }
+
+  function onPeriodPresetChange() {
+    currentRocYear = parseInt(document.getElementById('rocYearSelect').value, 10) || 115;
+    const preset = document.getElementById('periodPresetSelect').value;
+    if (preset === 'Q1') selectedMonths = [1, 2, 3];
+    else if (preset === 'Q2') selectedMonths = [4, 5, 6];
+    else if (preset === 'M7_8') selectedMonths = [7, 8];
+    else if (preset === 'Q3') selectedMonths = [7, 8, 9];
+    else if (preset === 'Q4') selectedMonths = [10, 11, 12];
+    else selectedMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+    renderMonthCheckboxes();
+    if (!loadAssessmentStateFromLocal()) {
+      if (selectedMonths.length === 2) fillDefaultBudget78(false);
+      else if (selectedMonths.length === 3) fillDefaultBudgetQ(false);
+    }
+    loadAllData();
+  }
+
+  function onMonthCheckToggle() {
+    const boxes = document.querySelectorAll('#monthCheckboxes input[type="checkbox"]:checked');
+    selectedMonths = [...boxes].map(b => parseInt(b.value, 10)).sort((a, b) => a - b);
+    loadAssessmentStateFromLocal();
+    renderAllTables();
+  }
+
+  function getStateStorageKey() {
+    return `lz_care_quarter_stats_${currentRocYear}_${selectedMonths.join('_')}`;
+  }
+
+  function saveAssessmentState() {
+    localStorage.setItem(getStateStorageKey(), JSON.stringify(assessmentItems));
+    setStatus('已儲存核定補助與實際支出設定');
+  }
+
+  function loadAssessmentStateFromLocal() {
+    const raw = localStorage.getItem(getStateStorageKey());
+    if (!raw) return false;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length === assessmentItems.length) {
+        assessmentItems = parsed;
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  async function loadAllData() {
+    currentRocYear = parseInt(document.getElementById('rocYearSelect').value, 10) || 115;
+    setStatus('正在同步業務費、專職薪資與臨時人員資料...');
+
+    try {
+      const [expRes, payRes, tmpRes] = await Promise.all([
+        supabaseClient.from('monthly_business_expenses').select('*').eq('roc_year', currentRocYear),
+        supabaseClient.from('fulltime_payroll_records').select('*').eq('roc_year', currentRocYear),
+        supabaseClient.from('temp_staff_hours').select('*').eq('roc_year', currentRocYear)
+      ]);
+      expenseRows = expRes.data || [];
+      payrollRows = payRes.data || [];
+      tempHoursRows = tmpRes.data || [];
+      setStatus(`已同步 ${currentRocYear} 年度雲端核銷記錄`);
+    } catch (e) {
+      setStatus('讀取雲端失敗，顯示目前設定數據', true);
+    }
+
+    // 若該區間尚未手動儲存過，自動由雲端業務費＆薪資計算實際支出
+    if (!localStorage.getItem(getStateStorageKey())) {
+      syncActualFromRecords(false);
+    } else {
+      renderAllTables();
+    }
+  }
+
+  function getMonthExpenseObj(m) {
+    const found = expenseRows.find(r => Number(r.month) === Number(m) && (r.program_type === '關懷' || !r.program_type)) || {};
+    // 若 temp_staff_hours 有該月記錄，計算臨時酬勞費並與 found.temp_labor_fee 取有效值
+    const mTemp = tempHoursRows.filter(t => Number(t.month) === Number(m));
+    const calcTemp = mTemp.reduce((s, t) => s + Math.round(Number(t.work_days || 0) * Number(t.hours_per_day || 3) * Number(t.hourly_rate || 196)), 0);
+    const tempFee = calcTemp > 0 ? calcTemp : Number(found.temp_labor_fee || 0);
+
+    const obj = {
+      food_fee: Number(found.food_fee || 0),
+      gas_fee: Number(found.gas_fee || 0),
+      internet_fee: Number(found.internet_fee || 0),
+      phone_fee: Number(found.phone_fee || 0),
+      electricity_fee: Number(found.electricity_fee || 0),
+      water_fee: Number(found.water_fee || 0),
+      temp_labor_fee: tempFee
+    };
+    obj.total = ITEM_DEFS.reduce((s, d) => s + obj[d.field], 0);
+    return obj;
+  }
+
+  function getSelectedBusinessTotal() {
+    return selectedMonths.reduce((sum, m) => sum + getMonthExpenseObj(m).total, 0);
+  }
+
+  function getSelectedFulltimeTotal() {
+    let total = 0;
+    selectedMonths.forEach(m => {
+      const mPay = payrollRows.filter(p => Number(p.month) === Number(m));
+      if (mPay.length > 0) {
+        mPay.forEach(p => {
+          const empBurden = Number(p.labor_employer || 0) + Number(p.health_employer || 0) + Number(p.pension_employer || 0);
+          const gross = (p.gross_salary !== null && p.gross_salary !== undefined && Number(p.gross_salary) > 0)
+            ? Number(p.gross_salary)
+            : (Number(p.net_salary || 0) + Number(p.labor_self || 0) + Number(p.health_self || 0));
+          total += (gross + empBurden);
+        });
+      }
+    });
+    return total;
+  }
+
+  function fillDefaultBudget78(doRender = true) {
+    // 對應 04 據點執行概況考核表 (7-8月合計 176,000)
+    const map = { biz: 30000, meal_bonus: 14000, tier_bonus: 50000, fulltime: 82000, equip_curr: 0, equip_cap: 0 };
+    assessmentItems.forEach(it => { if (it.key in map) it.approved = map[it.key]; });
+    if (doRender) renderAssessmentTable();
+  }
+
+  function fillDefaultBudgetQ(doRender = true) {
+    // 單季3個月標準核定補助 (業務費45,000+餐飲21,000+加值75,000+專職126,000=267,000)
+    const map = { biz: 45000, meal_bonus: 21000, tier_bonus: 75000, fulltime: 126000, equip_curr: 0, equip_cap: 0 };
+    assessmentItems.forEach(it => { if (it.key in map) it.approved = map[it.key]; });
+    if (doRender) renderAssessmentTable();
+  }
+
+  function syncActualFromRecords(showMsg = true) {
+    const bizTotal = getSelectedBusinessTotal();
+    const ftTotal = getSelectedFulltimeTotal();
+
+    // 將業務費總額依序分配至「1.業務費、2.餐飲加值費、3.第2/3級據點加值費」的實際支出合計
+    if (bizTotal > 0) {
+      let remaining = bizTotal;
+      const app1 = Number(assessmentItems[0].approved || 0);
+      const app2 = Number(assessmentItems[1].approved || 0);
+      const app3 = Number(assessmentItems[2].approved || 0);
+
+      const act2 = Math.min(remaining, app2);
+      remaining -= act2;
+      const act3 = Math.min(remaining, app3);
+      remaining -= act3;
+      const act1 = remaining; // 剩餘（包含超出補助的自籌款）全部歸入 1.業務費實際支出合計
+
+      assessmentItems[0].actualTotal = act1;
+      assessmentItems[1].actualTotal = act2;
+      assessmentItems[2].actualTotal = act3;
+    }
+
+    if (ftTotal > 0) {
+      assessmentItems[3].actualTotal = ftTotal;
+    }
+
+    if (showMsg) setStatus('已從每月業務費與專職薪資記錄同步實際支出金額');
+    renderAllTables();
+  }
+
+  function onAssessmentInput(idx, field, val) {
+    if (field === 'remark') {
+      assessmentItems[idx].remark = val;
+    } else {
+      const cleaned = String(val).replace(/,/g, '').trim();
+      assessmentItems[idx][field] = cleaned === '' ? 0 : Number(cleaned);
+    }
+    renderAssessmentTable();
+  }
+
+  function calcSplit(approved, actualTotal) {
+    const app = Math.max(0, Number(approved || 0));
+    const act = Math.max(0, Number(actualTotal || 0));
+    const subsidySpent = Math.min(app, act);
+    const selfSpent = Math.max(0, act - app);
+    return { approved: app, subsidySpent, selfSpent, actualTotal: act };
+  }
+
+  function renderAllTables() {
+    renderAssessmentTable();
+    renderByMonthTable();
+    renderByItemTable();
+  }
+
+  function renderAssessmentTable() {
+    const periodLabel = selectedMonths.length > 0
+      ? `${currentRocYear} 年 ${selectedMonths.map(m => m + '月').join('、')}`
+      : `${currentRocYear} 年`;
+    document.getElementById('assessmentHeading').textContent = `一、執行概況考核表試算（${periodLabel}・核定補助 vs. 累計實支數）`;
+
+    const tbody = document.getElementById('assessmentBody');
+    let sumApproved = 0, sumSubsidy = 0, sumSelf = 0, sumActual = 0;
+
+    let html = assessmentItems.map((it, idx) => {
+      const sp = calcSplit(it.approved, it.actualTotal);
+      sumApproved += sp.approved;
+      sumSubsidy += sp.subsidySpent;
+      sumSelf += sp.selfSpent;
+      sumActual += sp.actualTotal;
+
+      return `
+        <tr>
+          <td style="font-weight:bold;">${it.label}</td>
+          <td><input type="text" class="num-input" value="${fmtNum(sp.approved)}" onchange="onAssessmentInput(${idx}, 'approved', this.value)"></td>
+          <td class="num-col" style="font-weight:bold; color:#0f766e;">${fmtNum(sp.subsidySpent)}</td>
+          <td class="num-col" style="font-weight:bold; color:${sp.selfSpent > 0 ? '#b91c1c' : '#475569'};">${fmtNum(sp.selfSpent)}</td>
+          <td><input type="text" class="num-input" value="${fmtNum(sp.actualTotal)}" onchange="onAssessmentInput(${idx}, 'actualTotal', this.value)"></td>
+          <td class="center-col">
+            <button type="button" class="btn btn-outline btn-sm" onclick="copySingleRow(${idx})">複製此列</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    html += `
+      <tr class="total-row">
+        <td class="center-col">合計</td>
+        <td class="num-col">${fmtNum(sumApproved)}</td>
+        <td class="num-col">${fmtNum(sumSubsidy)}</td>
+        <td class="num-col">${fmtNum(sumSelf)}</td>
+        <td class="num-col">${fmtNum(sumActual)}</td>
+        <td class="center-col">
+          <button type="button" class="btn btn-primary btn-sm" onclick="copyAssessmentTable()">複製整表</button>
+        </td>
+      </tr>
+    `;
+
+    tbody.innerHTML = html;
+  }
+
+  function renderByMonthTable() {
+    const mRangeStr = selectedMonths.length > 1
+      ? `${selectedMonths[0]}-${selectedMonths[selectedMonths.length - 1]} 月份`
+      : (selectedMonths.length === 1 ? `${selectedMonths[0]} 月份` : '');
+    document.getElementById('byMonthTitle').textContent = `二、${currentRocYear} 年 ${mRangeStr}支出明細表（依月份）`;
+
+    const tbody = document.getElementById('byMonthBody');
+    let grandTotal = 0;
+
+    let rowsHtml = selectedMonths.map(m => {
+      const mObj = getMonthExpenseObj(m);
+      grandTotal += mObj.total;
+      const activeNames = ITEM_DEFS.filter(d => mObj[d.field] > 0).map(d => d.label);
+      const desc = activeNames.length > 0
+        ? `${String(m).padStart(2, '0')}月${activeNames.join('、')}`
+        : `${String(m).padStart(2, '0')}月業務費`;
+      return `
+        <tr>
+          <td class="center-col">${currentRocYear}</td>
+          <td class="center-col">${m}</td>
+          <td>${desc}</td>
+          <td class="num-col" style="font-weight:bold;">${fmtNum(mObj.total)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.innerHTML = `
+      <tr class="total-row">
+        <td colspan="3" class="center-col">合　　計</td>
+        <td class="num-col">${fmtNum(grandTotal)}</td>
+      </tr>
+      ${rowsHtml}
+    `;
+  }
+
+  function renderByItemTable() {
+    const mRangeStr = selectedMonths.length > 1
+      ? `${selectedMonths[0]}-${selectedMonths[selectedMonths.length - 1]}`
+      : (selectedMonths.length === 1 ? `${selectedMonths[0]}` : '');
+    document.getElementById('byItemTitle').textContent = `三、${currentRocYear} 年 ${mRangeStr} 月份項目支出總額`;
+
+    const tbody = document.getElementById('byItemBody');
+    let grandTotal = 0;
+
+    const itemTotals = ITEM_DEFS.map(d => {
+      const sum = selectedMonths.reduce((acc, m) => acc + getMonthExpenseObj(m)[d.field], 0);
+      grandTotal += sum;
+      return { label: d.label, amount: sum };
+    });
+
+    const rowsHtml = itemTotals.map(it => `
+      <tr>
+        <td class="center-col">${currentRocYear}</td>
+        <td class="center-col">${mRangeStr}</td>
+        <td class="center-col">${it.label}</td>
+        <td class="num-col" style="font-weight:bold;">${fmtNum(it.amount)}</td>
+      </tr>
+    `).join('');
+
+    tbody.innerHTML = `
+      <tr class="total-row">
+        <td colspan="3" class="center-col">合　　計</td>
+        <td class="num-col">${fmtNum(grandTotal)}</td>
+      </tr>
+      ${rowsHtml}
+    `;
+  }
+
+  function copyTsv(lines, msg) {
+    const text = lines.join('\n');
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => setStatus(msg));
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      setStatus(msg);
+    }
+  }
+
+  function copySingleRow(idx) {
+    const it = assessmentItems[idx];
+    const sp = calcSplit(it.approved, it.actualTotal);
+    const line = `${it.label}\t${fmtNum(sp.approved)}\t${fmtNum(sp.subsidySpent)}\t${fmtNum(sp.selfSpent)}\t${fmtNum(sp.actualTotal)}`;
+    copyTsv([line], `已複製「${it.label}」數據，可直接貼上 Word / Excel！`);
+  }
+
+  function copyAssessmentTable() {
+    let sumApproved = 0, sumSubsidy = 0, sumSelf = 0, sumActual = 0;
+    const lines = assessmentItems.map(it => {
+      const sp = calcSplit(it.approved, it.actualTotal);
+      sumApproved += sp.approved;
+      sumSubsidy += sp.subsidySpent;
+      sumSelf += sp.selfSpent;
+      sumActual += sp.actualTotal;
+      return `${it.label}\t${fmtNum(sp.approved)}\t${fmtNum(sp.subsidySpent)}\t${fmtNum(sp.selfSpent)}\t${fmtNum(sp.actualTotal)}`;
+    });
+    lines.push(`合計\t${fmtNum(sumApproved)}\t${fmtNum(sumSubsidy)}\t${fmtNum(sumSelf)}\t${fmtNum(sumActual)}`);
+    copyTsv(lines, '已複製《執行概況考核表》整表數據（Tab 分隔，可直接貼上 Word 表格）！');
+  }
+
+  function copyByMonthTable() {
+    let grandTotal = 0;
+    const lines = [];
+    selectedMonths.forEach(m => {
+      const mObj = getMonthExpenseObj(m);
+      grandTotal += mObj.total;
+      const activeNames = ITEM_DEFS.filter(d => mObj[d.field] > 0).map(d => d.label);
+      const desc = activeNames.length > 0 ? `${String(m).padStart(2, '0')}月${activeNames.join('、')}` : `${String(m).padStart(2, '0')}月業務費`;
+      lines.push(`${currentRocYear}\t${m}\t${desc}\t${fmtNum(mObj.total)}`);
+    });
+    lines.unshift(`合計\t\t\t${fmtNum(grandTotal)}`);
+    copyTsv(lines, '已複製《當期業務費支出總額》明細，可直接貼上核銷文件！');
+  }
+
+  function copyByItemTable() {
+    const mRangeStr = selectedMonths.length > 1
+      ? `${selectedMonths[0]}-${selectedMonths[selectedMonths.length - 1]}`
+      : (selectedMonths.length === 1 ? `${selectedMonths[0]}` : '');
+    let grandTotal = 0;
+    const lines = [];
+    ITEM_DEFS.forEach(d => {
+      const sum = selectedMonths.reduce((acc, m) => acc + getMonthExpenseObj(m)[d.field], 0);
+      grandTotal += sum;
+      lines.push(`${currentRocYear}\t${mRangeStr}\t${d.label}\t${fmtNum(sum)}`);
+    });
+    lines.unshift(`合計\t\t\t${fmtNum(grandTotal)}`);
+    copyTsv(lines, '已複製《當期業務項目支出總額》7 大項目明細，可直接貼上核銷文件！');
+  }
+</script>
+
+</body>
+</html>
