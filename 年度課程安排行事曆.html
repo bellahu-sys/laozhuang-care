@@ -54,7 +54,8 @@
       grid-template-columns: 44px 1fr; gap: 10px;
     }
     .left-dock-panel {
-      position: relative;
+      position: sticky; top: 12px; z-index: 200;
+      max-height: calc(100vh - 24px); overflow-y: auto;
       background: #fff; border-radius: 10px; padding: 14px;
       border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.06);
       transition: padding 0.2s ease;
@@ -1618,6 +1619,13 @@
   function onCellDragOver(ev) {
     ev.preventDefault();
     ev.currentTarget.classList.add('drag-over');
+    const edgeMargin = 90;
+    const scrollStep = 18;
+    if (ev.clientY > window.innerHeight - edgeMargin) {
+      window.scrollBy(0, scrollStep);
+    } else if (ev.clientY < edgeMargin && window.scrollY > 0) {
+      window.scrollBy(0, -scrollStep);
+    }
   }
 
   function onCellDragLeave(ev) {
