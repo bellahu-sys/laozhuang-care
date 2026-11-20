@@ -113,4 +113,501 @@
     @media print {
       @page { size: A4 portrait; margin: 6mm 8mm; }
       body { background: #fff; }
-      nav.topbar, .no-print { display: none !
+      nav.topbar, .no-print { display: none !important; }
+      .container { max-width: 100%; margin: 0; padding: 0; box-shadow: none; }
+      .report-title { font-size: 13pt; margin-bottom: 6px; }
+      .print-layout { display: grid !important; grid-template-columns: 1.75fr 1fr !important; gap: 10px !important; }
+      table.report-table th, table.report-table td { padding: 2px 5px !important; font-size: 8.5pt !important; line-height: 1.22 !important; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">每月核銷 5 份簽到/出勤表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度計畫排課行事曆（1-12月跨月拖曳）</a>
+        <a href="月報表套印中心.html">前往核銷 5 份簽到表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <h1 class="no-print">每日零用金收支與現鈔清點記錄中心</h1>
+
+  <div class="toolbar no-print">
+    <label><strong>民國年：</strong>
+      <select id="rocYearSelect" onchange="loadMonthData()">
+        <option value="115">115 年 (2026)</option>
+        <option value="116">116 年 (2027)</option>
+        <option value="117">117 年 (2028)</option>
+      </select>
+    </label>
+    <label><strong>月份：</strong>
+      <select id="monthSelect" onchange="loadMonthData()">
+        <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
+        <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
+        <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
+        <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+      </select>
+    </label>
+    <button type="button" class="btn btn-blue" onclick="window.print()">列印月底結算表 (單頁 A4)</button>
+    <span id="statusText" style="font-weight:bold; color:#166534;"></span>
+  </div>
+
+  <div class="grid-2 no-print">
+    <!-- 左側：1. 每日收支記錄 -->
+    <div class="card">
+      <h2>1. 每日收支記錄</h2>
+      <div class="form-inline">
+        <label><strong>選擇日期：</strong>
+          <select id="dateSelect" onchange="onDateChange()"></select>
+        </label>
+      </div>
+      <div class="form-row">
+        <label for="incomeInput"><strong>餐費收入 (元)（無供餐可填 X）：</strong></label>
+        <input type="text" id="incomeInput" placeholder="例如：810 或 X">
+      </div>
+      <div class="form-row">
+        <label for="expenseInput"><strong>支出金額 (元)（買日用品／五金等）：</strong></label>
+        <input type="number" id="expenseInput" value="0" min="0">
+      </div>
+      <div class="form-row">
+        <label for="remarkInput"><strong>備註說明：</strong></label>
+        <input type="text" id="remarkInput" placeholder="例如：買日用品、郵寄等">
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+        <button type="button" class="btn btn-primary" onclick="saveDailyRecord()">儲存此日收支</button>
+        <button type="button" class="btn btn-sec" onclick="clearDailyForm()">清空欄位</button>
+      </div>
+    </div>
+
+    <!-- 右側：2. 現鈔與硬幣清點盤點（點鈔方便：輸入自動累加並歸零，支出可填負數扣除） -->
+    <div class="card">
+      <h2>2. 現鈔與硬幣清點盤點（點鈔方便）</h2>
+      <p style="font-size:0.84rem; color:#475569; margin:0 0 8px 0;">
+        輸入今日新收到的張數按儲存會<strong>自動累加</strong>進本月結算並歸零；若買日用品拿走鈔票或找零，請在對應面額輸入<strong>負數（例如 -1）</strong>即可自動扣除！
+      </p>
+      <table class="denom-input-table">
+        <thead>
+          <tr>
+            <th>貨幣單位</th>
+            <th>數量 (支出填負數)</th>
+            <th>金額</th>
+          </tr>
+        </thead>
+        <tbody id="denomInputBody"></tbody>
+      </table>
+      <div class="denom-total-bar">
+        <span>本次清點異動小計：</span>
+        <span id="inputDenomTotal">0 元</span>
+      </div>
+      <button type="button" class="btn-full-save" onclick="saveDenomRecord()">儲存今日現鈔盤點（自動累加並歸零）</button>
+      <div style="text-align:right; margin-top:8px;">
+        <button type="button" class="btn btn-sec" style="font-size:0.82rem; padding:5px 10px;" onclick="resetDenomRecord()">清空本月現鈔盤點重計</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 帳實核對提示列 -->
+  <div id="reconcileBanner" class="check-banner check-ok no-print"></div>
+
+  <!-- 下方正式列印與結算報表區 -->
+  <div class="report-area">
+    <div class="report-title" id="reportMainTitle">115年11月 零用金收支與現鈔盤點結算表</div>
+    <div class="print-layout">
+      <!-- 左表：1-31日收支明細 -->
+      <div>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th style="width:72px;">日期</th>
+              <th style="width:85px;">餐費(收入)</th>
+              <th style="width:75px;">支出</th>
+              <th>備註</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody"></tbody>
+          <tfoot id="ledgerFoot"></tfoot>
+        </table>
+      </div>
+
+      <!-- 右表：現鈔與硬幣盤點結算 -->
+      <div>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th colspan="3">現鈔與硬幣盤點結算（本月累計）</th>
+            </tr>
+            <tr>
+              <th>貨幣單位</th>
+              <th>數量</th>
+              <th>金額</th>
+            </tr>
+          </thead>
+          <tbody id="denomReportBody"></tbody>
+          <tfoot id="denomReportFoot"></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const DENOMS = [1000, 500, 100, 50, 10, 5, 1];
+  let dailyMap = {};
+  let storedDenomMap = { 1000: 0, 500: 0, 100: 0, 50: 0, 10: 0, 5: 0, 1: 0 };
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  // 頁面開啟時自動對齊系統今日年、月
+  (function initTodayYM() {
+    const now = new Date();
+    const rocY = String(now.getFullYear() - 1911);
+    const m = String(now.getMonth() + 1);
+    const ySel = document.getElementById('rocYearSelect');
+    if ([...ySel.options].some(o => o.value === rocY)) ySel.value = rocY;
+    document.getElementById('monthSelect').value = m;
+  })();
+
+  function renderBlankDenomInputs() {
+    const tbody = document.getElementById('denomInputBody');
+    tbody.innerHTML = DENOMS.map(d => `
+      <tr>
+        <td><strong>${d} 元</strong></td>
+        <td><input type="number" id="in-denom-${d}" value="0" oninput="recalcInputDenomTotal()"></td>
+        <td id="sub-denom-${d}" style="text-align:right; font-weight:bold;">0 元</td>
+      </tr>
+    `).join('');
+    recalcInputDenomTotal();
+  }
+
+  function recalcInputDenomTotal() {
+    let total = 0;
+    DENOMS.forEach(d => {
+      const el = document.getElementById(`in-denom-${d}`);
+      const cnt = el ? (parseInt(el.value, 10) || 0) : 0;
+      const sub = d * cnt;
+      total += sub;
+      const subEl = document.getElementById(`sub-denom-${d}`);
+      if (subEl) subEl.textContent = `${sub.toLocaleString()} 元`;
+    });
+    document.getElementById('inputDenomTotal').textContent = `${total.toLocaleString()} 元`;
+  }
+
+  async function loadMonthData() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const month = parseInt(document.getElementById('monthSelect').value, 10);
+    const adYear = rocYear + 1911;
+    const daysInMonth = new Date(adYear, month, 0).getDate();
+    const startDate = `${adYear}-${pad2(month)}-01`;
+    const endDate = `${adYear}-${pad2(month)}-${pad2(daysInMonth)}`;
+
+    document.getElementById('reportMainTitle').textContent = `${rocYear}年${month}月 零用金收支與現鈔盤點結算表`;
+    const statusEl = document.getElementById('statusText');
+    statusEl.textContent = '載入雲端資料中...';
+
+    // 1. 讀取當月收支流水
+    const { data: recRows, error: recErr } = await supabaseClient
+      .from('petty_cash_records')
+      .select('*')
+      .gte('record_date', startDate)
+      .lte('record_date', endDate)
+      .order('record_date', { ascending: true });
+
+    if (recErr) {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '讀取收支失敗：' + recErr.message;
+      return;
+    }
+
+    dailyMap = {};
+    (recRows || []).forEach(r => { dailyMap[r.record_date] = r; });
+
+    // 產生當月日期下拉選單並預設為今天
+    const dateSel = document.getElementById('dateSelect');
+    const dateList = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      dateList.push(`${adYear}-${pad2(month)}-${pad2(d)}`);
+    }
+    dateSel.innerHTML = dateList.map(iso => {
+      const p = iso.split('-');
+      return `<option value="${iso}">${parseInt(p[1], 10)}/${parseInt(p[2], 10)}</option>`;
+    }).join('');
+
+    const now = new Date();
+    const todayIso = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+    if (dateList.includes(todayIso)) {
+      dateSel.value = todayIso;
+    }
+    onDateChange();
+
+    // 2. 讀取當月現鈔盤點累計資料
+    const { data: denomRow, error: denomErr } = await supabaseClient
+      .from('petty_cash_denoms')
+      .select('*')
+      .eq('roc_year', rocYear)
+      .eq('month', month)
+      .maybeSingle();
+
+    if (denomErr) {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '讀取現鈔盤點失敗：' + denomErr.message;
+      return;
+    }
+
+    storedDenomMap = { 1000: 0, 500: 0, 100: 0, 50: 0, 10: 0, 5: 0, 1: 0 };
+    if (denomRow && denomRow.denom_data) {
+      DENOMS.forEach(d => {
+        storedDenomMap[d] = Number(denomRow.denom_data[String(d)] ?? denomRow.denom_data[d]) || 0;
+      });
+    }
+
+    renderBlankDenomInputs();
+    renderReportTables(adYear, month, daysInMonth);
+
+    statusEl.style.color = '#166534';
+    statusEl.textContent = '雲端資料已同步';
+  }
+
+  function onDateChange() {
+    const iso = document.getElementById('dateSelect').value;
+    const rec = dailyMap[iso];
+    if (rec) {
+      document.getElementById('incomeInput').value = rec.income ?? '';
+      document.getElementById('expenseInput').value = rec.expense ?? 0;
+      document.getElementById('remarkInput').value = rec.remark ?? '';
+    } else {
+      document.getElementById('incomeInput').value = '';
+      document.getElementById('expenseInput').value = 0;
+      document.getElementById('remarkInput').value = '';
+    }
+  }
+
+  function clearDailyForm() {
+    document.getElementById('incomeInput').value = '';
+    document.getElementById('expenseInput').value = 0;
+    document.getElementById('remarkInput').value = '';
+  }
+
+  async function saveDailyRecord() {
+    const iso = document.getElementById('dateSelect').value;
+    const incRaw = document.getElementById('incomeInput').value.trim();
+    const expVal = parseFloat(document.getElementById('expenseInput').value) || 0;
+    const remRaw = document.getElementById('remarkInput').value.trim();
+
+    const { error } = await supabaseClient
+      .from('petty_cash_records')
+      .upsert({
+        record_date: iso,
+        income: incRaw === '' ? null : incRaw,
+        expense: expVal,
+        remark: remRaw === '' ? null : remRaw
+      }, { onConflict: 'record_date' });
+
+    if (error) {
+      alert('儲存收支失敗：' + error.message);
+    } else {
+      await loadMonthData();
+      document.getElementById('dateSelect').value = iso;
+      onDateChange();
+    }
+  }
+
+  // 將本次輸入的張數（含正數累加或負數扣除）更新至本月累計，並將輸入框歸零
+  async function saveDenomRecord() {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const month = parseInt(document.getElementById('monthSelect').value, 10);
+
+    const updatedMap = {};
+    DENOMS.forEach(d => {
+      const delta = parseInt(document.getElementById(`in-denom-${d}`).value, 10) || 0;
+      const nextCnt = Math.max(0, (Number(storedDenomMap[d]) || 0) + delta);
+      updatedMap[String(d)] = nextCnt;
+    });
+
+    const { error } = await supabaseClient
+      .from('petty_cash_denoms')
+      .upsert({
+        roc_year: rocYear,
+        month: month,
+        denom_data: updatedMap
+      }, { onConflict: 'roc_year,month' });
+
+    if (error) {
+      alert('儲存現鈔盤點失敗：' + error.message);
+      return;
+    }
+
+    DENOMS.forEach(d => { storedDenomMap[d] = updatedMap[String(d)]; });
+    renderBlankDenomInputs();
+
+    const adYear = rocYear + 1911;
+    const daysInMonth = new Date(adYear, month, 0).getDate();
+    renderReportTables(adYear, month, daysInMonth);
+
+    const statusEl = document.getElementById('statusText');
+    statusEl.style.color = '#166534';
+    statusEl.textContent = '已同步更新本月現鈔盤點並歸零輸入框！';
+  }
+
+  async function resetDenomRecord() {
+    if (!confirm('確定要將本月所有現鈔與硬幣盤點累計數量全部歸零嗎？')) return;
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const month = parseInt(document.getElementById('monthSelect').value, 10);
+    const zeroMap = { "1000": 0, "500": 0, "100": 0, "50": 0, "10": 0, "5": 0, "1": 0 };
+
+    const { error } = await supabaseClient
+      .from('petty_cash_denoms')
+      .upsert({ roc_year: rocYear, month: month, denom_data: zeroMap }, { onConflict: 'roc_year,month' });
+
+    if (error) {
+      alert('歸零失敗：' + error.message);
+      return;
+    }
+    storedDenomMap = { 1000: 0, 500: 0, 100: 0, 50: 0, 10: 0, 5: 0, 1: 0 };
+    renderBlankDenomInputs();
+    const adYear = rocYear + 1911;
+    renderReportTables(adYear, month, new Date(adYear, month, 0).getDate());
+  }
+
+  function renderReportTables(adYear, month, daysInMonth) {
+    let totalIncome = 0;
+    let totalExpense = 0;
+    const rowsHtml = [];
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = `${adYear}-${pad2(month)}-${pad2(d)}`;
+      const rec = dailyMap[iso] || {};
+      const incStr = rec.income != null ? String(rec.income).trim() : '';
+      const incNum = parseFloat(incStr);
+      if (!isNaN(incNum)) totalIncome += incNum;
+
+      const expNum = Number(rec.expense) || 0;
+      totalExpense += expNum;
+
+      rowsHtml.push(`
+        <tr>
+          <td class="ctr">${month}/${d}</td>
+          <td class="${!isNaN(incNum) ? 'num' : 'ctr'}">${incStr}</td>
+          <td class="num">${expNum > 0 ? expNum.toLocaleString() : ''}</td>
+          <td>${rec.remark ? String(rec.remark).replace(/\n/g, '；') : ''}</td>
+        </tr>
+      `);
+    }
+
+    const netCash = totalIncome - totalExpense;
+    document.getElementById('ledgerBody').innerHTML = rowsHtml.join('');
+    document.getElementById('ledgerFoot').innerHTML = `
+      <tr style="background:#f1f5f9; font-weight:bold;">
+        <td class="ctr">小計</td>
+        <td class="num">${totalIncome.toLocaleString()}</td>
+        <td class="num">${totalExpense.toLocaleString()}</td>
+        <td></td>
+      </tr>
+      <tr style="background:#e2e8f0; font-weight:bold;">
+        <td class="ctr">應有餘額</td>
+        <td colspan="2" class="num" style="color:#166534;">${netCash.toLocaleString()} 元</td>
+        <td>收入 － 支出</td>
+      </tr>
+    `;
+
+    let denomGrandTotal = 0;
+    const denomRowsHtml = DENOMS.map(d => {
+      const cnt = Number(storedDenomMap[d]) || 0;
+      const amt = d * cnt;
+      denomGrandTotal += amt;
+      return `
+        <tr>
+          <td class="ctr"><strong>${d}</strong></td>
+          <td class="num">${cnt}</td>
+          <td class="num">${amt.toLocaleString()}</td>
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('denomReportBody').innerHTML = denomRowsHtml;
+    document.getElementById('denomReportFoot').innerHTML = `
+      <tr style="background:#e2e8f0; font-weight:bold;">
+        <td colspan="2" class="ctr">現鈔總計</td>
+        <td class="num" style="color:#b91c1c;">${denomGrandTotal.toLocaleString()} 元</td>
+      </tr>
+    `;
+
+    const diff = denomGrandTotal - netCash;
+    const banner = document.getElementById('reconcileBanner');
+    if (diff === 0) {
+      banner.className = 'check-banner check-ok no-print';
+      banner.innerHTML = `
+        <span>上方收支結餘：${netCash.toLocaleString()} 元</span>
+        <span>下方現鈔總數：${denomGrandTotal.toLocaleString()} 元</span>
+        <span>帳實相符！收支結餘與現鈔盤點完全一致</span>
+      `;
+    } else {
+      const diffText = diff > 0 ? `現鈔多出 ${diff.toLocaleString()} 元` : `現鈔短少 ${Math.abs(diff).toLocaleString()} 元`;
+      banner.className = 'check-banner check-diff no-print';
+      banner.innerHTML = `
+        <span>上方收支結餘：${netCash.toLocaleString()} 元</span>
+        <span>下方現鈔總數：${denomGrandTotal.toLocaleString()} 元</span>
+        <span>尚有差額（${diffText}）— 請確認是否已登錄收支或扣除花掉的鈔票張數</span>
+      `;
+    }
+  }
+
+  loadMonthData();
+</script>
+</body>
+</html>
