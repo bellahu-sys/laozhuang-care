@@ -292,9 +292,9 @@
     }
     .plan-arrow {
       display: inline-block; width: 14px; text-align: center;
-      color: #475569; font-size: 0.78rem; transition: transform 0.15s;
+      color: #475569; font-size: 0.75rem; transition: transform 0.15s;
     }
-    .plan-accordion-card.is-open .plan-arrow { transform: rotate(90deg); }
+    .plan-accordion-card.is-open .plan-arrow { transform: rotate(180deg); }
     .plan-accordion-body {
       display: none; border-top: 1px solid #e2e8f0; padding: 6px 8px; background: #f8fafc;
     }
@@ -1842,12 +1842,8 @@
         <div class="plan-accordion-card ${isOpen ? 'is-open' : ''}" id="plan_card_${planName}" data-plan="${planName}">
           <div class="plan-accordion-header" onclick="togglePlanCard('${planName}')">
             <div class="plan-accordion-left">
-              <span class="plan-arrow">▶</span>
+              <span class="plan-arrow">▼</span>
               <span class="plan-pill p-${planName}" style="background:${hexToRgbaBg(getPlanColor(planName), 0.16)}; color:${escapeHtml(getPlanColor(planName))};">${escapeHtml(planName)}計畫</span>
-              <span style="color:#334155; font-size:0.82rem;">${groups.length}課／${totalLessons}堂</span>
-            </div>
-            <div onclick="event.stopPropagation();">
-              <button type="button" class="btn-copy-sm" onclick="copyPlanSummary('${planName}')">複製${escapeHtml(planName)}日期</button>
             </div>
           </div>
           <div class="plan-accordion-body">
