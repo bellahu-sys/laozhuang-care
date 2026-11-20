@@ -46,8 +46,11 @@
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
     .page-wrap {
-      max-width: 1460px; margin: 18px auto 40px auto; padding: 0 16px;
+      max-width: 1460px; margin: 18px auto 20px auto; padding: 0 16px;
       display: grid; grid-template-columns: 345px 1fr; gap: 18px; align-items: start;
+    }
+    .summary-wrap {
+      max-width: 1460px; margin: 0 auto 40px auto; padding: 0 16px;
     }
     @media (max-width: 1024px) {
       .page-wrap { grid-template-columns: 1fr; }
@@ -204,7 +207,7 @@
     }
     .calendar-grid td:hover .add-day-btn { color: var(--primary); border-color: #cbd5e1; }
 
-    /* 單堂課程卡片（核銷時間為主視覺、實際上課時間灰色提醒） */
+    /* 單堂課程卡片 */
     .course-chip {
       border-radius: 6px; padding: 5px 7px; margin-bottom: 5px;
       font-size: 0.82rem; line-height: 1.32; position: relative;
@@ -237,6 +240,43 @@
       background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px 12px;
       border-radius: 8px; margin-bottom: 12px;
     }
+
+    /* 各計畫課程排定日期總覽表格 */
+    .summary-table {
+      width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.92rem;
+    }
+    .summary-table th {
+      background: #f1f5f9; color: #1e293b; text-align: left;
+      padding: 10px 12px; border-bottom: 2px solid #cbd5e1;
+    }
+    .summary-table td {
+      padding: 11px 12px; border-bottom: 1px solid #e2e8f0; vertical-align: middle;
+    }
+    .summary-table tr:hover { background: #f8fafc; }
+    .plan-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 12px;
+      font-size: 0.8rem; font-weight: bold;
+    }
+    .plan-pill.p-關懷 { background: #dcfce7; color: #166534; }
+    .plan-pill.p-多元 { background: #dbeafe; color: #1e40af; }
+    .plan-pill.p-伯公 { background: #fef3c7; color: #92400e; }
+    .plan-pill.p-樂齡 { background: #ede9fe; color: #5b21b6; }
+    .dates-text-box {
+      font-weight: bold; color: #0f172a; line-height: 1.6;
+      word-break: break-word;
+    }
+    .copy-btn-group {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .btn-copy-sm {
+      padding: 5px 10px; border-radius: 5px; font-size: 0.8rem; font-weight: bold;
+      border: 1px solid #cbd5e1; background: #fff; color: #1e293b; cursor: pointer;
+    }
+    .btn-copy-sm:hover { background: #f0fdfa; border-color: var(--primary); color: var(--primary); }
+    .btn-copy-sm.primary-copy {
+      background: var(--primary); color: #fff; border-color: var(--primary);
+    }
+    .btn-copy-sm.primary-copy:hover { background: #1e4237; }
 
     .modal-backdrop {
       display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45);
@@ -359,7 +399,6 @@
       </label>
     </div>
 
-    <!-- 雙模式產生按鈕：整組連續週排 vs 每一堂課獨立積木 -->
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
       <button type="button" class="btn btn-primary" onclick="createDragBlock('series')">＋ 產生【連續週排】積木</button>
       <button type="button" class="btn btn-blue" onclick="createDragBlock('single')">＋ 產生【單堂獨立】積木</button>
@@ -428,6 +467,38 @@
       </thead>
       <tbody id="calendarBody"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- 下方：各計畫課程排定日期總覽與核銷一鍵複製區 -->
+<div class="summary-wrap">
+  <div class="panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:2px solid var(--primary); padding-bottom:8px; margin-bottom:12px;">
+      <h3 style="margin:0; border:none; padding:0;">3. 各計畫課程排定日期總覽（核銷專用一鍵複製）</h3>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <select id="summaryPlanFilter" style="width:auto;" onchange="renderScheduleSummary()">
+          <option value="ALL">全部計畫類別</option>
+          <option value="關懷">僅看：關懷</option>
+          <option value="多元">僅看：多元</option>
+          <option value="伯公">僅看：伯公</option>
+          <option value="樂齡">僅看：樂齡</option>
+        </select>
+        <select id="summaryQuarterFilter" style="width:auto;" onchange="renderScheduleSummary()">
+          <option value="ALL">全年度 (1-12月)</option>
+          <option value="Q1">第 1 季 (1-3月)</option>
+          <option value="Q2">第 2 季 (4-6月)</option>
+          <option value="Q3">第 3 季 (7-9月)</option>
+          <option value="Q4">第 4 季 (10-12月)</option>
+        </select>
+        <label style="display:flex; align-items:center; gap:5px; font-size:0.85rem; cursor:pointer;">
+          <input type="checkbox" id="mergeSeriesCheckbox" checked onchange="renderScheduleSummary()">
+          自動合併同系列堂次（如插花-1～6合併顯示）
+        </label>
+        <button type="button" class="btn btn-primary" onclick="copyAllFilteredSummary()">一鍵複製目前總覽全部清單</button>
+      </div>
+    </div>
+
+    <div id="scheduleSummaryContainer"></div>
   </div>
 </div>
 
@@ -513,6 +584,7 @@
   let yearCourses = [];
   let dragBlocks = [];
   let activeDraggedBlock = null;
+  let lastSummaryGroups = [];
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -553,7 +625,6 @@
     localStorage.setItem('lz_drag_blocks_v2', JSON.stringify(dragBlocks));
   }
 
-  // 支援產生「series 連續週排」或「single 每一堂獨立積木」
   function createDragBlock(mode) {
     const planType = document.getElementById('planTypeInput').value;
     const prefix = document.getElementById('coursePrefixInput').value.trim();
@@ -566,7 +637,6 @@
     if (!prefix) { alert('請輸入課程名稱前綴（例如：多元1 或 插花）！'); return; }
 
     if (mode === 'single') {
-      // 產生 1 堂 1 塊的獨立小積木（逆序 unshift 讓 1 號排在最上面）
       for (let i = count - 1; i >= 0; i--) {
         const seq = startNum + i;
         dragBlocks.unshift({
@@ -600,7 +670,6 @@
     renderDragPool();
   }
 
-  // 將整組連續積木一鍵拆成每一堂獨立小積木
   function splitSeriesToSingles(blockId) {
     const idx = dragBlocks.findIndex(b => b.id === blockId);
     if (idx === -1) return;
@@ -643,14 +712,12 @@
     const pool = document.getElementById('dragPool');
     const hidePlaced = document.getElementById('hidePlacedCheckbox').checked;
 
-    // 建立「已排入課表」的快速查詢表，自動比對單堂積木是否已排進某一天
     const placedDateByKey = {};
     yearCourses.forEach(c => {
       const key = `${c.plan_type || '關懷'}__${c.course_name}`;
       placedDateByKey[key] = c.course_date;
     });
 
-    // 將未排入的積木排在前面，已排入的單堂積木排在後面
     const sortedBlocks = [...dragBlocks].sort((a, b) => {
       const aPlaced = (a.mode === 'single') && Boolean(placedDateByKey[`${a.planType}__${a.singleName}`]);
       const bPlaced = (b.mode === 'single') && Boolean(placedDateByKey[`${b.planType}__${b.singleName}`]);
@@ -728,6 +795,7 @@
     renderMonthTabs();
     renderCalendar();
     renderDragPool();
+    renderScheduleSummary();
   }
 
   function renderMonthTabs() {
@@ -835,7 +903,6 @@
     ev.currentTarget.classList.remove('drag-over');
   }
 
-  // 同時支援「單堂獨立放入該格」與「連續週排跨月自動填入」
   async function onCellDrop(ev, startIsoDate) {
     ev.preventDefault();
     ev.currentTarget.classList.remove('drag-over');
@@ -848,10 +915,8 @@
 
     let scheduledDates = [];
     if (blk.mode === 'single') {
-      // 單堂獨立積木：直接放在使用者指定的這一天（即使跨月或跳過好幾週也沒問題）
       scheduledDates = [startIsoDate];
     } else {
-      // 連續週排積木：從放下當天起每週同一天自動跨月排滿（避開國定假日）
       const parts = startIsoDate.split('-').map(Number);
       let cursor = new Date(parts[0], parts[1] - 1, parts[2]);
       while (scheduledDates.length < blk.count) {
@@ -908,6 +973,168 @@
     }
   }
 
+  // =========================================================================
+  // 3. 各計畫課程排定日期總覽與核銷複製功能
+  // =========================================================================
+  function getSeriesBaseName(rawName) {
+    // 將 "插花-1"、"多元1-12" 去除末尾 "-數字" 合併為系列名稱；沒有 "-數字" 則保留原名
+    return String(rawName || '').replace(/-\d+$/, '').trim();
+  }
+
+  function renderScheduleSummary() {
+    const planFilter = document.getElementById('summaryPlanFilter').value;
+    const qFilter = document.getElementById('summaryQuarterFilter').value;
+    const mergeSeries = document.getElementById('mergeSeriesCheckbox').checked;
+    const container = document.getElementById('scheduleSummaryContainer');
+
+    const filtered = yearCourses.filter(c => {
+      const p = c.plan_type || '關懷';
+      if (planFilter !== 'ALL' && p !== planFilter) return false;
+      const m = parseInt(c.course_date.split('-')[1], 10);
+      if (qFilter === 'Q1' && !(m >= 1 && m <= 3)) return false;
+      if (qFilter === 'Q2' && !(m >= 4 && m <= 6)) return false;
+      if (qFilter === 'Q3' && !(m >= 7 && m <= 9)) return false;
+      if (qFilter === 'Q4' && !(m >= 10 && m <= 12)) return false;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      lastSummaryGroups = [];
+      container.innerHTML = '<div style="padding:18px; text-align:center; color:#64748b;">目前篩選條件下尚無排定課程。</div>';
+      return;
+    }
+
+    const groupMap = new Map();
+    filtered.forEach(c => {
+      const plan = c.plan_type || '關懷';
+      const displayTitle = mergeSeries ? getSeriesBaseName(c.course_name) : c.course_name;
+      const key = `${plan}__${displayTitle}`;
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          plan,
+          title: displayTitle,
+          items: [],
+          instructors: new Set()
+        });
+      }
+      const grp = groupMap.get(key);
+      grp.items.push(c);
+      if (c.instructor_name) grp.instructors.add(c.instructor_name);
+    });
+
+    // 依計畫順序排列（關懷、多元、伯公、樂齡）
+    const planOrder = { '關懷': 1, '多元': 2, '伯公': 3, '樂齡': 4 };
+    lastSummaryGroups = [...groupMap.values()].sort((a, b) => {
+      const pa = planOrder[a.plan] || 9;
+      const pb = planOrder[b.plan] || 9;
+      if (pa !== pb) return pa - pb;
+      return a.items[0].course_date.localeCompare(b.items[0].course_date);
+    });
+
+    const rowsHtml = lastSummaryGroups.map((g, idx) => {
+      const shortDates = g.items.map(it => {
+        const p = it.course_date.split('-');
+        return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
+      }).join('、');
+
+      const instStr = [...g.instructors].join('、') || '-';
+
+      return `
+        <tr>
+          <td style="width:95px;"><span class="plan-pill p-${g.plan}">${escapeHtml(g.plan)}</span></td>
+          <td style="width:190px; font-weight:bold;">${escapeHtml(g.title)} <span style="color:#64748b; font-weight:normal;">(${g.items.length}堂)</span></td>
+          <td style="width:110px; color:#475569;">${escapeHtml(instStr)}</td>
+          <td><div class="dates-text-box">${escapeHtml(shortDates)}</div></td>
+          <td style="width:320px;">
+            <div class="copy-btn-group">
+              <button type="button" class="btn-copy-sm primary-copy" onclick="copyGroupDates(${idx}, 'short')">複製 1/6、2/3...</button>
+              <button type="button" class="btn-copy-sm" onclick="copyGroupDates(${idx}, 'roc_lines')">複製 116年01月06日(換行)</button>
+              <button type="button" class="btn-copy-sm" onclick="copyGroupDates(${idx}, 'full')">複製完整標題+日期</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>計畫類別</th>
+            <th>課程名稱（堂數）</th>
+            <th>授課講師</th>
+            <th>已排定上課日期總覽</th>
+            <th>核銷快速複製</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    `;
+  }
+
+  function copyGroupDates(groupIdx, formatType) {
+    const g = lastSummaryGroups[groupIdx];
+    if (!g) return;
+
+    const shortDates = g.items.map(it => {
+      const p = it.course_date.split('-');
+      return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
+    }).join('、');
+
+    const rocLines = g.items.map(it => {
+      const p = it.course_date.split('-');
+      const rocY = parseInt(p[0], 10) - 1911;
+      return `${rocY}年${p[1]}月${p[2]}日`;
+    }).join('\n');
+
+    let textToCopy = shortDates;
+    if (formatType === 'roc_lines') {
+      textToCopy = rocLines;
+    } else if (formatType === 'full') {
+      textToCopy = `${g.plan}：${g.title}（共${g.items.length}堂）：${shortDates}`;
+    }
+
+    copyTextToClipboard(textToCopy, `已複製「${g.plan}：${g.title}」日期，可直接 Ctrl+V 貼上！`);
+  }
+
+  function copyAllFilteredSummary() {
+    if (lastSummaryGroups.length === 0) {
+      alert('目前沒有可複製的課程日期資料！');
+      return;
+    }
+    const lines = lastSummaryGroups.map(g => {
+      const shortDates = g.items.map(it => {
+        const p = it.course_date.split('-');
+        return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
+      }).join('、');
+      return `${g.plan}：${g.title}（${g.items.length}堂）➔ ${shortDates}`;
+    });
+    copyTextToClipboard(lines.join('\n'), `已複製全部 ${lastSummaryGroups.length} 項計畫課程排程日期！`);
+  }
+
+  function copyTextToClipboard(text, successMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setStatus(successMsg);
+      }).catch(() => fallbackCopy(text, successMsg));
+    } else {
+      fallbackCopy(text, successMsg);
+    }
+  }
+
+  function fallbackCopy(text, successMsg) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    setStatus(successMsg);
+  }
+
+  // =========================================================================
+  // 批次鋪設與清除功能
+  // =========================================================================
   async function fillDefaultCareForMonth() {
     const adYear = currentRocYear + 1911;
     const daysInMonth = new Date(adYear, currentMonth, 0).getDate();
