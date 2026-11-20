@@ -289,7 +289,13 @@
     }
     .plan-accordion-header:hover { background: #f1f5f9; }
     .plan-accordion-left {
-      display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 0.86rem;
+      display: flex; align-items: flex-start; gap: 6px; font-weight: bold; font-size: 0.86rem;
+    }
+    .plan-label-col {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    }
+    .plan-date-sub {
+      font-size: 0.75rem; font-weight: bold; color: #334155; padding-left: 2px; line-height: 1.2;
     }
     .plan-arrow {
       display: inline-block; width: 14px; text-align: center;
@@ -709,7 +715,9 @@
       <button type="button" class="btn btn-outline" onclick="fillDefaultCareForMonth()">複製本月課程</button>
       <button type="button" class="btn btn-outline" onclick="fillDefaultCareForYear()">複製全年課程</button>
       <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-        <input type="text" id="clearPrefixInput" placeholder="輸入前綴如：多元1" style="width:125px; padding:6px 8px;">
+        <input type="text" id="clearPrefixInput" placeholder="原名稱如：插花" style="width:115px; padding:6px 8px;">
+        <input type="text" id="renameNewPrefixInput" placeholder="新名稱如：藝術插花" style="width:125px; padding:6px 8px;">
+        <button type="button" class="btn btn-blue" onclick="renameCoursePrefixKeepNum()">一鍵修改課程名稱</button>
         <button type="button" class="btn btn-amber" onclick="clearByPrefix()">清除指定計畫重排</button>
         <button type="button" class="btn btn-outline" style="color:#b91c1c; border-color:#fca5a5;" onclick="clearCurrentMonth()">清除本月重排</button>
         <button type="button" class="btn btn-danger" onclick="clearWholeYear()">清除全年度重排</button>
@@ -1516,7 +1524,7 @@
     if (lblEl) {
       const mPrefix = `${adYear}-${pad2(currentMonth)}-`;
       const mCnt = yearCourses.filter(c => c.plan_type !== '提醒' && c.course_date.startsWith(mPrefix)).length;
-      lblEl.textContent = `${currentRocYear} 年 (${adYear}) ${currentMonth} 月（本月已排 ${mCnt} 堂）`;
+      lblEl.textContent = `${currentRocYear} 年 (${adYear}) ${currentMonth} 月`;
     }
     const tabsEl = document.getElementById('monthTabs');
     let html = '';
@@ -1766,7 +1774,7 @@
     });
   }
 
-  function getCarePlanDateRange(groups) {
+  function getPlanDateRange(groups) {
     const allDates = [];
     (groups || []).forEach(g => {
       (g.items || []).forEach(it => {
@@ -1887,7 +1895,10 @@
           <div class="plan-accordion-header" onclick="togglePlanCard('${planName}')">
             <div class="plan-accordion-left">
               <span class="plan-arrow">▼</span>
-              <span class="plan-pill p-${planName}" style="background:${hexToRgbaBg(getPlanColor(planName), 0.16)}; color:${escapeHtml(getPlanColor(planName))};">${escapeHtml(planName)}計畫</span>${planName === '關懷' ? `<span style="color:#166534; font-size:0.8rem; font-weight:bold;">${escapeHtml(getCarePlanDateRange(groups))}</span>` : ''}
+              <div class="plan-label-col">
+                <span class="plan-pill p-${planName}" style="background:${hexToRgbaBg(getPlanColor(planName), 0.16)}; color:${escapeHtml(getPlanColor(planName))};">${escapeHtml(planName)}計畫</span>
+                <span class="plan-date-sub">${escapeHtml(getPlanDateRange(groups))}</span>
+              </div>
             </div>
           </div>
           <div class="plan-accordion-body">
@@ -2211,6 +2222,55 @@
     const { error } = await supabaseClient.from('course_schedules').insert(toInsert);
     if (error) { alert('寫入失敗：' + error.message); return; }
     await loadYearCourses();
+  }
+
+  async function renameCoursePrefixKeepNum() {
+    const oldPrefix = document.getElementById('clearPrefixInput').value.trim();
+    const newPrefix = document.getElementById('renameNewPrefixInput').value.trim();
+    if (!oldPrefix) { alert('請先在左側輸入框填寫原本的課程名稱（例如：插花）！'); return; }
+    if (!newPrefix) { alert('請在旁輸入新的課程名稱（例如：藝術插花）！'); return; }
+    if (oldPrefix === newPrefix) { alert('新舊課程名稱相同，無需修改！'); return; }
+
+    const adYear = currentRocYear + 1911;
+    const targets = yearCourses.filter(c => {
+      if (c.plan_type === '提醒') return false;
+      const d = String(c.course_date || '');
+      if (d < `${adYear}-01-01` || d > `${adYear}-12-31`) return false;
+      const name = String(c.course_name || '');
+      return name === oldPrefix || name.startsWith(oldPrefix + '-');
+    });
+
+    if (targets.length === 0) {
+      alert(`查無 ${currentRocYear} 年度名稱為「${oldPrefix}」或「${oldPrefix}-編號」的課程！`);
+      return;
+    }
+
+    if (!confirm(`確定要將 ${currentRocYear} 年度共 ${targets.length} 堂「${oldPrefix}」課程改為「${newPrefix}」（保留後方堂數編號）嗎？`)) return;
+
+    setStatus('正在批次修改課程名稱...');
+    for (const item of targets) {
+      const oldName = String(item.course_name || '');
+      let updatedName = newPrefix;
+      if (oldName.startsWith(oldPrefix + '-')) {
+        updatedName = newPrefix + oldName.slice(oldPrefix.length);
+      } else {
+        const suffixMatch = oldName.match(/(-\d+)$/);
+        if (suffixMatch) updatedName = newPrefix + suffixMatch[1];
+      }
+      const { error } = await supabaseClient
+        .from('course_schedules')
+        .update({ course_name: updatedName })
+        .eq('id', item.id);
+      if (error) {
+        alert('修改失敗：' + error.message);
+        setStatus('修改失敗', true);
+        return;
+      }
+    }
+
+    document.getElementById('renameNewPrefixInput').value = '';
+    await loadYearCourses();
+    setStatus(`已將 ${targets.length} 堂課程名稱改為「${newPrefix}」（已保留堂數編號）！`);
   }
 
   async function clearByPrefix() {
