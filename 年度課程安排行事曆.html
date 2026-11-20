@@ -706,6 +706,7 @@
 
     <!-- 關懷固定課預設與清除重排工具列 -->
     <div class="batch-bar">
+      <button type="button" class="btn btn-outline" onclick="openCareWeekdayModal()">設定週一至週五關懷課表</button>
       <button type="button" class="btn btn-outline" onclick="fillDefaultCareForMonth()">＋ 鋪設本月固定「關懷」課（週一至週五）</button>
       <button type="button" class="btn btn-outline" onclick="fillDefaultCareForYear()">＋ 鋪設全年 1-12 月固定「關懷」課</button>
       <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
@@ -918,7 +919,8 @@
     }
 
     // 先用本機畫面立即繪製 1-12 月分頁與當月月曆格子，避免網路延遲或連線異常時畫面空白
-    if (localStorage.getItem('lz_left_dock_collapsed') === '1') {
+    const savedDockState = localStorage.getItem('lz_left_dock_collapsed');
+    if (savedDockState === null || savedDockState === '1') {
       document.getElementById('pageWrap')?.classList.add('left-collapsed');
     }
     renderPlanSelectOptions();
@@ -1487,7 +1489,8 @@
     }
     yearCourses = data || [];
     setStatus(`已同步 ${currentRocYear} 年度雲端課表（共 ${yearCourses.length} 堂）`);
-    if (localStorage.getItem('lz_left_dock_collapsed') === '1') {
+    const savedDockState = localStorage.getItem('lz_left_dock_collapsed');
+    if (savedDockState === null || savedDockState === '1') {
       document.getElementById('pageWrap')?.classList.add('left-collapsed');
     }
     renderPlanSelectOptions();
@@ -1537,7 +1540,8 @@
   function switchMonth(m) {
     currentMonth = m;
     localStorage.setItem('lz_cal_month', String(currentMonth));
-    if (localStorage.getItem('lz_left_dock_collapsed') === '1') {
+    const savedDockState = localStorage.getItem('lz_left_dock_collapsed');
+    if (savedDockState === null || savedDockState === '1') {
       document.getElementById('pageWrap')?.classList.add('left-collapsed');
     }
     renderPlanSelectOptions();
@@ -2060,8 +2064,83 @@
   }
 
   // =========================================================================
-  // 鋪設固定「關懷」課與批次清除重排
+  // 鋪設固定「關懷」課（週一至週五各自課程名稱與講師）與批次清除重排
   // =========================================================================
+  const CARE_WEEKDAY_STORAGE_KEY = 'lz_care_weekday_config_v1';
+  const DEFAULT_CARE_WEEKDAY_CONFIG = {
+    1: { course_name: '關懷常態活動', instructor_name: '', time_slot: '09:00-11:00' },
+    2: { course_name: '關懷常態活動', instructor_name: '', time_slot: '09:00-11:00' },
+    3: { course_name: '關懷常態活動', instructor_name: '', time_slot: '09:00-11:00' },
+    4: { course_name: '關懷常態活動', instructor_name: '', time_slot: '09:00-11:00' },
+    5: { course_name: '關懷常態活動', instructor_name: '', time_slot: '09:00-11:00' }
+  };
+
+  function getCareWeekdayConfig() {
+    const out = JSON.parse(JSON.stringify(DEFAULT_CARE_WEEKDAY_CONFIG));
+    try {
+      const raw = localStorage.getItem(CARE_WEEKDAY_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        [1, 2, 3, 4, 5].forEach(dow => {
+          if (parsed && parsed[dow]) {
+            out[dow] = Object.assign({}, out[dow], parsed[dow]);
+          }
+        });
+      }
+    } catch (e) {}
+    return out;
+  }
+
+  function openCareWeekdayModal() {
+    const cfg = getCareWeekdayConfig();
+    const dayLabels = { 1: '星期一', 2: '星期二', 3: '星期三', 4: '星期四', 5: '星期五' };
+    const rowsEl = document.getElementById('careWeekdayRows');
+    rowsEl.innerHTML = [1, 2, 3, 4, 5].map(dow => {
+      const item = cfg[dow] || { course_name: '關懷常態活動', instructor_name: '', time_slot: '09:00-11:00' };
+      return `
+        <div style="display:grid; grid-template-columns: 78px 1.4fr 1fr 110px; gap:6px; align-items:center; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+          <div style="font-weight:bold; color:#1e293b;">${dayLabels[dow]}</div>
+          <input type="text" id="care_name_${dow}" value="${escapeHtml(item.course_name)}" placeholder="課程名稱">
+          <input type="text" id="care_inst_${dow}" list="instructorDatalist" value="${escapeHtml(item.instructor_name)}" placeholder="授課講師">
+          <input type="text" id="care_time_${dow}" value="${escapeHtml(item.time_slot || '09:00-11:00')}" placeholder="時間">
+        </div>
+      `;
+    }).join('');
+    document.getElementById('careWeekdayModal').classList.add('open');
+  }
+
+  function closeCareWeekdayModal() {
+    document.getElementById('careWeekdayModal').classList.remove('open');
+  }
+
+  function saveCareWeekdaySchedule() {
+    const cfg = {};
+    [1, 2, 3, 4, 5].forEach(dow => {
+      const cName = document.getElementById(`care_name_${dow}`)?.value.trim() || '關懷常態活動';
+      const inst = document.getElementById(`care_inst_${dow}`)?.value.trim() || '';
+      const tSlot = document.getElementById(`care_time_${dow}`)?.value.trim() || '09:00-11:00';
+      cfg[dow] = { course_name: cName, instructor_name: inst, time_slot: tSlot };
+    });
+    localStorage.setItem(CARE_WEEKDAY_STORAGE_KEY, JSON.stringify(cfg));
+    closeCareWeekdayModal();
+    setStatus('已儲存週一至週五固定關懷課程設定');
+  }
+
+  function buildCareInsertItem(isoDate) {
+    const parts = isoDate.split('-').map(Number);
+    const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+    const dow = dt.getDay();
+    const cfg = getCareWeekdayConfig();
+    const dayCfg = cfg[dow] || { course_name: '關懷常態活動', instructor_name: '', time_slot: '09:00-11:00' };
+    return {
+      course_date: isoDate,
+      plan_type: '關懷',
+      course_name: dayCfg.course_name || '關懷常態活動',
+      time_slot: dayCfg.time_slot || '09:00-11:00',
+      instructor_name: dayCfg.instructor_name || null
+    };
+  }
+
   function getWorkdaysInMonth(adYear, month) {
     const daysInMonth = new Date(adYear, month, 0).getDate();
     const dates = [];
@@ -2080,12 +2159,7 @@
     const adYear = currentRocYear + 1911;
     const workdays = getWorkdaysInMonth(adYear, currentMonth);
     const existingDates = new Set(yearCourses.map(c => c.course_date));
-    const toInsert = workdays.filter(d => !existingDates.has(d)).map(d => ({
-      course_date: d,
-      plan_type: '關懷',
-      course_name: '關懷常態活動',
-      time_slot: '09:00-11:00'
-    }));
+    const toInsert = workdays.filter(d => !existingDates.has(d)).map(d => buildCareInsertItem(d));
 
     if (toInsert.length === 0) {
       alert(`${currentMonth} 月所有上班日皆已有排定課程！`);
@@ -2099,7 +2173,7 @@
   }
 
   async function fillDefaultCareForYear() {
-    if (!confirm(`確定要為 ${currentRocYear} 年（1-12月）尚未排課的所有週一至週五上班日，自動鋪設「關懷常態活動」嗎？`)) return;
+    if (!confirm(`確定要為 ${currentRocYear} 年（1-12月）尚未排課的所有週一至週五上班日，依設定鋪設固定「關懷」課嗎？`)) return;
     const adYear = currentRocYear + 1911;
     const existingDates = new Set(yearCourses.map(c => c.course_date));
     const toInsert = [];
@@ -2107,12 +2181,7 @@
       const workdays = getWorkdaysInMonth(adYear, m);
       workdays.forEach(d => {
         if (!existingDates.has(d)) {
-          toInsert.push({
-            course_date: d,
-            plan_type: '關懷',
-            course_name: '關懷常態活動',
-            time_slot: '09:00-11:00'
-          });
+          toInsert.push(buildCareInsertItem(d));
         }
       });
     }
@@ -2200,7 +2269,20 @@
       <body>
         <h2>${escapeHtml(titleText)}</h2>
         ${calTableHtml}
-      </body></html>
+      
+<!-- 設定週一至週五固定關懷課程名稱與講師彈窗（免拖曳積木） -->
+<div class="modal-backdrop" id="careWeekdayModal">
+  <div class="modal-box" style="max-width: 580px;">
+    <h4>設定週一至週五固定關懷課程</h4>
+    <div id="careWeekdayRows" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline" onclick="closeCareWeekdayModal()">取消</button>
+      <button type="button" class="btn btn-primary" onclick="saveCareWeekdaySchedule()">儲存設定</button>
+    </div>
+  </div>
+</div>
+
+</body></html>
     `;
     const blob = new Blob(['\ufeff', docContent], { type: 'application/msword;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -2247,6 +2329,19 @@
     <div class="modal-actions">
       <button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="resetDefaultPresets()">恢復預設清單</button>
       <button type="button" class="btn btn-primary" onclick="closePresetManagerModal()">完成關閉</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- 設定週一至週五固定關懷課程名稱與講師彈窗（免拖曳積木） -->
+<div class="modal-backdrop" id="careWeekdayModal">
+  <div class="modal-box" style="max-width: 580px;">
+    <h4>設定週一至週五固定關懷課程</h4>
+    <div id="careWeekdayRows" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline" onclick="closeCareWeekdayModal()">取消</button>
+      <button type="button" class="btn btn-primary" onclick="saveCareWeekdaySchedule()">儲存設定</button>
     </div>
   </div>
 </div>
