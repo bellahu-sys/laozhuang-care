@@ -157,12 +157,13 @@
     }
     .preset-chip-btn {
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 3px 8px; border-radius: 14px; font-size: 0.78rem; font-weight: bold;
-      border: 1px solid #cbd5e1; background: #fff; color: #1e293b; cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.1s;
+      padding: 4px 9px; border-radius: 14px; font-size: 0.8rem; font-weight: bold;
+      border: 1.5px solid #cbd5e1; background: #fff; color: #1e293b; cursor: grab;
+      user-select: none; transition: transform 0.1s, box-shadow 0.1s;
     }
+    .preset-chip-btn:active { cursor: grabbing; }
     .preset-chip-btn:hover {
-      transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.14);
     }
     .preset-dot {
       width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
@@ -516,22 +517,22 @@
 
         <div class="drag-pool" id="dragPool"></div>
 
-    <!-- 新增：提醒事項積木區塊（常用名稱＋色彩綁定清單） -->
+    <!-- 新增：提醒事項積木區塊（直接拖曳常用清單，精簡省版面） -->
     <div class="reminder-section">
-      <h3>2. 建立提醒事項積木（可自訂色彩）</h3>
+      <h3>2. 提醒事項積木（可自訂色彩）</h3>
 
-      <!-- 常用提醒名稱＆色彩綁定快速選單 -->
+      <!-- 常用提醒名稱＆色彩綁定快速選單（可直接拖曳至月曆，也可點擊帶入修改） -->
       <div class="preset-quick-bar">
         <div class="preset-quick-header">
-          <span>⚡ 常用提醒清單（點選自動帶入名稱與綁定色）</span>
-          <button type="button" class="token-mini-btn" onclick="openPresetManagerModal()" style="border-color:#d97706; color:#92400e;">⚙ 管理清單</button>
+          <span>常用提醒清單（可直接拖進日曆，或點選帶入）</span>
+          <button type="button" class="token-mini-btn" onclick="openPresetManagerModal()" style="border-color:#d97706; color:#92400e;">管理清單</button>
         </div>
         <div class="preset-chip-wrap" id="reminderPresetChips"></div>
       </div>
 
       <div class="form-group">
-        <label>提醒標題（可點上方快速選取或自行輸入）</label>
-        <input type="text" id="reminderTitleInput" oninput="autoMatchPresetColor(this.value)" placeholder="如：關懷核銷、長照核銷、課程提醒、每月固定會議">
+        <label>新增或修改提醒標題</label>
+        <input type="text" id="reminderTitleInput" oninput="autoMatchPresetColor(this.value)" placeholder="如：課程提醒、每月固定會議">
       </div>
       <div class="form-group">
         <label>備註或時間提醒（選填）</label>
@@ -540,7 +541,7 @@
       <div class="form-group">
         <label>綁定標籤色彩（計畫核銷類統一玫紅，其餘自由選色）</label>
         <div class="color-picker-row">
-          <input type="color" id="reminderColorInput" value="#e11d48" style="width:36px; height:28px; padding:1px; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;">
+          <input type="color" id="reminderColorInput" value="#0284c7" style="width:36px; height:28px; padding:1px; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer;">
           <button type="button" class="color-swatch" style="background:#e11d48;" onclick="setReminderColor('#e11d48')" title="玫紅（計畫核銷類統一色）"></button>
           <button type="button" class="color-swatch" style="background:#0284c7;" onclick="setReminderColor('#0284c7')" title="天藍（課程提醒）"></button>
           <button type="button" class="color-swatch" style="background:#0d9488;" onclick="setReminderColor('#0d9488')" title="青綠（活動／訪視）"></button>
@@ -551,22 +552,10 @@
         </div>
       </div>
 
-      <div class="form-group" style="background:#f8fafc; padding:6px 8px; border-radius:5px; border:1px solid #e2e8f0;">
-        <label style="display:flex; align-items:center; gap:6px; margin:0; cursor:pointer; font-size:0.81rem; color:#334155;">
-          <input type="checkbox" id="saveToPresetCheckbox" checked>
-          同時儲存／更新至上方「常用提醒名稱＋色彩綁定清單」
-        </label>
-      </div>
-
-      <button type="button" class="btn btn-amber" style="width:100%;" onclick="createReminderBlock()">＋ 產生提醒積木</button>
+      <button type="button" class="btn btn-amber" style="width:100%;" onclick="addOrUpdateReminderPreset()">＋ 加入常用提醒清單（可重複拖曳）</button>
       <div style="margin-top:6px; font-size:0.79rem; color:#64748b;">
-        • 提醒積木可<strong>重複多次拖曳</strong>至行事曆任意日期（不會消失，也不會取代當日課程）。
+        • 直接按住上方彩色標籤拖進右側日曆即可（可重複多次拖曳，不會取代當日課程）。
       </div>
-      <div class="pool-toolbar">
-        <span>待拖曳提醒積木池</span>
-        <button type="button" class="token-mini-btn" onclick="resetDefaultReminders()">恢復核銷統一色預設</button>
-      </div>
-      <div class="reminder-pool" id="reminderPool"></div>
     </div>
   </div>
 
@@ -980,13 +969,48 @@
     }
     wrap.innerHTML = reminderPresets.map(p => `
       <button type="button" class="preset-chip-btn"
-              style="border-color:${escapeHtml(p.color)}; background:${hexToRgbaBg(p.color, 0.08)};"
+              draggable="true"
+              ondragstart="onPresetDragStart(event, '${p.id}')"
+              style="border-color:${escapeHtml(p.color)}; background:${hexToRgbaBg(p.color, 0.1)};"
               onclick="applyReminderPreset('${p.id}')"
-              title="點選帶入「${escapeHtml(p.title)}」與綁定色彩">
+              title="按住拖進日曆，或點選帶入「${escapeHtml(p.title)}」${p.note ? '（' + escapeHtml(p.note) + '）' : ''}">
         <span class="preset-dot" style="background:${escapeHtml(p.color)};"></span>
         <span>${escapeHtml(p.title)}</span>
       </button>
     `).join('');
+  }
+
+  function onPresetDragStart(ev, presetId) {
+    activeDraggedBlock = null;
+    const p = reminderPresets.find(item => item.id === presetId);
+    activeDraggedReminder = p ? { title: p.title, note: p.note || '', color: p.color || '#e11d48' } : null;
+    ev.dataTransfer.effectAllowed = 'copy';
+    ev.dataTransfer.setData('text/plain', presetId);
+  }
+
+  function addOrUpdateReminderPreset() {
+    const title = document.getElementById('reminderTitleInput').value.trim();
+    const note = document.getElementById('reminderNoteInput').value.trim();
+    const color = document.getElementById('reminderColorInput').value || '#0284c7';
+    if (!title) { alert('請輸入提醒標題！'); return; }
+
+    const existing = reminderPresets.find(p => p.title === title);
+    if (existing) {
+      existing.color = color;
+      existing.note = note;
+    } else {
+      reminderPresets.push({
+        id: 'pre_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+        title,
+        note,
+        color
+      });
+    }
+    document.getElementById('reminderTitleInput').value = '';
+    document.getElementById('reminderNoteInput').value = '';
+    saveReminderPresetsLocal();
+    renderReminderPresets();
+    setStatus(`已將「${title}」加入常用提醒清單，可直接拖進日曆！`);
   }
 
   function applyReminderPreset(presetId) {
