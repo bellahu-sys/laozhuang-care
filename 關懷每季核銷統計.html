@@ -229,12 +229,46 @@
     </div>
   </div>
 
-  <!-- 一、當期業務項目支出總額 & 二、當期業務費支出總額（依月份彙總） -->
+  <!-- 一、執行概況考核表試算（對應 04 據點執行概況考核表.doc、02 核銷領據.doc、03 經費支出憑證.doc） -->
+  <div class="card">
+    <div class="section-header-bar">
+      <h2 id="assessmentHeading">一、執行概況考核表試算</h2>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-blue btn-sm" onclick="syncActualFromRecords()">從業務費＆專職薪資帶入「實際支出合計」</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyApprovedChineseAmount()">複製核定補助大寫國字</button>
+        <button type="button" class="btn btn-teal btn-sm" onclick="copyActualChineseAmount()">複製實際支出大寫國字</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyAssessmentTable()">複製考核表數據 (貼上 Word/Excel)</button>
+      </div>
+    </div>
+
+    <div id="chineseAmountStrip" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; background:#fffbeb; border:1px solid #fde68a; border-radius:7px; padding:8px 12px; margin-bottom:10px; font-size:0.9rem;"></div>
+
+    <div style="overflow-x:auto;">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:23%;">獎助項目</th>
+            <th rowspan="2" style="width:14%;">核定補助經費<br><span style="font-size:0.76rem; font-weight:normal;">（可輸入修改）</span></th>
+            <th colspan="3">累計實支數</th>
+            <th rowspan="2" style="width:22%;">大寫國字／一鍵複製</th>
+          </tr>
+          <tr>
+            <th style="width:13%;">補助經費支出<br><span style="font-size:0.75rem; font-weight:normal;">（自動取兩者較小值）</span></th>
+            <th style="width:13%;">自籌經費支出<br><span style="font-size:0.75rem; font-weight:normal;">（超出補助自動計入）</span></th>
+            <th style="width:15%;">合計（實際支出金額）<br><span style="font-size:0.75rem; font-weight:normal;">（可手動修改或帶入）</span></th>
+          </tr>
+        </thead>
+        <tbody id="assessmentBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 二、月份項目支出總額 & 三、月份支出明細表（依月份） -->
   <div class="grid-2">
-    <!-- 左表（一）：按 7 大項目彙總 (對應 09 當期業務項目支出總額.doc) -->
+    <!-- 左表（二）：按 7 大項目彙總 -->
     <div class="card">
       <div class="section-header-bar">
-        <h2 id="byItemTitle">一、115 年 10-12 月份項目支出總額</h2>
+        <h2 id="byItemTitle">二、115 年 10-12 月份項目支出總額</h2>
         <button type="button" class="btn btn-primary btn-sm" onclick="copyByItemTable()">複製項目支出明細</button>
       </div>
       <table class="doc-table">
@@ -250,10 +284,10 @@
       </table>
     </div>
 
-    <!-- 右表（二）：按月份彙總 (對應 09 當期業務費支出總額.doc) -->
+    <!-- 右表（三）：按月份彙總 -->
     <div class="card">
       <div class="section-header-bar">
-        <h2 id="byMonthTitle">二、115 年 10-12 月份支出明細表（依月份）</h2>
+        <h2 id="byMonthTitle">三、115 年 10-12 月份支出明細表（依月份）</h2>
         <button type="button" class="btn btn-primary btn-sm" onclick="copyByMonthTable()">複製月份支出明細</button>
       </div>
       <table class="doc-table">
@@ -270,11 +304,11 @@
     </div>
   </div>
 
-  <!-- 三、支出明細表（單月）（對應 10 單月業務費支出細項_10月.doc） -->
+  <!-- 四、支出明細表（單月）（對應 10 單月業務費支出細項_10月.doc） -->
   <div class="card">
     <div class="section-header-bar">
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <h2 id="singleMonthTitle">三、支出明細表（單月）</h2>
+        <h2 id="singleMonthTitle">四、支出明細表（單月・115 年 10 月份）</h2>
         <select id="singleMonthSelect" onchange="renderSingleMonthTable()" style="padding:4px 10px; font-weight:bold;">
           <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
           <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
@@ -308,36 +342,6 @@
           </tr>
         </thead>
         <tbody id="singleMonthBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- 四、執行概況考核表試算（對應 04 據點執行概況考核表.doc） -->
-  <div class="card">
-    <div class="section-header-bar">
-      <h2 id="assessmentHeading">四、執行概況考核表試算</h2>
-      <div style="display:flex; gap:6px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-blue btn-sm" onclick="syncActualFromRecords()">從業務費＆專職薪資帶入「實際支出合計」</button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="copyAssessmentTable()">複製考核表數據 (貼上 Word/Excel)</button>
-      </div>
-    </div>
-
-    <div style="overflow-x:auto;">
-      <table class="doc-table">
-        <thead>
-          <tr>
-            <th rowspan="2" style="width:24%;">獎助項目</th>
-            <th rowspan="2" style="width:15%;">核定補助經費<br><span style="font-size:0.76rem; font-weight:normal;">（可輸入修改）</span></th>
-            <th colspan="3">累計實支數</th>
-            <th rowspan="2" style="width:16%;">備註 / 一鍵複製</th>
-          </tr>
-          <tr>
-            <th style="width:15%;">補助經費支出<br><span style="font-size:0.75rem; font-weight:normal;">（自動取兩者較小值）</span></th>
-            <th style="width:15%;">自籌經費支出<br><span style="font-size:0.75rem; font-weight:normal;">（超出補助自動計入）</span></th>
-            <th style="width:15%;">合計（實際支出金額）<br><span style="font-size:0.75rem; font-weight:normal;">（可手動修改或帶入）</span></th>
-          </tr>
-        </thead>
-        <tbody id="assessmentBody"></tbody>
       </table>
     </div>
   </div>
@@ -592,14 +596,131 @@
   }
 
   function renderAllTables() {
+    renderAssessmentTable();
     renderByItemTable();
     renderByMonthTable();
     renderSingleMonthTable();
-    renderAssessmentTable();
   }
 
+  function numberToChineseUppercase(num) {
+    const n = Math.round(Number(num || 0));
+    if (n === 0) return '零元整';
+    if (n < 0) return '負' + numberToChineseUppercase(Math.abs(n));
+    const digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
+    const units = ['', '拾', '佰', '仟'];
+    const bigUnits = ['', '萬', '億', '兆'];
+
+    let str = String(n);
+    let parts = [];
+    let bigIdx = 0;
+
+    while (str.length > 0) {
+      const seg = str.slice(-4);
+      str = str.slice(0, -4);
+      let segStr = '';
+      let zeroFlag = false;
+
+      for (let i = 0; i < seg.length; i++) {
+        const d = parseInt(seg[i], 10);
+        const uIdx = seg.length - 1 - i;
+        if (d === 0) {
+          zeroFlag = true;
+        } else {
+          if (zeroFlag) {
+            segStr += '零';
+            zeroFlag = false;
+          }
+          segStr += digits[d] + units[uIdx];
+        }
+      }
+
+      if (segStr !== '') {
+        parts.unshift(segStr + bigUnits[bigIdx]);
+      }
+      bigIdx++;
+    }
+
+    return parts.join('') + '元整';
+  }
+
+  let latestApprovedTotal = 0;
+  let latestActualTotal = 0;
+
   function renderAssessmentTable() {
-    document.getElementById('assessmentHeading').textContent = '四、執行概況考核表試算';
+    document.getElementById('assessmentHeading').textContent = '一、執行概況考核表試算';
+
+    const tbody = document.getElementById('assessmentBody');
+    let sumApproved = 0, sumSubsidy = 0, sumSelf = 0, sumActual = 0;
+
+    let html = assessmentItems.map((it, idx) => {
+      const sp = calcSplit(it.approved, it.actualTotal);
+      sumApproved += sp.approved;
+      sumSubsidy += sp.subsidySpent;
+      sumSelf += sp.selfSpent;
+      sumActual += sp.actualTotal;
+
+      const appZh = numberToChineseUppercase(sp.approved);
+      const actZh = numberToChineseUppercase(sp.actualTotal);
+
+      return `
+        <tr>
+          <td style="font-weight:bold;">${it.label}</td>
+          <td><input type="text" class="num-input" value="${fmtNum(sp.approved)}" onchange="onAssessmentInput(${idx}, 'approved', this.value)"></td>
+          <td class="num-col" style="font-weight:bold; color:#0f766e;">${fmtNum(sp.subsidySpent)}</td>
+          <td class="num-col" style="font-weight:bold; color:${sp.selfSpent > 0 ? '#b91c1c' : '#475569'};">${fmtNum(sp.selfSpent)}</td>
+          <td><input type="text" class="num-input" value="${fmtNum(sp.actualTotal)}" onchange="onAssessmentInput(${idx}, 'actualTotal', this.value)"></td>
+          <td class="center-col">
+            <div style="font-size:0.78rem; color:#334155; margin-bottom:4px;">核定：<strong>${appZh}</strong>｜實支：<strong>${actZh}</strong></div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="copyTextToClipboard('${appZh}', '已複製「${it.label}」核定大寫國字：${appZh}')">複製核定大寫</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="copyTextToClipboard('${actZh}', '已複製「${it.label}」實支大寫國字：${actZh}')">複製實支大寫</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    latestApprovedTotal = sumApproved;
+    latestActualTotal = sumActual;
+    const totalApprovedZh = numberToChineseUppercase(sumApproved);
+    const totalActualZh = numberToChineseUppercase(sumActual);
+
+    const stripEl = document.getElementById('chineseAmountStrip');
+    if (stripEl) {
+      stripEl.innerHTML = `
+        <div><strong>核定補助合計（大寫）：</strong><span style="color:#0f766e; font-weight:bold;">${totalApprovedZh}</span>（${fmtNum(sumApproved)} 元）</div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyApprovedChineseAmount()">複製核定大寫</button>
+        <span style="color:#cbd5e1;">|</span>
+        <div><strong>實際支出合計（大寫）：</strong><span style="color:#1d4ed8; font-weight:bold;">${totalActualZh}</span>（${fmtNum(sumActual)} 元）</div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyActualChineseAmount()">複製實支大寫</button>
+      `;
+    }
+
+    html += `
+      <tr class="total-row">
+        <td class="center-col">合計</td>
+        <td class="num-col">${fmtNum(sumApproved)}</td>
+        <td class="num-col">${fmtNum(sumSubsidy)}</td>
+        <td class="num-col">${fmtNum(sumSelf)}</td>
+        <td class="num-col">${fmtNum(sumActual)}</td>
+        <td class="center-col">
+          <button type="button" class="btn btn-outline btn-sm" onclick="copyApprovedChineseAmount()">複製核定大寫</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="copyActualChineseAmount()">複製實支大寫</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="copyAssessmentTable()">複製整表</button>
+        </td>
+      </tr>
+    `;
+
+    tbody.innerHTML = html;
+  }
+
+  function copyApprovedChineseAmount() {
+    const zh = numberToChineseUppercase(latestApprovedTotal);
+    copyTextToClipboard(zh, `已複製核定補助大寫國字金額：${zh}`);
+  }
+
+  function copyActualChineseAmount() {
+    const zh = numberToChineseUppercase(latestActualTotal);
+    copyTextToClipboard(zh, `已複製實際支出大寫國字金額：${zh}`);
+  }
 
     const tbody = document.getElementById('assessmentBody');
     let sumApproved = 0, sumSubsidy = 0, sumSelf = 0, sumActual = 0;
@@ -680,7 +801,7 @@
     const mRangeStr = selectedMonths.length > 1
       ? `${selectedMonths[0]}-${selectedMonths[selectedMonths.length - 1]}`
       : (selectedMonths.length === 1 ? `${selectedMonths[0]}` : '');
-    document.getElementById('byItemTitle').textContent = `一、${currentRocYear} 年 ${mRangeStr} 月份項目支出總額`;
+    document.getElementById('byItemTitle').textContent = `二、${currentRocYear} 年 ${mRangeStr} 月份項目支出總額`;
 
     const tbody = document.getElementById('byItemBody');
     let grandTotal = 0;
@@ -742,7 +863,7 @@
 
   function renderSingleMonthTable() {
     const m = parseInt(document.getElementById('singleMonthSelect')?.value, 10) || selectedMonths[0] || 10;
-    document.getElementById('singleMonthTitle').textContent = `三、支出明細表（單月・${currentRocYear} 年 ${m} 月份）`;
+    document.getElementById('singleMonthTitle').textContent = `四、支出明細表（單月・${currentRocYear} 年 ${m} 月份）`;
 
     const { rows, total } = getSingleMonthRowsData(m);
     const tbody = document.getElementById('singleMonthBody');
@@ -784,6 +905,24 @@
     copyTsv(lines, `已複製 ${currentRocYear} 年 ${m} 月份《支出明細表（單月）》數據，可直接貼上 Word 核銷表！`);
   }
 
+
+  function copyTextToClipboard(text, msg) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => setStatus(msg)).catch(() => fallbackCopy(text, msg));
+    } else {
+      fallbackCopy(text, msg);
+    }
+  }
+  function fallbackCopy(text, msg) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    setStatus(msg);
+  }
+
   function copyTsv(lines, msg) {
     const text = lines.join('\n');
     if (navigator.clipboard && window.isSecureContext) {
@@ -803,7 +942,7 @@
     const it = assessmentItems[idx];
     const sp = calcSplit(it.approved, it.actualTotal);
     const line = `${it.label}\t${fmtNum(sp.approved)}\t${fmtNum(sp.subsidySpent)}\t${fmtNum(sp.selfSpent)}\t${fmtNum(sp.actualTotal)}`;
-    copyTsv([line], `已複製「${it.label}」數據，可直接貼上 Word / Excel！`);
+    copyTextToClipboard(line, `已複製「${it.label}」數據，可直接貼上 Word / Excel！`);
   }
 
   function copyAssessmentTable() {
