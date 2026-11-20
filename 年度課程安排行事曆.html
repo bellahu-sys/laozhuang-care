@@ -574,13 +574,13 @@
         <input type="text" id="reimburseTimeInput" value="09:00-11:00" placeholder="如：09:00-11:00">
       </div>
       <div>
-        <label>實際上課時間（灰色提醒）</label>
+        <label>實際上課時間</label>
         <input type="text" id="actualTimeInput" value="" placeholder="選填，如：09:30-11:30">
       </div>
     </div>
 
     <div class="form-group">
-      <label>授課講師（可選填，連動簽到表）</label>
+      <label>授課講師</label>
       <input type="text" id="instructorInput" list="instructorDatalist" placeholder="輸入或選擇講師姓名">
       <datalist id="instructorDatalist"></datalist>
     </div>
@@ -607,7 +607,7 @@
     <!-- 提醒事項積木區塊（取消原垂直收合，直接利用整區往左收合） -->
     <div class="reminder-section" id="reminderSectionBox">
       <div class="reminder-section-header">
-        <h3>2. 提醒事項積木（可自訂色彩）</h3>
+        <h3>2. 提醒事項積木</h3>
         <button type="button" class="left-collapse-btn" onclick="toggleLeftDock(true)" title="往左收合，增加行事曆空間">⇤ 往左收合</button>
       </div>
       <div class="reminder-section-body" id="reminderSectionBody">
@@ -663,9 +663,8 @@
       </div>
       <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <button type="button" class="btn btn-primary" onclick="printCalendarNow()">列印課程行事曆</button>
-        <button type="button" class="btn btn-blue" onclick="downloadCalendarPdfPrint()">列印成 1 份 PDF</button>
         <button type="button" class="btn btn-outline" onclick="downloadCalendarWordDoc()">下載 Word (.doc)</button>
-        <a href="月報表套印中心.html" class="btn-link-report">前往核銷 5 份簽到表套印 ➔</a>
+        <a href="月報表套印中心.html" class="btn-link-report">前往套表列印</a>
       </div>
     </div>
 
@@ -706,9 +705,9 @@
 
     <!-- 關懷固定課預設與清除重排工具列 -->
     <div class="batch-bar">
-      <button type="button" class="btn btn-outline" onclick="openCareWeekdayModal()">設定週一至週五關懷課表</button>
-      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForMonth()">＋ 鋪設本月固定「關懷」課（週一至週五）</button>
-      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForYear()">＋ 鋪設全年 1-12 月固定「關懷」課</button>
+      <button type="button" class="btn btn-outline" onclick="openCareWeekdayModal()">設定關懷課表</button>
+      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForMonth()">複製本月課程</button>
+      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForYear()">複製全年課程</button>
       <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
         <input type="text" id="clearPrefixInput" placeholder="輸入前綴如：多元1" style="width:125px; padding:6px 8px;">
         <button type="button" class="btn btn-amber" onclick="clearByPrefix()">清除指定計畫重排</button>
@@ -770,7 +769,7 @@
         <input type="text" id="modalReimburseTime" value="09:00-11:00">
       </div>
       <div id="modalActualGroup">
-        <label>實際上課時間（灰色提醒）</label>
+        <label>實際上課時間</label>
         <input type="text" id="modalActualTime" placeholder="選填">
       </div>
     </div>
@@ -1528,7 +1527,6 @@
       html += `
         <button type="button" class="month-tab ${activeCls}" onclick="switchMonth(${m})">
           ${m} 月
-          <span class="m-count">${cnt} 堂</span>
         </button>
       `;
     }
@@ -1768,6 +1766,24 @@
     });
   }
 
+  function getCarePlanDateRange(groups) {
+    const allDates = [];
+    (groups || []).forEach(g => {
+      (g.items || []).forEach(it => {
+        if (it.course_date) allDates.push(String(it.course_date));
+      });
+    });
+    if (allDates.length === 0) return '';
+    allDates.sort();
+    const fmtMD = (iso) => {
+      const p = iso.split('-');
+      return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
+    };
+    const first = fmtMD(allDates[0]);
+    const last = fmtMD(allDates[allDates.length - 1]);
+    return first === last ? first : `${first}-${last}`;
+  }
+
   function renderScheduleSummary() {
     const planFilter = document.getElementById('summaryPlanFilter').value;
     const qFilter = document.getElementById('summaryQuarterFilter').value;
@@ -1871,7 +1887,7 @@
           <div class="plan-accordion-header" onclick="togglePlanCard('${planName}')">
             <div class="plan-accordion-left">
               <span class="plan-arrow">▼</span>
-              <span class="plan-pill p-${planName}" style="background:${hexToRgbaBg(getPlanColor(planName), 0.16)}; color:${escapeHtml(getPlanColor(planName))};">${escapeHtml(planName)}計畫</span>
+              <span class="plan-pill p-${planName}" style="background:${hexToRgbaBg(getPlanColor(planName), 0.16)}; color:${escapeHtml(getPlanColor(planName))};">${escapeHtml(planName)}計畫</span>${planName === '關懷' ? `<span style="color:#166534; font-size:0.8rem; font-weight:bold;">${escapeHtml(getCarePlanDateRange(groups))}</span>` : ''}
             </div>
           </div>
           <div class="plan-accordion-body">
