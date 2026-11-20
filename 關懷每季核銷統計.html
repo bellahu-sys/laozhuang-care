@@ -200,7 +200,7 @@
 <div class="container">
   <div class="card">
     <div class="top-bar">
-      <h1 class="page-h1">4. 關懷每季核銷統計（執行概況考核表 ＋ 支出明細表一鍵複製）</h1>
+      <h1 class="page-h1">4. 關懷每季核銷統計</h1>
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <span id="statusText" style="font-size:0.88rem; font-weight:bold; color:#166534;"></span>
         <button type="button" class="btn btn-teal" onclick="loadAllData()">重新同步雲端記錄</button>
@@ -220,7 +220,6 @@
       <select id="periodPresetSelect" onchange="onPeriodPresetChange()">
         <option value="Q1">第 1 季 (1-3月)</option>
         <option value="Q2">第 2 季 (4-6月)</option>
-        <option value="M7_8" selected>7-8 月份（當期核銷）</option>
         <option value="Q3">第 3 季 (7-9月)</option>
         <option value="Q4">第 4 季 (10-12月)</option>
         <option value="ALL">全年度 (1-12月)</option>
@@ -233,7 +232,7 @@
   <!-- 區塊一：對應《04 據點執行概況考核表》 -->
   <div class="card">
     <div class="section-header-bar">
-      <h2 id="assessmentHeading">一、執行概況考核表試算（核定補助經費 vs. 累計實支數・自動算自籌款）</h2>
+      <h2 id="assessmentHeading">一、執行概況考核表試算</h2>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
         <button type="button" class="btn btn-outline btn-sm" onclick="fillDefaultBudget78()">帶入 7-8 月標準核定補助 (176,000)</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="fillDefaultBudgetQ()">帶入單季 3 個月標準核定補助 (267,000)</button>
@@ -307,8 +306,17 @@
 <script>
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  function getCurrentQuarterMonths() {
+    const m = new Date().getMonth() + 1;
+    if (m <= 3) return { preset: 'Q1', months: [1, 2, 3] };
+    if (m <= 6) return { preset: 'Q2', months: [4, 5, 6] };
+    if (m <= 9) return { preset: 'Q3', months: [7, 8, 9] };
+    return { preset: 'Q4', months: [10, 11, 12] };
+  }
+
+  const initQ = getCurrentQuarterMonths();
   let currentRocYear = 115;
-  let selectedMonths = [7, 8];
+  let selectedMonths = initQ.months;
   let expenseRows = []; // monthly_business_expenses
   let payrollRows = []; // fulltime_payroll_records
   let tempHoursRows = []; // temp_staff_hours
@@ -345,6 +353,8 @@
   }
 
   (async function init() {
+    const presetSel = document.getElementById('periodPresetSelect');
+    if (presetSel) presetSel.value = initQ.preset;
     renderMonthCheckboxes();
     loadAssessmentStateFromLocal();
     await loadAllData();
@@ -365,7 +375,6 @@
     const preset = document.getElementById('periodPresetSelect').value;
     if (preset === 'Q1') selectedMonths = [1, 2, 3];
     else if (preset === 'Q2') selectedMonths = [4, 5, 6];
-    else if (preset === 'M7_8') selectedMonths = [7, 8];
     else if (preset === 'Q3') selectedMonths = [7, 8, 9];
     else if (preset === 'Q4') selectedMonths = [10, 11, 12];
     else selectedMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -543,10 +552,7 @@
   }
 
   function renderAssessmentTable() {
-    const periodLabel = selectedMonths.length > 0
-      ? `${currentRocYear} 年 ${selectedMonths.map(m => m + '月').join('、')}`
-      : `${currentRocYear} 年`;
-    document.getElementById('assessmentHeading').textContent = `一、執行概況考核表試算（${periodLabel}・核定補助 vs. 累計實支數）`;
+    document.getElementById('assessmentHeading').textContent = '一、執行概況考核表試算';
 
     const tbody = document.getElementById('assessmentBody');
     let sumApproved = 0, sumSubsidy = 0, sumSelf = 0, sumActual = 0;
