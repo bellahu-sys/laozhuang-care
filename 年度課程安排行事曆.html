@@ -672,7 +672,7 @@
     <!-- 直接放在月曆最上方的「各計畫排定日期總覽＆一鍵複製盒（依計畫展開收合）」 -->
     <div class="summary-top-box">
       <div class="summary-top-header">
-        <div class="summary-top-title">各計畫課程排定日期總覽</div>
+        <div class="summary-top-title">各計畫課程排定日期總覽（核銷專用一鍵複製・點擊計畫展開）</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
           <select id="summaryPlanFilter" style="width:auto; padding:4px 8px; font-size:0.84rem;" onchange="renderScheduleSummary()">
             <option value="ALL">全部計畫</option>
@@ -688,7 +688,6 @@
             <input type="checkbox" id="mergeSeriesCheckbox" checked onchange="renderScheduleSummary()">
             合併同系列堂次
           </label>
-          <button type="button" class="btn btn-outline" style="padding:4px 8px; font-size:0.8rem;" onclick="openDateDisplaySettingsModal()">課程日期顯示設定</button>
           <button type="button" class="btn btn-outline" style="padding:4px 8px; font-size:0.8rem;" onclick="toggleAllPlanCards(true)">全部展開</button>
           <button type="button" class="btn btn-outline" style="padding:4px 8px; font-size:0.8rem;" onclick="toggleAllPlanCards(false)">全部收合</button>
           <button type="button" class="btn btn-primary" style="padding:5px 10px; font-size:0.82rem;" onclick="copyAllFilteredSummary()">複製全部總覽</button>
@@ -1742,101 +1741,8 @@
   }
 
   // =========================================================================
-  // 各計畫課程排定日期總覽（依計畫核銷規則分組與一鍵複製）
+  // 置頂：各計畫課程排定日期總覽與核銷複製功能（依計畫分類展開／收合）
   // =========================================================================
-  const DEFAULT_PLAN_DATE_RULES = {
-    '關懷': { mode: 'quarter_instructor' },
-    '長照': { mode: 'quarter_instructor' },
-    '延緩': { mode: 'term_instructor' },
-    '多元': { mode: 'whole_plan_instructor' },
-    '伯公': { mode: 'whole_plan_instructor' },
-    '樂齡': { mode: 'whole_plan_instructor' }
-  };
-
-  let planDateRules = {};
-
-  function loadPlanDateRules() {
-    const saved = localStorage.getItem('lz_plan_date_rules_v1');
-    planDateRules = Object.assign({}, DEFAULT_PLAN_DATE_RULES);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        Object.assign(planDateRules, parsed);
-      } catch (e) {}
-    }
-  }
-
-  function savePlanDateRules() {
-    localStorage.setItem('lz_plan_date_rules_v1', JSON.stringify(planDateRules));
-  }
-
-  function getRuleForPlan(planName) {
-    if (!Object.keys(planDateRules).length) loadPlanDateRules();
-    if (planDateRules[planName]) return planDateRules[planName];
-    if (DEFAULT_PLAN_DATE_RULES[planName]) return DEFAULT_PLAN_DATE_RULES[planName];
-    return { mode: 'whole_plan_instructor' };
-  }
-
-  function openDateDisplaySettingsModal() {
-    loadPlanDateRules();
-    const planNames = new Set([
-      '關懷', '長照', '延緩', '多元', '伯公', '樂齡',
-      ...coursePlans.map(p => p.value),
-      ...Object.keys(planDateRules)
-    ]);
-
-    const listEl = document.getElementById('dateDisplaySettingsList');
-    listEl.innerHTML = [...planNames].map(pName => {
-      const rule = getRuleForPlan(pName);
-      const curMode = rule.mode || 'whole_plan_instructor';
-      return `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; flex-wrap:wrap;">
-          <div style="font-weight:bold; min-width:90px;">${escapeHtml(pName)}計畫</div>
-          <select style="flex:1; min-width:240px;" onchange="updatePlanDateRuleMode('${escapeAttr(pName)}', this.value)">
-            <option value="quarter_instructor" ${curMode === 'quarter_instructor' ? 'selected' : ''}>每季核銷 1 次・依不同老師</option>
-            <option value="term_instructor" ${curMode === 'term_instructor' ? 'selected' : ''}>每 1 期核銷 1 次（1年通常3期）・依不同老師</option>
-            <option value="whole_plan_instructor" ${curMode === 'whole_plan_instructor' ? 'selected' : ''}>全年度整個計畫核銷・不同老師不同領據</option>
-            <option value="course_all_dates" ${curMode === 'course_all_dates' ? 'selected' : ''}>依課程名稱合併全部日期</option>
-          </select>
-        </div>
-      `;
-    }).join('');
-
-    document.getElementById('dateDisplaySettingsModal').classList.add('open');
-  }
-
-  function updatePlanDateRuleMode(planName, modeVal) {
-    planDateRules[planName] = { mode: modeVal };
-    savePlanDateRules();
-    renderScheduleSummary();
-  }
-
-  function resetDefaultDateDisplayRules() {
-    planDateRules = Object.assign({}, DEFAULT_PLAN_DATE_RULES);
-    savePlanDateRules();
-    openDateDisplaySettingsModal();
-    renderScheduleSummary();
-  }
-
-  function closeDateDisplaySettingsModal() {
-    document.getElementById('dateDisplaySettingsModal').classList.remove('open');
-  }
-
-  function getQuarterLabel(dateStr) {
-    const m = parseInt(String(dateStr || '').split('-')[1], 10);
-    if (m <= 3) return '第1季(1-3月)';
-    if (m <= 6) return '第2季(4-6月)';
-    if (m <= 9) return '第3季(7-9月)';
-    return '第4季(10-12月)';
-  }
-
-  function getTermLabel(courseName, dateStr) {
-    const raw = String(courseName || '');
-    const mMatch = raw.match(/(第?\s*[一二三123]\s*期)/);
-    if (mMatch) return mMatch[1].replace(/\s+/g, '');
-    return getQuarterLabel(dateStr);
-  }
-
   function getSeriesBaseName(rawName) {
     return String(rawName || '').replace(/-\d+$/, '').trim();
   }
@@ -1858,46 +1764,7 @@
     });
   }
 
-  function buildSummaryGroupKey(c, mergeSeries) {
-    const plan = c.plan_type || '關懷';
-    const inst = (c.instructor_name || '').trim() || '未指定講師';
-    const baseName = mergeSeries ? getSeriesBaseName(c.course_name) : (c.course_name || '課程');
-
-    const rule = getRuleForPlan(plan);
-    const mode = rule.mode || 'whole_plan_instructor';
-
-    if (mode === 'quarter_instructor') {
-      const qLbl = getQuarterLabel(c.course_date);
-      return {
-        key: `${plan}__${qLbl}__${inst}__${baseName}`,
-        title: `${qLbl} · ${baseName}`,
-        instructor: inst
-      };
-    }
-    if (mode === 'term_instructor') {
-      const tLbl = getTermLabel(c.course_name, c.course_date);
-      return {
-        key: `${plan}__${tLbl}__${inst}`,
-        title: `${tLbl} · ${baseName}`,
-        instructor: inst
-      };
-    }
-    if (mode === 'whole_plan_instructor') {
-      return {
-        key: `${plan}__ALL__${inst}`,
-        title: `${plan}計畫 · ${baseName}`,
-        instructor: inst
-      };
-    }
-    return {
-      key: `${plan}__${baseName}`,
-      title: baseName,
-      instructor: inst
-    };
-  }
-
   function renderScheduleSummary() {
-    loadPlanDateRules();
     const planFilter = document.getElementById('summaryPlanFilter').value;
     const qFilter = document.getElementById('summaryQuarterFilter').value;
     const mergeSeries = document.getElementById('mergeSeriesCheckbox').checked;
@@ -1905,7 +1772,7 @@
 
     const filtered = yearCourses.filter(c => {
       const p = c.plan_type || '關懷';
-      if (p === '提醒') return false;
+      if (p === '提醒') return false; // 提醒事項不混入課程核銷日期總覽
       if (planFilter !== 'ALL' && p !== planFilter) return false;
       const m = parseInt(c.course_date.split('-')[1], 10);
       if (qFilter === 'Q1' && !(m >= 1 && m <= 3)) return false;
@@ -1924,23 +1791,24 @@
     const groupMap = new Map();
     filtered.forEach(c => {
       const plan = c.plan_type || '關懷';
-      const meta = buildSummaryGroupKey(c, mergeSeries);
-      if (!groupMap.has(meta.key)) {
-        groupMap.set(meta.key, {
+      const displayTitle = mergeSeries ? getSeriesBaseName(c.course_name) : c.course_name;
+      const key = `${plan}__${displayTitle}`;
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
           plan,
-          title: meta.title,
+          title: displayTitle,
           items: [],
           instructors: new Set()
         });
       }
-      const grp = groupMap.get(meta.key);
+      const grp = groupMap.get(key);
       grp.items.push(c);
       if (c.instructor_name) grp.instructors.add(c.instructor_name);
     });
 
-    const planOrder = { '關懷': 1, '長照': 2, '延緩': 3, '多元': 4, '伯公': 5, '樂齡': 6 };
+    const planOrder = { '關懷': 1 };
     coursePlans.forEach((p, i) => {
-      if (!(p.value in planOrder)) planOrder[p.value] = i + 10;
+      if (!(p.value in planOrder)) planOrder[p.value] = i + 2;
     });
     lastSummaryGroups = [...groupMap.values()].sort((a, b) => {
       const pa = planOrder[a.plan] || 99;
@@ -1958,12 +1826,13 @@
     const planKeys = [...byPlan.keys()];
     planKeys.forEach(p => {
       if (planOpenState[p] !== true) {
-        planOpenState[p] = false;
+        planOpenState[p] = false; // 嚴格預設所有計畫（含關懷計畫）皆為收合狀態
       }
     });
 
     const cardsHtml = planKeys.map(planName => {
       const groups = byPlan.get(planName);
+      const totalLessons = groups.reduce((sum, g) => sum + g.items.length, 0);
       const isOpen = Boolean(planOpenState[planName]);
 
       const stripItemsHtml = groups.map(g => {
@@ -2032,8 +1901,7 @@
       document.execCommand('copy');
       setStatus(successMsg);
     } catch (e) {
-      alert('複製失敗，請手動選取文字複製：
-' + text);
+      alert('複製失敗，請手動選取文字複製：\n' + text);
     }
     document.body.removeChild(ta);
   }
@@ -2052,8 +1920,7 @@
         const p = it.course_date.split('-');
         const rocY = parseInt(p[0], 10) - 1911;
         return `${rocY}年${p[1]}月${p[2]}日`;
-      }).join('
-');
+      }).join('\n');
     } else {
       const shortDates = grp.items.map(it => {
         const p = it.course_date.split('-');
@@ -2074,8 +1941,7 @@
       }).join('、');
       return `${grp.plan}：${grp.title}（${grp.items.length}堂） ${shortDates}`;
     });
-    copyTextToClipboard(lines.join('
-'), `已複製「${planName}計畫」全部課程日期總覽！`);
+    copyTextToClipboard(lines.join('\n'), `已複製「${planName}計畫」全部課程日期總覽！`);
   }
 
   function copyAllFilteredSummary() {
@@ -2090,8 +1956,7 @@
       }).join('、');
       return `${grp.plan}：${grp.title}（${grp.items.length}堂） ${shortDates}`;
     });
-    copyTextToClipboard(lines.join('
-'), `已複製全部 ${lastSummaryGroups.length} 項課程日期總覽！`);
+    copyTextToClipboard(lines.join('\n'), `已複製全部 ${lastSummaryGroups.length} 項課程日期總覽！`);
   }
 
   // =========================================================================
@@ -2335,20 +2200,7 @@
       <body>
         <h2>${escapeHtml(titleText)}</h2>
         ${calTableHtml}
-      
-<!-- 課程日期顯示設定彈窗（依不同計畫設定核銷領據日期分組與顯示方式） -->
-<div class="modal-backdrop" id="dateDisplaySettingsModal">
-  <div class="modal-box" style="max-width: 600px;">
-    <h4>課程日期顯示設定</h4>
-    <div id="dateDisplaySettingsList" style="display:flex; flex-direction:column; gap:8px; max-height:420px; overflow-y:auto;"></div>
-    <div class="modal-actions">
-      <button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="resetDefaultDateDisplayRules()">恢復預設規則</button>
-      <button type="button" class="btn btn-primary" onclick="closeDateDisplaySettingsModal()">完成</button>
-    </div>
-  </div>
-</div>
-
-</body></html>
+      </body></html>
     `;
     const blob = new Blob(['\ufeff', docContent], { type: 'application/msword;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -2395,19 +2247,6 @@
     <div class="modal-actions">
       <button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="resetDefaultPresets()">恢復預設清單</button>
       <button type="button" class="btn btn-primary" onclick="closePresetManagerModal()">完成關閉</button>
-    </div>
-  </div>
-</div>
-
-
-<!-- 課程日期顯示設定彈窗（依不同計畫設定核銷領據日期分組與顯示方式） -->
-<div class="modal-backdrop" id="dateDisplaySettingsModal">
-  <div class="modal-box" style="max-width: 600px;">
-    <h4>課程日期顯示設定</h4>
-    <div id="dateDisplaySettingsList" style="display:flex; flex-direction:column; gap:8px; max-height:420px; overflow-y:auto;"></div>
-    <div class="modal-actions">
-      <button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="resetDefaultDateDisplayRules()">恢復預設規則</button>
-      <button type="button" class="btn btn-primary" onclick="closeDateDisplaySettingsModal()">完成</button>
     </div>
   </div>
 </div>
