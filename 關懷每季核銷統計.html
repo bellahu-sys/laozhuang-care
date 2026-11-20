@@ -229,10 +229,93 @@
     </div>
   </div>
 
-  <!-- 區塊一：對應《04 據點執行概況考核表》 -->
+  <!-- 一、當期業務項目支出總額 & 二、當期業務費支出總額（依月份彙總） -->
+  <div class="grid-2">
+    <!-- 左表（一）：按 7 大項目彙總 (對應 09 當期業務項目支出總額.doc) -->
+    <div class="card">
+      <div class="section-header-bar">
+        <h2 id="byItemTitle">一、115 年 10-12 月份項目支出總額</h2>
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyByItemTable()">複製項目支出明細</button>
+      </div>
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th style="width:14%;">年</th>
+            <th style="width:18%;">月</th>
+            <th style="width:42%;">項目別</th>
+            <th style="width:26%;">金額</th>
+          </tr>
+        </thead>
+        <tbody id="byItemBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 右表（二）：按月份彙總 (對應 09 當期業務費支出總額.doc) -->
+    <div class="card">
+      <div class="section-header-bar">
+        <h2 id="byMonthTitle">二、115 年 10-12 月份支出明細表（依月份）</h2>
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyByMonthTable()">複製月份支出明細</button>
+      </div>
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th style="width:12%;">年</th>
+            <th style="width:12%;">月</th>
+            <th style="width:52%;">項目別（自動列出有金額之細項）</th>
+            <th style="width:24%;">金額</th>
+          </tr>
+        </thead>
+        <tbody id="byMonthBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 三、支出明細表（單月）（對應 10 單月業務費支出細項_10月.doc） -->
   <div class="card">
     <div class="section-header-bar">
-      <h2 id="assessmentHeading">一、執行概況考核表試算</h2>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <h2 id="singleMonthTitle">三、支出明細表（單月）</h2>
+        <select id="singleMonthSelect" onchange="renderSingleMonthTable()" style="padding:4px 10px; font-weight:bold;">
+          <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
+          <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
+          <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
+          <option value="10" selected>10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+        </select>
+        <label style="display:inline-flex; align-items:center; gap:4px; font-size:0.84rem; cursor:pointer;">
+          <input type="checkbox" id="hideZeroSingleMonthChk" checked onchange="renderSingleMonthTable()">
+          僅顯示有金額項目（同核銷單月表）
+        </label>
+      </div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="copySingleMonthTable()">複製單月支出明細 (貼上 Word 核銷表)</button>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th colspan="3">項次</th>
+            <th rowspan="2" style="width:28%;">項目別</th>
+            <th rowspan="2" style="width:16%;">原始憑證<br>編　　號</th>
+            <th rowspan="2" style="width:18%;">金　　　額</th>
+            <th rowspan="2" style="width:16%;">備　　　註</th>
+          </tr>
+          <tr>
+            <th style="width:7%;">年</th>
+            <th style="width:7%;">月</th>
+            <th style="width:8%;">日</th>
+          </tr>
+        </thead>
+        <tbody id="singleMonthBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 四、執行概況考核表試算（對應 04 據點執行概況考核表.doc） -->
+  <div class="card">
+    <div class="section-header-bar">
+      <h2 id="assessmentHeading">四、執行概況考核表試算</h2>
       <div style="display:flex; gap:6px; flex-wrap:wrap;">
         <button type="button" class="btn btn-blue btn-sm" onclick="syncActualFromRecords()">從業務費＆專職薪資帶入「實際支出合計」</button>
         <button type="button" class="btn btn-primary btn-sm" onclick="copyAssessmentTable()">複製考核表數據 (貼上 Word/Excel)</button>
@@ -255,47 +338,6 @@
           </tr>
         </thead>
         <tbody id="assessmentBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- 區塊二：對應《09 當期業務費支出總額》與《09 當期業務項目支出總額》 -->
-  <div class="grid-2">
-    <!-- 左表：按月份彙總 (對應 09 當期業務費支出總額.doc) -->
-    <div class="card">
-      <div class="section-header-bar">
-        <h2 id="byMonthTitle">二、當期業務費支出總額（依月份彙總）</h2>
-        <button type="button" class="btn btn-primary btn-sm" onclick="copyByMonthTable()">複製月份支出明細</button>
-      </div>
-      <table class="doc-table">
-        <thead>
-          <tr>
-            <th style="width:12%;">年</th>
-            <th style="width:12%;">月</th>
-            <th style="width:52%;">項目別（自動列出有金額之細項）</th>
-            <th style="width:24%;">金額</th>
-          </tr>
-        </thead>
-        <tbody id="byMonthBody"></tbody>
-      </table>
-    </div>
-
-    <!-- 右表：按 7 大項目彙總 (對應 09 當期業務項目支出總額.doc) -->
-    <div class="card">
-      <div class="section-header-bar">
-        <h2 id="byItemTitle">三、當期業務項目支出總額（依項目彙總）</h2>
-        <button type="button" class="btn btn-primary btn-sm" onclick="copyByItemTable()">複製項目支出明細</button>
-      </div>
-      <table class="doc-table">
-        <thead>
-          <tr>
-            <th style="width:14%;">年</th>
-            <th style="width:18%;">月</th>
-            <th style="width:42%;">項目別</th>
-            <th style="width:26%;">金額</th>
-          </tr>
-        </thead>
-        <tbody id="byItemBody"></tbody>
       </table>
     </div>
   </div>
@@ -353,6 +395,8 @@
   (async function init() {
     const presetSel = document.getElementById('periodPresetSelect');
     if (presetSel) presetSel.value = initQ.preset;
+    const smSel = document.getElementById('singleMonthSelect');
+    if (smSel && initQ.months.length > 0) smSel.value = String(initQ.months[0]);
     renderMonthCheckboxes();
     loadAssessmentStateFromLocal();
     await loadAllData();
@@ -378,6 +422,10 @@
     else selectedMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
     renderMonthCheckboxes();
+    const smSel = document.getElementById('singleMonthSelect');
+    if (smSel && selectedMonths.length > 0 && !selectedMonths.includes(parseInt(smSel.value, 10))) {
+      smSel.value = String(selectedMonths[0]);
+    }
     if (!loadAssessmentStateFromLocal()) {
       if (selectedMonths.length === 2) fillDefaultBudget78(false);
       else if (selectedMonths.length === 3) fillDefaultBudgetQ(false);
@@ -544,13 +592,14 @@
   }
 
   function renderAllTables() {
-    renderAssessmentTable();
-    renderByMonthTable();
     renderByItemTable();
+    renderByMonthTable();
+    renderSingleMonthTable();
+    renderAssessmentTable();
   }
 
   function renderAssessmentTable() {
-    document.getElementById('assessmentHeading').textContent = '一、執行概況考核表試算';
+    document.getElementById('assessmentHeading').textContent = '四、執行概況考核表試算';
 
     const tbody = document.getElementById('assessmentBody');
     let sumApproved = 0, sumSubsidy = 0, sumSelf = 0, sumActual = 0;
@@ -631,7 +680,7 @@
     const mRangeStr = selectedMonths.length > 1
       ? `${selectedMonths[0]}-${selectedMonths[selectedMonths.length - 1]}`
       : (selectedMonths.length === 1 ? `${selectedMonths[0]}` : '');
-    document.getElementById('byItemTitle').textContent = `三、${currentRocYear} 年 ${mRangeStr} 月份項目支出總額`;
+    document.getElementById('byItemTitle').textContent = `一、${currentRocYear} 年 ${mRangeStr} 月份項目支出總額`;
 
     const tbody = document.getElementById('byItemBody');
     let grandTotal = 0;
@@ -658,6 +707,81 @@
       </tr>
       ${rowsHtml}
     `;
+  }
+
+
+  const SINGLE_MONTH_LABELS = {
+    food_fee: '食材費',
+    gas_fee: '瓦斯費',
+    internet_fee: '網路費',
+    phone_fee: '電話費',
+    electricity_fee: '電費',
+    water_fee: '水費',
+    temp_labor_fee: '臨時酬勞'
+  };
+
+  function getSingleMonthRowsData(m) {
+    const mObj = getMonthExpenseObj(m);
+    const hideZero = document.getElementById('hideZeroSingleMonthChk')?.checked ?? true;
+    const rows = [];
+    ITEM_DEFS.forEach(d => {
+      const amt = mObj[d.field] || 0;
+      if (hideZero && amt <= 0) return;
+      rows.push({
+        year: currentRocYear,
+        month: m,
+        day: '',
+        label: SINGLE_MONTH_LABELS[d.field] || d.label,
+        voucherNo: '',
+        amount: amt,
+        remark: '業務費'
+      });
+    });
+    return { rows, total: mObj.total };
+  }
+
+  function renderSingleMonthTable() {
+    const m = parseInt(document.getElementById('singleMonthSelect')?.value, 10) || selectedMonths[0] || 10;
+    document.getElementById('singleMonthTitle').textContent = `三、支出明細表（單月・${currentRocYear} 年 ${m} 月份）`;
+
+    const { rows, total } = getSingleMonthRowsData(m);
+    const tbody = document.getElementById('singleMonthBody');
+
+    const rowsHtml = rows.length > 0
+      ? rows.map(r => `
+          <tr>
+            <td class="center-col">${r.year}</td>
+            <td class="center-col">${r.month}</td>
+            <td class="center-col">${r.day}</td>
+            <td class="center-col">${r.label}</td>
+            <td class="center-col">${r.voucherNo}</td>
+            <td class="num-col" style="font-weight:bold;">${fmtNum(r.amount)}</td>
+            <td class="center-col" style="font-weight:bold;">${r.remark}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="7" class="center-col" style="padding:14px; color:#64748b;">${currentRocYear} 年 ${m} 月份尚無業務費支出記錄</td></tr>`;
+
+    tbody.innerHTML = `
+      <tr class="total-row">
+        <td colspan="4" class="center-col">合　　　　計</td>
+        <td></td>
+        <td class="num-col">${fmtNum(total)}</td>
+        <td></td>
+      </tr>
+      ${rowsHtml}
+    `;
+  }
+
+  function copySingleMonthTable() {
+    const m = parseInt(document.getElementById('singleMonthSelect')?.value, 10) || selectedMonths[0] || 10;
+    const { rows, total } = getSingleMonthRowsData(m);
+    const lines = [
+      `合計\t\t\t\t\t${fmtNum(total)}\t`
+    ];
+    rows.forEach(r => {
+      lines.push(`${r.year}\t${r.month}\t\t${r.label}\t\t${fmtNum(r.amount)}\t${r.remark}`);
+    });
+    copyTsv(lines, `已複製 ${currentRocYear} 年 ${m} 月份《支出明細表（單月）》數據，可直接貼上 Word 核銷表！`);
   }
 
   function copyTsv(lines, msg) {
