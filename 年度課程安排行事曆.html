@@ -91,6 +91,7 @@
     }
     .btn-link-report:hover { background: #115e59; }
 
+    /* 積木池篩選與清單 */
     .pool-toolbar {
       display: flex; justify-content: space-between; align-items: center;
       margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0;
@@ -142,7 +143,7 @@
     }
     .token-del:hover { color: #dc2626; }
 
-    /* 置頂：各計畫日期總覽與核銷複製盒 */
+    /* 右側：置頂的「各計畫日期總覽與核銷複製盒」 */
     .summary-top-box {
       background: #f0fdfa; border: 1.5px solid #5eead4; border-radius: 8px;
       padding: 12px 14px; margin-bottom: 14px;
@@ -188,6 +189,7 @@
     }
     .btn-copy-sm.primary-copy:hover { background: #1e4237; }
 
+    /* 1-12月分頁與工具列 */
     .cal-header-bar {
       display: flex; justify-content: space-between; align-items: center;
       flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
@@ -213,6 +215,7 @@
       display: block; font-size: 0.72rem; font-weight: normal; opacity: 0.85; margin-top: 1px;
     }
 
+    /* 行事曆格子（星期一排第一、六日排最後） */
     .calendar-grid {
       width: 100%; border-collapse: collapse; table-layout: fixed;
     }
@@ -247,6 +250,7 @@
     }
     .calendar-grid td:hover .add-day-btn { color: var(--primary); border-color: #cbd5e1; }
 
+    /* 單堂課程卡片 */
     .course-chip {
       border-radius: 6px; padding: 5px 7px; margin-bottom: 5px;
       font-size: 0.82rem; line-height: 1.32; position: relative;
@@ -432,14 +436,14 @@
           <option value="116">116 年 (2027)</option>
           <option value="117">117 年 (2028)</option>
         </select>
-        <span id="syncStatus" style="font-size:0.88rem; font-weight:bold; color:#166534;"></span>
+        <span id="syncStatus" style="font-size:0.86rem; font-weight:bold; color:#166534;"></span>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <a href="月報表套印中心.html" class="btn-link-report">前往核銷 5 份簽到表套印 ➔</a>
       </div>
     </div>
 
-    <!-- 置頂：各計畫排定日期總覽＆一鍵複製盒 -->
+    <!-- 直接放在月曆最上方的「各計畫排定日期總覽＆一鍵複製盒」 -->
     <div class="summary-top-box">
       <div class="summary-top-header">
         <div class="summary-top-title">各計畫課程排定日期總覽（核銷專用一鍵複製）</div>
@@ -604,17 +608,10 @@
   (async function initPage() {
     const now = new Date();
     const rocNow = now.getFullYear() - 1911;
-    const savedYear = localStorage.getItem('lz_cal_last_year');
-    const savedMonth = localStorage.getItem('lz_cal_last_month');
-
     const ySel = document.getElementById('rocYearSelect');
-    const targetYear = savedYear && [...ySel.options].some(o => o.value === savedYear) ? savedYear : String(rocNow);
-    if ([...ySel.options].some(o => o.value === targetYear)) {
-      ySel.value = targetYear;
-      currentRocYear = parseInt(targetYear, 10);
-    }
-    if (savedMonth && parseInt(savedMonth, 10) >= 1 && parseInt(savedMonth, 10) <= 12) {
-      currentMonth = parseInt(savedMonth, 10);
+    if ([...ySel.options].some(o => o.value === String(rocNow))) {
+      ySel.value = String(rocNow);
+      currentRocYear = rocNow;
     }
 
     const savedBlocks = localStorage.getItem('lz_drag_blocks_v2');
@@ -786,7 +783,6 @@
 
   async function onYearChange() {
     currentRocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
-    localStorage.setItem('lz_cal_last_year', String(currentRocYear));
     await loadYearCourses();
   }
 
@@ -802,12 +798,11 @@
       .order('id', { ascending: true });
 
     if (error) {
-      setStatus('雲端讀取失敗（請確認已執行步驟 1 SQL）：' + error.message, true);
-      alert('雲端課表讀取失敗：' + error.message);
+      setStatus('讀取失敗：' + error.message, true);
       return;
     }
     yearCourses = data || [];
-    setStatus(`已同步 ${currentRocYear} 年度雲端課表（共 ${yearCourses.length} 堂，關閉重開不會遺失）`);
+    setStatus(`已同步 ${currentRocYear} 年度課表（共 ${yearCourses.length} 堂）`);
     renderMonthTabs();
     renderCalendar();
     renderDragPool();
@@ -834,7 +829,6 @@
 
   function switchMonth(m) {
     currentMonth = m;
-    localStorage.setItem('lz_cal_last_month', String(m));
     renderMonthTabs();
     renderCalendar();
   }
@@ -948,19 +942,14 @@
 
     if (scheduledDates.length === 0) return;
 
-    setStatus('正在寫入 Supabase 雲端資料庫...');
+    setStatus('正在排入課程並同步雲端...');
 
     if (replaceCare && blk.planType !== '關懷') {
-      const { error: delErr } = await supabaseClient
+      await supabaseClient
         .from('course_schedules')
         .delete()
         .in('course_date', scheduledDates)
         .eq('plan_type', '關懷');
-      if (delErr) {
-        alert('取代原關懷課程時發生錯誤：' + delErr.message);
-        setStatus('寫入失敗', true);
-        return;
-      }
     }
 
     const insertRows = scheduledDates.map((dIso, idx) => {
@@ -980,18 +969,18 @@
 
     const { error } = await supabaseClient.from('course_schedules').insert(insertRows);
     if (error) {
-      alert('雲端寫入失敗（請確認已執行步驟 1 SQL 且無阻擋）：' + error.message);
-      setStatus('雲端寫入失敗', true);
+      alert('排課寫入失敗：' + error.message);
+      setStatus('寫入失敗', true);
       return;
     }
 
     await loadYearCourses();
     if (blk.mode === 'single') {
-      setStatus(`已成功存入雲端：「${insertRows[0].course_name}」(${startIsoDate})`);
+      setStatus(`已將「${insertRows[0].course_name}」排入 ${startIsoDate}！`);
     } else {
       const firstM = parseInt(scheduledDates[0].split('-')[1], 10);
       const lastM = parseInt(scheduledDates[scheduledDates.length - 1].split('-')[1], 10);
-      setStatus(`已成功存入雲端：連續 ${scheduledDates.length} 堂（${firstM}月～${lastM}月）`);
+      setStatus(`已成功連續排入 ${scheduledDates.length} 堂（${firstM}月～${lastM}月）！`);
     }
   }
 
@@ -1057,284 +1046,4 @@
         return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
       }).join('、');
 
-      const instStr = [...g.instructors].join('、') || '-';
-
-      return `
-        <tr>
-          <td style="width:76px;"><span class="plan-pill p-${g.plan}">${escapeHtml(g.plan)}</span></td>
-          <td style="width:165px; font-weight:bold;">${escapeHtml(g.title)} <span style="color:#64748b; font-weight:normal;">(${g.items.length}堂)</span></td>
-          <td style="width:95px; color:#475569;">${escapeHtml(instStr)}</td>
-          <td><div class="dates-text-box">${escapeHtml(shortDates)}</div></td>
-          <td style="width:295px;">
-            <div class="copy-btn-group">
-              <button type="button" class="btn-copy-sm primary-copy" onclick="copyGroupDates(${idx}, 'short')">複製 1/6、2/3...</button>
-              <button type="button" class="btn-copy-sm" onclick="copyGroupDates(${idx}, 'roc_lines')">複製民國日期(換行)</button>
-              <button type="button" class="btn-copy-sm" onclick="copyGroupDates(${idx}, 'full')">複製標題+日期</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    container.innerHTML = `
-      <table class="summary-table">
-        <thead>
-          <tr>
-            <th>計畫</th>
-            <th>課程名稱</th>
-            <th>講師</th>
-            <th>已排定日期總覽</th>
-            <th>核銷一鍵複製</th>
-          </tr>
-        </thead>
-        <tbody>${rowsHtml}</tbody>
-      </table>
-    `;
-  }
-
-  function copyGroupDates(groupIdx, formatType) {
-    const g = lastSummaryGroups[groupIdx];
-    if (!g) return;
-
-    const shortDates = g.items.map(it => {
-      const p = it.course_date.split('-');
-      return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
-    }).join('、');
-
-    const rocLines = g.items.map(it => {
-      const p = it.course_date.split('-');
-      const rocY = parseInt(p[0], 10) - 1911;
-      return `${rocY}年${p[1]}月${p[2]}日`;
-    }).join('\n');
-
-    let textToCopy = shortDates;
-    if (formatType === 'roc_lines') {
-      textToCopy = rocLines;
-    } else if (formatType === 'full') {
-      textToCopy = `${g.plan}：${g.title}（共${g.items.length}堂）：${shortDates}`;
-    }
-
-    copyTextToClipboard(textToCopy, `已複製「${g.plan}：${g.title}」日期，可直接 Ctrl+V 貼上！`);
-  }
-
-  function copyAllFilteredSummary() {
-    if (lastSummaryGroups.length === 0) {
-      alert('目前沒有可複製的課程日期資料！');
-      return;
-    }
-    const lines = lastSummaryGroups.map(g => {
-      const shortDates = g.items.map(it => {
-        const p = it.course_date.split('-');
-        return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
-      }).join('、');
-      return `${g.plan}：${g.title}（${g.items.length}堂）➔ ${shortDates}`;
-    });
-    copyTextToClipboard(lines.join('\n'), `已複製全部 ${lastSummaryGroups.length} 項計畫課程排程日期！`);
-  }
-
-  function copyTextToClipboard(text, successMsg) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => {
-        setStatus(successMsg);
-      }).catch(() => fallbackCopy(text, successMsg));
-    } else {
-      fallbackCopy(text, successMsg);
-    }
-  }
-
-  function fallbackCopy(text, successMsg) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    setStatus(successMsg);
-  }
-
-  // =========================================================================
-  // 批次鋪設與清除功能
-  // =========================================================================
-  async function fillDefaultCareForMonth() {
-    const adYear = currentRocYear + 1911;
-    const daysInMonth = new Date(adYear, currentMonth, 0).getDate();
-    const existingDates = new Set(yearCourses.map(c => c.course_date));
-    const rows = [];
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dow = new Date(adYear, currentMonth - 1, d).getDay();
-      if (dow === 0 || dow === 6) continue;
-      const iso = `${adYear}-${pad2(currentMonth)}-${pad2(d)}`;
-      if (TW_HOLIDAYS[iso] || existingDates.has(iso)) continue;
-
-      rows.push({
-        course_date: iso,
-        plan_type: '關懷',
-        course_name: '關懷健康促進活動',
-        time_slot: '09:00-11:00',
-        actual_time_slot: null,
-        instructor_name: null
-      });
-    }
-
-    if (rows.length === 0) {
-      alert('本月所有平日皆已排有課程或為國定假日！');
-      return;
-    }
-    setStatus('正在鋪設本月固定關懷課程...');
-    const { error } = await supabaseClient.from('course_schedules').insert(rows);
-    if (error) { alert('寫入失敗：' + error.message); return; }
-    await loadYearCourses();
-  }
-
-  async function fillDefaultCareForYear() {
-    if (!confirm(`確定要為 ${currentRocYear} 年 1～12 月所有尚未排課的平日（週一至週五）自動鋪設固定「關懷」課程嗎？`)) return;
-    const adYear = currentRocYear + 1911;
-    const existingDates = new Set(yearCourses.map(c => c.course_date));
-    const rows = [];
-
-    for (let m = 1; m <= 12; m++) {
-      const daysInMonth = new Date(adYear, m, 0).getDate();
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dow = new Date(adYear, m - 1, d).getDay();
-        if (dow === 0 || dow === 6) continue;
-        const iso = `${adYear}-${pad2(m)}-${pad2(d)}`;
-        if (TW_HOLIDAYS[iso] || existingDates.has(iso)) continue;
-
-        rows.push({
-          course_date: iso,
-          plan_type: '關懷',
-          course_name: '關懷健康促進活動',
-          time_slot: '09:00-11:00',
-          actual_time_slot: null,
-          instructor_name: null
-        });
-      }
-    }
-
-    if (rows.length === 0) {
-      alert('全年度所有平日皆已排課完成！');
-      return;
-    }
-    setStatus('正在鋪設全年度關懷課程...');
-    const { error } = await supabaseClient.from('course_schedules').insert(rows);
-    if (error) { alert('寫入失敗：' + error.message); return; }
-    await loadYearCourses();
-  }
-
-  async function clearByPrefix() {
-    const prefix = document.getElementById('clearPrefixInput').value.trim();
-    if (!prefix) {
-      alert('請先在輸入框輸入要清除的課程前綴（例如：多元1 或 插花）！');
-      return;
-    }
-    const matched = yearCourses.filter(c => c.course_name.startsWith(prefix));
-    if (matched.length === 0) {
-      alert(`找不到名稱以「${prefix}」開頭的課程！`);
-      return;
-    }
-    if (!confirm(`確定要整批清除 ${currentRocYear} 年度所有「${prefix}*」課程（共 ${matched.length} 堂，跨月份同步刪除）嗎？`)) return;
-
-    const ids = matched.map(c => c.id);
-    const { error } = await supabaseClient.from('course_schedules').delete().in('id', ids);
-    if (error) { alert('刪除失敗：' + error.message); return; }
-    await loadYearCourses();
-    setStatus(`已整批清除「${prefix}」共 ${matched.length} 堂課程！`);
-  }
-
-  async function clearCurrentMonth() {
-    if (!confirm(`確定要清除 ${currentRocYear} 年 ${currentMonth} 月的所有已排課程嗎？`)) return;
-    const adYear = currentRocYear + 1911;
-    const startIso = `${adYear}-${pad2(currentMonth)}-01`;
-    const endIso = `${adYear}-${pad2(currentMonth)}-${pad2(new Date(adYear, currentMonth, 0).getDate())}`;
-
-    const { error } = await supabaseClient.from('course_schedules').delete().gte('course_date', startIso).lte('course_date', endIso);
-    if (error) { alert('刪除失敗：' + error.message); return; }
-    await loadYearCourses();
-    setStatus(`已清除 ${currentMonth} 月課表，可重新排課！`);
-  }
-
-  async function clearWholeYear() {
-    if (!confirm(`警告：確定要清除「${currentRocYear} 全年度 1-12 月」的所有課程資料重新排課嗎？`)) return;
-    const adYear = currentRocYear + 1911;
-    const { error } = await supabaseClient.from('course_schedules').delete().gte('course_date', `${adYear}-01-01`).lte('course_date', `${adYear}-12-31`);
-    if (error) { alert('刪除失敗：' + error.message); return; }
-    await loadYearCourses();
-    setStatus(`已清空 ${currentRocYear} 全年度課表！`);
-  }
-
-  function openNewModal(isoDate) {
-    document.getElementById('modalTitle').textContent = `新增課程（${isoDate}）`;
-    document.getElementById('modalCourseId').value = '';
-    document.getElementById('modalDateIso').value = isoDate;
-    document.getElementById('modalPlanType').value = '多元';
-    document.getElementById('modalCourseName').value = '';
-    document.getElementById('modalReimburseTime').value = '09:00-11:00';
-    document.getElementById('modalActualTime').value = '';
-    document.getElementById('modalInstructor').value = '';
-    document.getElementById('modalDeleteBtn').style.display = 'none';
-    document.getElementById('courseModal').classList.add('open');
-  }
-
-  function openEditModal(courseId) {
-    const c = yearCourses.find(item => item.id === courseId);
-    if (!c) return;
-    document.getElementById('modalTitle').textContent = `編輯課程（${c.course_date}）`;
-    document.getElementById('modalCourseId').value = c.id;
-    document.getElementById('modalDateIso').value = c.course_date;
-    document.getElementById('modalPlanType').value = c.plan_type || '關懷';
-    document.getElementById('modalCourseName').value = c.course_name || '';
-    document.getElementById('modalReimburseTime').value = c.time_slot || '09:00-11:00';
-    document.getElementById('modalActualTime').value = c.actual_time_slot || '';
-    document.getElementById('modalInstructor').value = c.instructor_name || '';
-    document.getElementById('modalDeleteBtn').style.display = 'inline-block';
-    document.getElementById('courseModal').classList.add('open');
-  }
-
-  function closeModal() {
-    document.getElementById('courseModal').classList.remove('open');
-  }
-
-  async function saveModalCourse() {
-    const id = document.getElementById('modalCourseId').value;
-    const isoDate = document.getElementById('modalDateIso').value;
-    const planType = document.getElementById('modalPlanType').value;
-    const courseName = document.getElementById('modalCourseName').value.trim();
-    const reimburseTime = document.getElementById('modalReimburseTime').value.trim();
-    const actualTime = document.getElementById('modalActualTime').value.trim();
-    const instructor = document.getElementById('modalInstructor').value.trim();
-
-    if (!courseName) { alert('請輸入課程名稱！'); return; }
-
-    const payload = {
-      course_date: isoDate,
-      plan_type: planType,
-      course_name: courseName,
-      time_slot: reimburseTime || null,
-      actual_time_slot: actualTime || null,
-      instructor_name: instructor || null
-    };
-
-    const { error } = id
-      ? await supabaseClient.from('course_schedules').update(payload).eq('id', id)
-      : await supabaseClient.from('course_schedules').insert([payload]);
-
-    if (error) {
-      alert('儲存失敗：' + error.message);
-      return;
-    }
-    closeModal();
-    await loadYearCourses();
-  }
-
-  async function deleteSingleCourse() {
-    const id = document.getElementById('modalCourseId').value;
-    if (!id) return;
-    const { error } = await supabaseClient.from('course_schedules').delete().eq('id', id);
-    if (error) { alert('刪除失敗：' + error.message); return; }
-    closeModal();
-    await loadYearCourses();
-  }
-</script>
-</body>
-</html>
+      const instStr = [...g.instructors].join('、')
