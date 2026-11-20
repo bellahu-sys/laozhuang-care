@@ -126,7 +126,9 @@
       <button type="button" class="nav-btn">核銷管理 ▾</button>
       <div class="dropdown-content">
         <div class="dropdown-divider">關懷核銷</div>
-        <a href="每月業務費記錄.html">每月業務費記錄</a>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
         <div class="dropdown-divider">其他核銷計畫（預留）</div>
         <a href="#" onclick="alert('長照核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">長照核銷（待建立）</a>
         <a href="#" onclick="alert('多元核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">多元核銷（待建立）</a>
@@ -157,11 +159,13 @@
       </select>
     </label>
     <button type="button" class="btn btn-primary" onclick="saveAllExpenses()">儲存全部月份變更</button>
+    <button type="button" class="btn" style="background:#2563eb; color:#fff;" onclick="syncTempLaborFromHours(true)">重新同步臨時酬勞費</button>
     <span id="statusText" style="font-weight:bold; color:#166534;"></span>
   </div>
 
   <div class="tip-box">
-    多筆金額累加提示：在<strong>「瓦斯費、電話費、電費、水費」</strong>欄位中，可直接輸入如 <strong><code>315+256+110</code></strong> 或 <strong><code>=315+256+110</code></strong>，系統會自動計算總和並顯示「共幾筆」費用，儲存後也會完整保留您的算式明細！
+    1. <strong>多筆金額累加提示</strong>：在<strong>「瓦斯費、電話費、電費、水費」</strong>欄位中，可直接輸入如 <strong><code>315+256+110</code></strong> 或 <strong><code>=315+256+110</code></strong>，系統會自動計算總和並顯示「共幾筆」費用，儲存後也會完整保留您的算式明細！<br>
+    2. <strong>臨時酬勞費自動連動</strong>：每月「臨時酬勞費」會自動讀取並連動<strong>「<a href="臨時人員時數記錄.html" style="color:#0f766e; text-decoration:underline;">3. 臨時人員時數記錄</a>」</strong>的單月實領金額總計（亦提供「重新同步時數金額」按鈕可隨時更新）。
   </div>
 
   <div class="summary-banner">
@@ -179,7 +183,7 @@
         <th style="width:145px;">電話費<br><span style="font-size:0.78rem; font-weight:normal;">(可輸入 + 算式)</span></th>
         <th style="width:145px;">電費<br><span style="font-size:0.78rem; font-weight:normal;">(可輸入 + 算式)</span></th>
         <th style="width:145px;">水費<br><span style="font-size:0.78rem; font-weight:normal;">(可輸入 + 算式)</span></th>
-        <th style="width:105px;">臨時酬勞費</th>
+        <th style="width:125px;">臨時酬勞費<br><span style="font-size:0.76rem; font-weight:normal; color:#0f766e;">(連動時數記錄)</span></th>
         <th style="width:110px;">單月合計</th>
         <th>備註</th>
       </tr>
@@ -260,16 +264,42 @@
     const statusEl = document.getElementById('statusText');
     statusEl.textContent = '載入中...';
 
-    const { data, error } = await supabaseClient
-      .from('monthly_business_expenses')
-      .select('*')
-      .eq('program_type', '關懷')
-      .eq('roc_year', rocYear);
+    const [expRes, hoursRes] = await Promise.all([
+      supabaseClient
+        .from('monthly_business_expenses')
+        .select('*')
+        .eq('program_type', '關懷')
+        .eq('roc_year', rocYear),
+      supabaseClient
+        .from('temp_staff_hours')
+        .select('month, role_label, staff_name, work_days, hours_per_day, hourly_rate')
+        .eq('roc_year', rocYear)
+    ]);
 
-    if (error) {
+    if (expRes.error) {
       statusEl.style.color = '#dc2626';
-      statusEl.textContent = '讀取失敗：' + error.message;
+      statusEl.textContent = '讀取失敗：' + expRes.error.message;
       return;
+    }
+
+    // 計算「3. 臨時人員時數記錄」各月實領金額總計
+    const linkedTempLaborMap = {};
+    const linkedTempDetailMap = {};
+    for (let m = 1; m <= 12; m++) {
+      linkedTempLaborMap[m] = 0;
+      linkedTempDetailMap[m] = [];
+    }
+    if (!hoursRes.error && hoursRes.data) {
+      hoursRes.data.forEach(h => {
+        const days = Number(h.work_days) || 0;
+        const hrs = days * (Number(h.hours_per_day) || 3);
+        const rate = Number(h.hourly_rate) || 196;
+        const pay = Math.round(hrs * rate);
+        linkedTempLaborMap[h.month] = (linkedTempLaborMap[h.month] || 0) + pay;
+        if (pay > 0) {
+          linkedTempDetailMap[h.month].push(`${h.role_label || ''}${h.staff_name ? '(' + h.staff_name + ')' : ''} ${pay.toLocaleString()}`);
+        }
+      });
     }
 
     monthDataMap = {};
@@ -277,22 +307,35 @@
       monthDataMap[m] = {
         program_type: '關懷', roc_year: rocYear, month: m,
         food_fee: 0, gas_fee: 0, internet_fee: 0, phone_fee: 0,
-        electricity_fee: 0, water_fee: 0, temp_labor_fee: 0,
+        electricity_fee: 0, water_fee: 0,
+        temp_labor_fee: linkedTempLaborMap[m] || 0,
+        linked_temp_detail: linkedTempDetailMap[m].join(' + '),
         remark: '', detail_formulas: {}
       };
     }
-    (data || []).forEach(r => {
+    (expRes.data || []).forEach(r => {
       const formulas = r.detail_formulas || {};
       MULTI_FIELDS.forEach(f => {
         if (!formulas[f] && Number(r[f]) > 0) {
           formulas[f] = String(r[f]);
         }
       });
-      monthDataMap[r.month] = { ...monthDataMap[r.month], ...r, detail_formulas: formulas };
+      // 臨時酬勞費優先採用「3. 臨時人員時數記錄」的最新實領金額總計（若時數表該月尚無任何資料才保留原存值）
+      const syncedTempFee = (hoursRes.data && hoursRes.data.some(h => h.month === r.month))
+        ? (linkedTempLaborMap[r.month] || 0)
+        : (Number(r.temp_labor_fee) || 0);
+
+      monthDataMap[r.month] = {
+        ...monthDataMap[r.month],
+        ...r,
+        temp_labor_fee: syncedTempFee,
+        linked_temp_detail: linkedTempDetailMap[r.month].join(' + '),
+        detail_formulas: formulas
+      };
     });
 
     statusEl.style.color = '#166534';
-    statusEl.textContent = '資料已同步';
+    statusEl.textContent = '資料已同步（已連動臨時人員實領總計）';
     renderTable();
   }
 
@@ -387,6 +430,15 @@
               ${metaHtml}
             </td>
           `;
+        } else if (f === 'temp_labor_fee') {
+          const val = Number(r[f]) || 0;
+          const detailTip = r.linked_temp_detail ? `連動：${r.linked_temp_detail}` : '連動時數記錄';
+          return `
+            <td style="background:#f0fdfa;">
+              <input type="number" id="input-temp-${m}" value="${val === 0 ? '' : val}" placeholder="0" style="font-weight:bold; color:#0f766e;" oninput="onSingleFieldChange(${m}, '${f}', this.value)" title="${detailTip}">
+              <div class="formula-meta" style="color:#0f766e; font-size:0.75rem;">${val > 0 ? '已連動時數表' : '時數表為 0'}</div>
+            </td>
+          `;
         } else {
           const val = Number(r[f]) || 0;
           return `<td><input type="number" value="${val === 0 ? '' : val}" placeholder="0" oninput="onSingleFieldChange(${m}, '${f}', this.value)"></td>`;
@@ -413,6 +465,49 @@
       </tr>
     `;
     recalcTotals();
+  }
+
+  async function syncTempLaborFromHours(showMsg = false) {
+    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
+    const statusEl = document.getElementById('statusText');
+    if (showMsg) statusEl.textContent = '正在從臨時人員時數記錄同步...';
+
+    const { data, error } = await supabaseClient
+      .from('temp_staff_hours')
+      .select('month, role_label, staff_name, work_days, hours_per_day, hourly_rate')
+      .eq('roc_year', rocYear);
+
+    if (error) {
+      if (showMsg) alert('同步失敗：' + error.message);
+      return;
+    }
+
+    const sumMap = {};
+    const detailMap = {};
+    for (let m = 1; m <= 12; m++) { sumMap[m] = 0; detailMap[m] = []; }
+    (data || []).forEach(h => {
+      const days = Number(h.work_days) || 0;
+      const hrs = days * (Number(h.hours_per_day) || 3);
+      const rate = Number(h.hourly_rate) || 196;
+      const pay = Math.round(hrs * rate);
+      sumMap[h.month] = (sumMap[h.month] || 0) + pay;
+      if (pay > 0) {
+        detailMap[h.month].push(`${h.role_label || ''}${h.staff_name ? '(' + h.staff_name + ')' : ''} ${pay.toLocaleString()}`);
+      }
+    });
+
+    for (let m = 1; m <= 12; m++) {
+      if (monthDataMap[m]) {
+        monthDataMap[m].temp_labor_fee = sumMap[m] || 0;
+        monthDataMap[m].linked_temp_detail = detailMap[m].join(' + ');
+      }
+    }
+
+    renderTable();
+    if (showMsg) {
+      statusEl.style.color = '#166534';
+      statusEl.textContent = '已成功同步臨時人員時數實領金額（請記得按儲存）！';
+    }
   }
 
   async function saveAllExpenses() {
