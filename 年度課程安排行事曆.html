@@ -46,8 +46,8 @@
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
     .page-wrap {
-      max-width: 1440px; margin: 18px auto 40px auto; padding: 0 16px;
-      display: grid; grid-template-columns: 325px 1fr; gap: 18px; align-items: start;
+      max-width: 1460px; margin: 18px auto 40px auto; padding: 0 16px;
+      display: grid; grid-template-columns: 345px 1fr; gap: 18px; align-items: start;
     }
     @media (max-width: 1024px) {
       .page-wrap { grid-template-columns: 1fr; }
@@ -63,7 +63,7 @@
     }
 
     .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-size: 0.86rem; font-weight: bold; margin-bottom: 4px; color: #334155; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 4px; color: #334155; }
     .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     input[type="text"], input[type="number"], select {
       width: 100%; padding: 7px 9px; border: 1px solid var(--border);
@@ -71,11 +71,13 @@
     }
 
     .btn {
-      padding: 8px 12px; border: none; border-radius: 6px; font-weight: bold;
-      cursor: pointer; font-size: 0.88rem; transition: background 0.15s;
+      padding: 8px 11px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.86rem; transition: background 0.15s;
     }
-    .btn-primary { background: var(--primary); color: #fff; width: 100%; }
+    .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: #1e4237; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
     .btn-outline { background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1; }
     .btn-outline:hover { background: #e2e8f0; }
     .btn-amber { background: #d97706; color: #fff; }
@@ -89,15 +91,20 @@
     }
     .btn-link-report:hover { background: #115e59; }
 
-    /* 可拖曳課程積木池 */
+    /* 積木池篩選與清單 */
+    .pool-toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0;
+      font-size: 0.82rem; color: #475569;
+    }
     .drag-pool {
-      margin-top: 12px; display: flex; flex-direction: column; gap: 8px;
-      max-height: 360px; overflow-y: auto; padding-right: 2px;
+      margin-top: 8px; display: flex; flex-direction: column; gap: 7px;
+      max-height: 410px; overflow-y: auto; padding-right: 2px;
     }
     .drag-token {
-      padding: 10px 12px; border-radius: 8px; border: 2px dashed #64748b;
+      padding: 9px 11px; border-radius: 8px; border: 2px dashed #64748b;
       background: #f8fafc; cursor: grab; user-select: none;
-      transition: transform 0.12s, box-shadow 0.12s;
+      transition: transform 0.12s, box-shadow 0.12s, opacity 0.15s;
     }
     .drag-token:active { cursor: grabbing; }
     .drag-token:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -105,12 +112,34 @@
     .drag-token.plan-伯公 { border-color: #d97706; background: #fffbeb; }
     .drag-token.plan-樂齡 { border-color: #7c3aed; background: #f5f3ff; }
     .drag-token.plan-關懷 { border-color: #16a34a; background: #f0fdf4; }
-    .token-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.95rem; }
-    .token-meta { font-size: 0.82rem; color: #334155; margin-top: 4px; }
-    .token-actual { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; }
+
+    .drag-token.is-single { border-style: solid; border-width: 1.5px; }
+    .drag-token.is-placed {
+      opacity: 0.55; background: #f1f5f9 !important; border-color: #cbd5e1 !important;
+      border-style: solid;
+    }
+
+    .token-header { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-weight: bold; font-size: 0.92rem; }
+    .token-mode-tag {
+      font-size: 0.7rem; padding: 1px 5px; border-radius: 4px;
+      background: #1e293b; color: #fff; font-weight: normal; margin-right: 4px;
+    }
+    .token-mode-tag.single { background: #0f766e; }
+    .token-placed-badge {
+      font-size: 0.74rem; color: #166534; background: #dcfce7;
+      padding: 1px 6px; border-radius: 10px; font-weight: bold;
+    }
+    .token-meta { font-size: 0.8rem; color: #334155; margin-top: 3px; }
+    .token-actual { font-size: 0.76rem; color: #94a3b8; margin-top: 1px; }
+    .token-btns { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .token-mini-btn {
+      background: #fff; border: 1px solid #cbd5e1; color: #334155;
+      border-radius: 4px; font-size: 0.72rem; padding: 2px 5px; cursor: pointer;
+    }
+    .token-mini-btn:hover { background: #e2e8f0; }
     .token-del {
       background: none; border: none; color: #94a3b8; font-weight: bold;
-      cursor: pointer; font-size: 0.95rem; padding: 0 4px;
+      cursor: pointer; font-size: 0.95rem; padding: 0 3px;
     }
     .token-del:hover { color: #dc2626; }
 
@@ -209,7 +238,6 @@
       border-radius: 8px; margin-bottom: 12px;
     }
 
-    /* 彈窗編輯單堂課程 */
     .modal-backdrop {
       display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45);
       z-index: 900; justify-content: center; align-items: center; padding: 16px;
@@ -277,7 +305,7 @@
 </nav>
 
 <div class="page-wrap">
-  <!-- 左側：建立可跨月拖曳的課程堂數區塊 -->
+  <!-- 左側：建立「連續週排」或「單堂獨立」課程積木 -->
   <div class="panel">
     <h3>1. 建立可拖曳課程積木</h3>
     <div class="form-row-2 form-group">
@@ -292,7 +320,7 @@
       </div>
       <div>
         <label>課程名稱前綴</label>
-        <input type="text" id="coursePrefixInput" value="多元1" placeholder="如：多元1、伯公體適能">
+        <input type="text" id="coursePrefixInput" value="多元1" placeholder="如：多元1、插花">
       </div>
     </div>
 
@@ -302,7 +330,7 @@
         <input type="number" id="startNumInput" value="1" min="1" max="99">
       </div>
       <div>
-        <label>總堂數（自動跨月）</label>
+        <label>總堂數</label>
         <input type="number" id="totalCountInput" value="12" min="1" max="52">
       </div>
     </div>
@@ -314,7 +342,7 @@
       </div>
       <div>
         <label>實際上課時間（灰色提醒）</label>
-        <input type="text" id="actualTimeInput" value="09:30-11:30" placeholder="選填，如：09:30-11:30">
+        <input type="text" id="actualTimeInput" value="" placeholder="選填，如：09:30-11:30">
       </div>
     </div>
 
@@ -331,10 +359,23 @@
       </label>
     </div>
 
-    <button type="button" class="btn btn-primary" onclick="createDragBlock()">＋ 產生可拖曳課程區塊</button>
+    <!-- 雙模式產生按鈕：整組連續週排 vs 每一堂課獨立積木 -->
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+      <button type="button" class="btn btn-primary" onclick="createDragBlock('series')">＋ 產生【連續週排】積木</button>
+      <button type="button" class="btn btn-blue" onclick="createDragBlock('single')">＋ 產生【單堂獨立】積木</button>
+    </div>
 
-    <div style="margin-top:14px; font-size:0.83rem; color:#475569; line-height:1.45;">
-      <strong>使用方式：</strong>將下方產生的方塊直接<strong>按住拖曳到右側行事曆的任一天</strong>（例如 3 月某個週一），系統會自動每週同日<strong>跨月份連續排滿全部堂數</strong>，並自動跳過國定假日！
+    <div style="margin-top:10px; font-size:0.81rem; color:#475569; line-height:1.45;">
+      • <strong>連續週排</strong>：拖入某天後，每週同日跨月連續排完。<br>
+      • <strong>單堂獨立</strong>：產生「1堂1塊」獨立積木，可自由跨月、跳週一堂一堂拖入，已排的會自動打勾標記。
+    </div>
+
+    <div class="pool-toolbar">
+      <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+        <input type="checkbox" id="hidePlacedCheckbox" onchange="renderDragPool()">
+        隱藏已排入課表的單堂積木
+      </label>
+      <button type="button" class="token-mini-btn" onclick="clearAllBlocks()">清空積木池</button>
     </div>
 
     <div class="drag-pool" id="dragPool"></div>
@@ -446,7 +487,6 @@
 
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // 內建台灣國定假日（不含農曆，介面清爽）
   const TW_HOLIDAYS = {
     '2026-01-01': '元旦',
     '2026-02-16': '除夕', '2026-02-17': '春節', '2026-02-18': '初二', '2026-02-19': '初三', '2026-02-20': '春節補假',
@@ -470,8 +510,8 @@
 
   let currentRocYear = 115;
   let currentMonth = new Date().getMonth() + 1;
-  let yearCourses = []; // 當年度全部課程資料
-  let dragBlocks = [];  // 左側待拖曳課程積木池
+  let yearCourses = [];
+  let dragBlocks = [];
   let activeDraggedBlock = null;
 
   function pad2(n) { return String(n).padStart(2, '0'); }
@@ -482,7 +522,6 @@
     el.textContent = msg;
   }
 
-  // 初始化預設積木與讀取講師名單
   (async function initPage() {
     const now = new Date();
     const rocNow = now.getFullYear() - 1911;
@@ -492,21 +531,16 @@
       currentRocYear = rocNow;
     }
 
-    // 載入已儲存的積木模板
-    const savedBlocks = localStorage.getItem('lz_drag_blocks_v1');
+    const savedBlocks = localStorage.getItem('lz_drag_blocks_v2');
     if (savedBlocks) {
       try { dragBlocks = JSON.parse(savedBlocks); } catch (e) { dragBlocks = []; }
     }
     if (dragBlocks.length === 0) {
       dragBlocks = [
-        { id: 'b1', planType: '多元', prefix: '多元1', startNum: 1, count: 12, reimburseTime: '09:00-11:00', actualTime: '09:30-11:30', instructor: '' },
-        { id: 'b2', planType: '伯公', prefix: '伯公1', startNum: 1, count: 8, reimburseTime: '09:00-11:00', actualTime: '', instructor: '' },
-        { id: 'b3', planType: '樂齡', prefix: '樂齡1', startNum: 1, count: 10, reimburseTime: '09:00-11:00', actualTime: '', instructor: '' }
+        { id: 'b1', mode: 'series', planType: '多元', prefix: '多元1', startNum: 1, count: 12, reimburseTime: '09:00-11:00', actualTime: '09:30-11:30', instructor: '' }
       ];
     }
-    renderDragPool();
 
-    // 從資料庫載入講師名單供快速選擇
     const { data: instData } = await supabaseClient.from('instructors').select('name').eq('status', '服務中');
     if (instData) {
       document.getElementById('instructorDatalist').innerHTML = instData.map(i => `<option value="${i.name}">`).join('');
@@ -516,10 +550,11 @@
   })();
 
   function saveDragBlocksLocal() {
-    localStorage.setItem('lz_drag_blocks_v1', JSON.stringify(dragBlocks));
+    localStorage.setItem('lz_drag_blocks_v2', JSON.stringify(dragBlocks));
   }
 
-  function createDragBlock() {
+  // 支援產生「series 連續週排」或「single 每一堂獨立積木」
+  function createDragBlock(mode) {
     const planType = document.getElementById('planTypeInput').value;
     const prefix = document.getElementById('coursePrefixInput').value.trim();
     const startNum = parseInt(document.getElementById('startNumInput').value, 10) || 1;
@@ -528,18 +563,65 @@
     const actualTime = document.getElementById('actualTimeInput').value.trim();
     const instructor = document.getElementById('instructorInput').value.trim();
 
-    if (!prefix) { alert('請輸入課程名稱前綴（例如：多元1）！'); return; }
+    if (!prefix) { alert('請輸入課程名稱前綴（例如：多元1 或 插花）！'); return; }
 
-    dragBlocks.unshift({
-      id: 'blk_' + Date.now(),
-      planType,
-      prefix,
-      startNum,
-      count,
-      reimburseTime,
-      actualTime,
-      instructor
-    });
+    if (mode === 'single') {
+      // 產生 1 堂 1 塊的獨立小積木（逆序 unshift 讓 1 號排在最上面）
+      for (let i = count - 1; i >= 0; i--) {
+        const seq = startNum + i;
+        dragBlocks.unshift({
+          id: 'blk_' + Date.now() + '_' + seq + '_' + Math.random().toString(36).slice(2, 6),
+          mode: 'single',
+          planType,
+          prefix,
+          startNum: seq,
+          count: 1,
+          singleName: `${prefix}-${seq}`,
+          reimburseTime,
+          actualTime,
+          instructor
+        });
+      }
+    } else {
+      dragBlocks.unshift({
+        id: 'blk_' + Date.now(),
+        mode: 'series',
+        planType,
+        prefix,
+        startNum,
+        count,
+        reimburseTime,
+        actualTime,
+        instructor
+      });
+    }
+
+    saveDragBlocksLocal();
+    renderDragPool();
+  }
+
+  // 將整組連續積木一鍵拆成每一堂獨立小積木
+  function splitSeriesToSingles(blockId) {
+    const idx = dragBlocks.findIndex(b => b.id === blockId);
+    if (idx === -1) return;
+    const b = dragBlocks[idx];
+    const singles = [];
+    for (let i = 0; i < b.count; i++) {
+      const seq = b.startNum + i;
+      singles.push({
+        id: 'blk_' + Date.now() + '_' + seq + '_' + Math.random().toString(36).slice(2, 6),
+        mode: 'single',
+        planType: b.planType,
+        prefix: b.prefix,
+        startNum: seq,
+        count: 1,
+        singleName: `${b.prefix}-${seq}`,
+        reimburseTime: b.reimburseTime,
+        actualTime: b.actualTime,
+        instructor: b.instructor
+      });
+    }
+    dragBlocks.splice(idx, 1, ...singles);
     saveDragBlocksLocal();
     renderDragPool();
   }
@@ -550,20 +632,66 @@
     renderDragPool();
   }
 
+  function clearAllBlocks() {
+    if (!confirm('確定要清空左側所有待拖曳課程積木嗎？（不會影響右側已排入行事曆的課程）')) return;
+    dragBlocks = [];
+    saveDragBlocksLocal();
+    renderDragPool();
+  }
+
   function renderDragPool() {
     const pool = document.getElementById('dragPool');
-    pool.innerHTML = dragBlocks.map(b => {
+    const hidePlaced = document.getElementById('hidePlacedCheckbox').checked;
+
+    // 建立「已排入課表」的快速查詢表，自動比對單堂積木是否已排進某一天
+    const placedDateByKey = {};
+    yearCourses.forEach(c => {
+      const key = `${c.plan_type || '關懷'}__${c.course_name}`;
+      placedDateByKey[key] = c.course_date;
+    });
+
+    // 將未排入的積木排在前面，已排入的單堂積木排在後面
+    const sortedBlocks = [...dragBlocks].sort((a, b) => {
+      const aPlaced = (a.mode === 'single') && Boolean(placedDateByKey[`${a.planType}__${a.singleName}`]);
+      const bPlaced = (b.mode === 'single') && Boolean(placedDateByKey[`${b.planType}__${b.singleName}`]);
+      return Number(aPlaced) - Number(bPlaced);
+    });
+
+    pool.innerHTML = sortedBlocks.map(b => {
+      const isSingle = b.mode === 'single';
+      const cName = isSingle ? (b.singleName || `${b.prefix}-${b.startNum}`) : '';
+      const placedIso = isSingle ? placedDateByKey[`${b.planType}__${cName}`] : null;
+
+      if (hidePlaced && placedIso) return '';
+
       const endNum = b.startNum + b.count - 1;
-      const rangeLabel = b.count > 1 ? `${b.prefix}-${b.startNum} ~ ${b.prefix}-${endNum}` : `${b.prefix}-${b.startNum}`;
+      const titleText = isSingle
+        ? `[${b.planType}] ${cName}`
+        : `[${b.planType}] ${b.prefix}-${b.startNum} ~ ${b.prefix}-${endNum}（共 ${b.count} 堂）`;
+
+      let placedTagHtml = '';
+      if (placedIso) {
+        const p = placedIso.split('-');
+        placedTagHtml = `<span class="token-placed-badge">✓ 已排 ${parseInt(p[1], 10)}/${parseInt(p[2], 10)}</span>`;
+      }
+
       return `
-        <div class="drag-token plan-${b.planType}" draggable="true"
+        <div class="drag-token plan-${b.planType} ${isSingle ? 'is-single' : ''} ${placedIso ? 'is-placed' : ''}"
+             draggable="true"
              ondragstart="onBlockDragStart(event, '${b.id}')">
           <div class="token-header">
-            <span>[${b.planType}] ${rangeLabel}（共 ${b.count} 堂）</span>
-            <button type="button" class="token-del" onclick="removeDragBlock('${b.id}')" title="移除此積木">✕</button>
+            <div>
+              <span class="token-mode-tag ${isSingle ? 'single' : ''}">${isSingle ? '單堂' : '連續'}</span>
+              <span>${escapeHtml(titleText)}</span>
+            </div>
+            <div class="token-btns">
+              ${placedTagHtml}
+              ${(!isSingle && b.count > 1) ? `<button type="button" class="token-mini-btn" onclick="splitSeriesToSingles('${b.id}')" title="拆成一堂一塊獨立積木">拆成單堂</button>` : ''}
+              <button type="button" class="token-del" onclick="removeDragBlock('${b.id}')" title="移除此積木">✕</button>
+            </div>
           </div>
-          <div class="token-meta">核銷時間：${b.reimburseTime} ${b.instructor ? `｜ 講師：${b.instructor}` : ''}</div>
-          ${b.actualTime ? `<div class="token-actual">實際上課提醒：${b.actualTime}</div>` : ''}
+          <div class="token-meta">核銷：${escapeHtml(b.reimburseTime)} ${b.instructor ? `｜ 講師：${escapeHtml(b.instructor)}` : ''}</div>
+          ${b.actualTime ? `<div class="token-actual">實際上課提醒：${escapeHtml(b.actualTime)}</div>` : ''}
         </div>
       `;
     }).join('');
@@ -592,13 +720,14 @@
       .order('id', { ascending: true });
 
     if (error) {
-      setStatus('讀取失敗（請確認已執行步驟 1 SQL）：' + error.message, true);
+      setStatus('讀取失敗：' + error.message, true);
       return;
     }
     yearCourses = data || [];
     setStatus(`已同步 ${currentRocYear} 年度課表（共 ${yearCourses.length} 堂）`);
     renderMonthTabs();
     renderCalendar();
+    renderDragPool();
   }
 
   function renderMonthTabs() {
@@ -625,13 +754,11 @@
     renderCalendar();
   }
 
-  // 渲染單月月曆（星期一在最左，星期六、日在最右）
   function renderCalendar() {
     const adYear = currentRocYear + 1911;
     const firstDay = new Date(adYear, currentMonth - 1, 1);
     const daysInMonth = new Date(adYear, currentMonth, 0).getDate();
 
-    // 轉換 JS getDay() (0=週日, 1=週一...6=週六) 為「週一=0, 週二=1 ... 週日=6」
     const startOffset = (firstDay.getDay() + 6) % 7;
     const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
 
@@ -646,7 +773,7 @@
       if (idx % 7 === 0) rowsHtml += '<tr>';
 
       const dayNum = idx - startOffset + 1;
-      const colIdx = idx % 7; // 0~4 為週一~週五，5~6 為週六~週日
+      const colIdx = idx % 7;
       const isWeekend = colIdx >= 5;
 
       if (dayNum < 1 || dayNum > daysInMonth) {
@@ -708,7 +835,7 @@
     ev.currentTarget.classList.remove('drag-over');
   }
 
-  // 跨月份自動連續排課核心邏輯
+  // 同時支援「單堂獨立放入該格」與「連續週排跨月自動填入」
   async function onCellDrop(ev, startIsoDate) {
     ev.preventDefault();
     ev.currentTarget.classList.remove('drag-over');
@@ -719,27 +846,28 @@
     const adYear = currentRocYear + 1911;
     const yearEndIso = `${adYear}-12-31`;
 
-    // 從放下當天開始，每週同一天往後推算直到排滿 blk.count 堂（自動跨月、自動跳過國定假日）
-    const parts = startIsoDate.split('-').map(Number);
-    let cursor = new Date(parts[0], parts[1] - 1, parts[2]);
-    const scheduledDates = [];
-
-    while (scheduledDates.length < blk.count) {
-      const iso = `${cursor.getFullYear()}-${pad2(cursor.getMonth() + 1)}-${pad2(cursor.getDate())}`;
-      if (iso > yearEndIso) break; // 不超過當年度 12/31
-
-      // 若遇國定假日則自動順延至下週同一天
-      if (!TW_HOLIDAYS[iso]) {
-        scheduledDates.push(iso);
+    let scheduledDates = [];
+    if (blk.mode === 'single') {
+      // 單堂獨立積木：直接放在使用者指定的這一天（即使跨月或跳過好幾週也沒問題）
+      scheduledDates = [startIsoDate];
+    } else {
+      // 連續週排積木：從放下當天起每週同一天自動跨月排滿（避開國定假日）
+      const parts = startIsoDate.split('-').map(Number);
+      let cursor = new Date(parts[0], parts[1] - 1, parts[2]);
+      while (scheduledDates.length < blk.count) {
+        const iso = `${cursor.getFullYear()}-${pad2(cursor.getMonth() + 1)}-${pad2(cursor.getDate())}`;
+        if (iso > yearEndIso) break;
+        if (!TW_HOLIDAYS[iso]) {
+          scheduledDates.push(iso);
+        }
+        cursor.setDate(cursor.getDate() + 7);
       }
-      cursor.setDate(cursor.getDate() + 7);
     }
 
     if (scheduledDates.length === 0) return;
 
-    setStatus('正在跨月排入課程並寫入雲端...');
+    setStatus('正在排入課程並同步雲端...');
 
-    // 若勾選「取代關懷課程」且本次拖入的是多元/伯公/樂齡，先刪除這些日期原有的關懷課程
     if (replaceCare && blk.planType !== '關懷') {
       await supabaseClient
         .from('course_schedules')
@@ -750,7 +878,9 @@
 
     const insertRows = scheduledDates.map((dIso, idx) => {
       const seq = blk.startNum + idx;
-      const cName = blk.count > 1 ? `${blk.prefix}-${seq}` : (blk.startNum > 1 ? `${blk.prefix}-${seq}` : blk.prefix);
+      const cName = (blk.mode === 'single')
+        ? (blk.singleName || `${blk.prefix}-${blk.startNum}`)
+        : (blk.count > 1 ? `${blk.prefix}-${seq}` : `${blk.prefix}-${blk.startNum}`);
       return {
         course_date: dIso,
         plan_type: blk.planType,
@@ -769,12 +899,15 @@
     }
 
     await loadYearCourses();
-    const firstM = parseInt(scheduledDates[0].split('-')[1], 10);
-    const lastM = parseInt(scheduledDates[scheduledDates.length - 1].split('-')[1], 10);
-    setStatus(`已成功跨月排入 ${scheduledDates.length} 堂（${firstM}月～${lastM}月），並已同步至簽到表！`);
+    if (blk.mode === 'single') {
+      setStatus(`已將「${insertRows[0].course_name}」排入 ${startIsoDate}！`);
+    } else {
+      const firstM = parseInt(scheduledDates[0].split('-')[1], 10);
+      const lastM = parseInt(scheduledDates[scheduledDates.length - 1].split('-')[1], 10);
+      setStatus(`已成功連續排入 ${scheduledDates.length} 堂（${firstM}月～${lastM}月）！`);
+    }
   }
 
-  // 鋪設單月固定「關懷」課程（週一至週五，排除國定假日與已有課程的日期）
   async function fillDefaultCareForMonth() {
     const adYear = currentRocYear + 1911;
     const daysInMonth = new Date(adYear, currentMonth, 0).getDate();
@@ -806,7 +939,6 @@
     await loadYearCourses();
   }
 
-  // 鋪設全年度 1-12 月固定「關懷」課程
   async function fillDefaultCareForYear() {
     if (!confirm(`確定要為 ${currentRocYear} 年 1～12 月所有尚未排課的平日（週一至週五）自動鋪設固定「關懷」課程嗎？`)) return;
     const adYear = currentRocYear + 1911;
@@ -841,14 +973,12 @@
     await loadYearCourses();
   }
 
-  // 依計畫名稱前綴整批清除（例如一次清掉跨月的多元1-1~多元1-12）
   async function clearByPrefix() {
     const prefix = document.getElementById('clearPrefixInput').value.trim();
     if (!prefix) {
-      alert('請先在左側輸入框輸入要清除的課程前綴（例如：多元1）！');
+      alert('請先在輸入框輸入要清除的課程前綴（例如：多元1 或 插花）！');
       return;
     }
-    const adYear = currentRocYear + 1911;
     const matched = yearCourses.filter(c => c.course_name.startsWith(prefix));
     if (matched.length === 0) {
       alert(`找不到名稱以「${prefix}」開頭的課程！`);
@@ -862,7 +992,6 @@
     setStatus(`已整批清除「${prefix}」共 ${matched.length} 堂課程！`);
   }
 
-  // 清除當月全部課程重新排課
   async function clearCurrentMonth() {
     if (!confirm(`確定要清除 ${currentRocYear} 年 ${currentMonth} 月的所有已排課程嗎？`)) return;
     const adYear = currentRocYear + 1911;
@@ -874,7 +1003,6 @@
     setStatus(`已清除 ${currentMonth} 月課表，可重新排課！`);
   }
 
-  // 清除全年度課程重新排課
   async function clearWholeYear() {
     if (!confirm(`警告：確定要清除「${currentRocYear} 全年度 1-12 月」的所有課程資料重新排課嗎？`)) return;
     const adYear = currentRocYear + 1911;
@@ -883,7 +1011,6 @@
     setStatus(`已清空 ${currentRocYear} 全年度課表！`);
   }
 
-  // 彈窗：新增單日課程
   function openNewModal(isoDate) {
     document.getElementById('modalTitle').textContent = `新增課程（${isoDate}）`;
     document.getElementById('modalCourseId').value = '';
@@ -897,7 +1024,6 @@
     document.getElementById('courseModal').classList.add('open');
   }
 
-  // 彈窗：編輯既有單堂課程
   function openEditModal(courseId) {
     const c = yearCourses.find(item => item.id === courseId);
     if (!c) return;
