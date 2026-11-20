@@ -271,14 +271,15 @@
       font-weight: bold; font-size: 0.98rem; color: #115e59;
     }
     .plan-accordion-list {
-      margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;
+      margin-top: 6px; display: flex; flex-direction: row; flex-wrap: nowrap;
+      overflow-x: auto; gap: 6px; align-items: flex-start; padding-bottom: 2px;
     }
     .plan-accordion-card {
       background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; overflow: hidden;
-      flex: 0 1 auto; min-width: 240px; max-width: 100%;
+      flex: 0 0 auto; width: auto;
     }
     .plan-accordion-card.is-open {
-      flex: 1 1 100%; width: 100%;
+      flex: 1 1 auto; min-width: 320px; max-width: 100%;
     }
     .plan-accordion-header {
       display: flex; justify-content: space-between; align-items: center;
@@ -582,11 +583,6 @@
       <button type="button" class="btn btn-blue" onclick="createDragBlock('single')">＋ 產生【單堂獨立】積木</button>
     </div>
 
-    <div style="margin-top:10px; font-size:0.81rem; color:#475569; line-height:1.45;">
-      • <strong>連續週排</strong>：拖入某天後，每週同日跨月連續排完。<br>
-      • <strong>單堂獨立</strong>：產生「1堂1塊」獨立積木，已排入課表會自動隱藏（若刪除課表則自動恢復）。
-    </div>
-
     <div class="pool-toolbar">
       <span>待拖曳課程積木池</span>
       <button type="button" class="token-mini-btn" onclick="clearAllBlocks()">清空積木池</button>
@@ -634,9 +630,6 @@
       </div>
 
       <button type="button" class="btn btn-amber" style="width:100%;" onclick="addOrUpdateReminderPreset()">＋ 加入常用提醒清單（可重複拖曳）</button>
-      <div style="margin-top:6px; font-size:0.79rem; color:#64748b;">
-        • 直接按住上方彩色標籤拖進右側日曆即可（可重複多次拖曳，不會取代當日課程）。
-      </div>
       </div>
     </div>
     </div>
@@ -690,7 +683,6 @@
     <div class="sticky-cal-nav" id="stickyCalNav">
       <div class="sticky-month-banner">
         <div>目前排課月份：<strong id="currentViewingMonthLabel" style="font-size:1.05rem; color:#0f766e;">115 年 1 月</strong></div>
-        <div style="font-size:0.82rem; color:#475569;">往下捲動排課時，上方月份列會自動固定，點擊即可跨月切換</div>
       </div>
       <div class="month-tabs" id="monthTabs"></div>
     </div>
@@ -2164,9 +2156,6 @@
 <div class="modal-backdrop" id="planManagerModal">
   <div class="modal-box" style="max-width: 480px;">
     <h4>管理課程計畫類別（新增／刪除）</h4>
-    <div style="font-size:0.82rem; color:#475569; margin-bottom:10px;">
-      因應每年申請核定的計畫不同，您可在此自由新增計畫名稱（如：長照計畫、失智據點、預防延緩）或刪除不使用的計畫。
-    </div>
     <div style="display:grid; grid-template-columns: 1fr 1fr auto auto; gap:6px; align-items:center; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
       <input type="text" id="newPlanShortInput" placeholder="簡稱，如：長照">
       <input type="text" id="newPlanLabelInput" placeholder="顯示名稱，如：長照計畫">
@@ -2185,9 +2174,6 @@
 <div class="modal-backdrop" id="presetManagerModal">
   <div class="modal-box" style="max-width: 500px;">
     <h4>⚙ 管理常用提醒名稱＆色彩綁定清單</h4>
-    <div style="font-size:0.82rem; color:#475569; margin-bottom:10px;">
-      在此設定常用提醒項目與對應色彩（例如：計畫核銷類統一設為玫紅色），之後點選名稱就會自動帶入綁定顏色。
-    </div>
     <div style="display:grid; grid-template-columns: 1fr 1fr auto auto; gap:6px; align-items:center; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
       <input type="text" id="newPresetTitleInput" placeholder="名稱，如：每月零用金盤點">
       <input type="text" id="newPresetNoteInput" placeholder="預設備註（選填）">
