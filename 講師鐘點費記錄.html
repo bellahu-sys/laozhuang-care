@@ -138,6 +138,42 @@
       color: #166534; font-weight: bold; font-size: 0.84rem;
     }
 
+
+    .instructor-picker-box {
+      background: #f0fdfa; border: 1.5px solid #5eead4; border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 14px;
+    }
+    .instructor-picker-header {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
+    }
+    .instructor-picker-title {
+      font-weight: bold; font-size: 0.94rem; color: #115e59;
+    }
+    .instructor-checkbox-grid {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .inst-chk-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px; border-radius: 16px; font-size: 0.86rem; font-weight: bold;
+      border: 1.5px solid #cbd5e1; background: #fff; color: #334155;
+      cursor: pointer; user-select: none; transition: all 0.12s;
+    }
+    .inst-chk-pill:hover { border-color: var(--primary); }
+    .inst-chk-pill.is-checked {
+      background: #dcfce7; border-color: #16a34a; color: #166534;
+    }
+    .inst-chk-pill.is-paused {
+      opacity: 0.75;
+    }
+    .inst-status-tag {
+      font-size: 0.72rem; padding: 1px 5px; border-radius: 8px;
+      background: #e2e8f0; color: #475569; font-weight: normal;
+    }
+    .inst-chk-pill.is-checked .inst-status-tag {
+      background: #bbf7d0; color: #166534;
+    }
+
     @media print {
       nav.topbar, .no-print { display: none !important; }
       body { background: #fff; }
@@ -268,6 +304,21 @@
       </span>
     </div>
 
+    <!-- 資料來源：人事資料「講師資料管理」勾選當年度授課講師 -->
+    <div class="instructor-picker-box no-print">
+      <div class="instructor-picker-header">
+        <div class="instructor-picker-title" id="pickerBoxTitle">勾選 115 年度要建立鐘點費資料的講師（來源：人事資料 ➔ 講師資料管理）</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="checkActiveStatusInstructors()">僅勾選「服務中」講師</button>
+          <button type="button" class="btn btn-teal btn-sm" onclick="checkInstructorsFromCalendar()">自動勾選本年度行事曆有排課講師</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="toggleAllInstructors(true)">全選</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="toggleAllInstructors(false)">全部取消</button>
+          <a href="講師資料.html" class="btn btn-outline btn-sm" style="text-decoration:none;">前往講師資料管理 ➔</a>
+        </div>
+      </div>
+      <div class="instructor-checkbox-grid" id="instructorCheckboxGrid"></div>
+    </div>
+
     <div class="kpi-grid" id="kpiGrid"></div>
 
     <div id="viewActualPanel">
@@ -330,8 +381,12 @@
 
   let currentMode = 'actual'; // 'actual' | 'claim' | 'summary'
   let currentRocYear = 115;
-  let currentInstructor = '林熙鈴';
-  let instructorNames = ['林熙鈴', '鄧美續', '張國堂', '蔡牡連', '吳佩珊', '黃仲慧', '詹益誠', '吳貴英', '詹細珍'];
+  let currentInstructor = '';
+
+  // 從人事資料 `instructors` 讀取的完整講師名冊：[{ id, staff_number, name, status, hire_type }]
+  let allMasterInstructors = [];
+  // 當年度有勾選要建立資料的講師姓名清單
+  let selectedInstructorNames = [];
 
   // 每一筆明細：{ id, roc_year, instructor_name, entry_type ('actual'|'claim'), plan_name, course_name, period_text, days, hours, rate, amount, remark, sort_order }
   let records = [];
@@ -358,31 +413,181 @@
     el.textContent = msg;
   }
 
+  function getSelectedInstStorageKey() {
+    return `lz_selected_instructors_${currentRocYear}`;
+  }
+
+  function saveSelectedInstructorsLocal() {
+    localStorage.setItem(getSelectedInstStorageKey(), JSON.stringify(selectedInstructorNames));
+  }
+
   (async function init() {
     const ySel = document.getElementById('rocYearSelect');
     currentRocYear = parseInt(ySel.value, 10) || 115;
 
+    await loadMasterInstructors();
+    await loadYearData();
+  })();
+
+  async function loadMasterInstructors() {
     try {
-      const { data: instRows } = await supabaseClient.from('instructors').select('name').order('name');
-      if (instRows && instRows.length > 0) {
-        const dbNames = instRows.map(r => r.name).filter(Boolean);
-        instructorNames = [...new Set([...instructorNames, ...dbNames])];
+      const { data: instRows, error } = await supabaseClient
+        .from('instructors')
+        .select('id, staff_number, name, status, hire_type')
+        .order('staff_number', { ascending: true })
+        .order('id', { ascending: true });
+
+      if (!error && Array.isArray(instRows) && instRows.length > 0) {
+        allMasterInstructors = instRows.filter(r => r.name && r.name.trim() !== '');
       }
     } catch (e) {}
 
+    if (allMasterInstructors.length === 0) {
+      allMasterInstructors = [
+        { staff_number: '001', name: '林熙鈴', status: '服務中', hire_type: '外聘' },
+        { staff_number: '002', name: '張國堂', status: '服務中', hire_type: '外聘' },
+        { staff_number: '003', name: '鄧美續', status: '服務中', hire_type: '內聘' },
+        { staff_number: '004', name: '蔡牡連', status: '服務中', hire_type: '內聘' },
+        { staff_number: '005', name: '吳佩珊', status: '暫停', hire_type: '外聘' },
+        { staff_number: '006', name: '黃仲慧', status: '服務中', hire_type: '外聘' },
+        { staff_number: '007', name: '吳貴英', status: '服務中', hire_type: '' },
+        { staff_number: '008', name: '詹細珍', status: '服務中', hire_type: '' },
+        { staff_number: '009', name: '詹益誠', status: '服務中', hire_type: '' },
+        { staff_number: '010', name: '張水潭', status: '暫停', hire_type: '內聘' },
+        { staff_number: '011', name: '詹偉倫', status: '暫停', hire_type: '外聘' },
+        { staff_number: '012', name: '張鳳玲', status: '應聘中', hire_type: '' }
+      ];
+    }
+  }
+
+  function renderInstructorPicker() {
+    document.getElementById('pickerBoxTitle').textContent =
+      `勾選 ${currentRocYear} 年度要建立鐘點費資料的講師（來源：人事資料 ➔ 講師資料管理，已選 ${selectedInstructorNames.length} 位）`;
+
+    const grid = document.getElementById('instructorCheckboxGrid');
+    grid.innerHTML = allMasterInstructors.map(inst => {
+      const name = inst.name.trim();
+      const checked = selectedInstructorNames.includes(name);
+      const statusText = inst.status || '服務中';
+      const isPaused = statusText !== '服務中';
+      const metaParts = [statusText, inst.hire_type].filter(Boolean).join('·');
+      return `
+        <label class="inst-chk-pill ${checked ? 'is-checked' : ''} ${isPaused ? 'is-paused' : ''}">
+          <input type="checkbox" value="${escapeAttr(name)}" ${checked ? 'checked' : ''} onchange="onInstructorCheckboxToggle('${escapeAttr(name)}', this.checked)">
+          <span>${escapeHtml(name)}</span>
+          ${metaParts ? `<span class="inst-status-tag">${escapeHtml(metaParts)}</span>` : ''}
+        </label>
+      `;
+    }).join('');
+  }
+
+  function onInstructorCheckboxToggle(name, isChecked) {
+    if (isChecked) {
+      if (!selectedInstructorNames.includes(name)) {
+        selectedInstructorNames.push(name);
+      }
+      currentInstructor = name;
+    } else {
+      selectedInstructorNames = selectedInstructorNames.filter(n => n !== name);
+      if (currentInstructor === name) {
+        currentInstructor = selectedInstructorNames[0] || '';
+      }
+    }
+    const masterOrder = new Map(allMasterInstructors.map((item, i) => [item.name.trim(), i]));
+    selectedInstructorNames.sort((a, b) => (masterOrder.get(a) ?? 999) - (masterOrder.get(b) ?? 999));
+
+    saveSelectedInstructorsLocal();
+    renderInstructorPicker();
     renderInstructorSelect();
-    await loadYearData();
-  })();
+    renderActiveView();
+  }
+
+  function checkActiveStatusInstructors() {
+    selectedInstructorNames = allMasterInstructors
+      .filter(i => (i.status || '服務中') === '服務中')
+      .map(i => i.name.trim());
+    if (!selectedInstructorNames.includes(currentInstructor)) {
+      currentInstructor = selectedInstructorNames[0] || '';
+    }
+    saveSelectedInstructorsLocal();
+    renderInstructorPicker();
+    renderInstructorSelect();
+    renderActiveView();
+  }
+
+  function toggleAllInstructors(flag) {
+    if (flag) {
+      selectedInstructorNames = allMasterInstructors.map(i => i.name.trim());
+      if (!selectedInstructorNames.includes(currentInstructor)) {
+        currentInstructor = selectedInstructorNames[0] || '';
+      }
+    } else {
+      selectedInstructorNames = [];
+      currentInstructor = '';
+    }
+    saveSelectedInstructorsLocal();
+    renderInstructorPicker();
+    renderInstructorSelect();
+    renderActiveView();
+  }
+
+  async function checkInstructorsFromCalendar() {
+    const adYear = currentRocYear + 1911;
+    setStatus(`正在查詢 ${currentRocYear} 年度行事曆排課講師...`);
+    try {
+      const { data, error } = await supabaseClient
+        .from('course_schedules')
+        .select('instructor_name')
+        .gte('course_date', `${adYear}-01-01`)
+        .lte('course_date', `${adYear}-12-31`);
+
+      if (error || !data) {
+        setStatus('查詢行事曆講師失敗', true);
+        return;
+      }
+      const calNames = [...new Set(data.map(r => (r.instructor_name || '').trim()).filter(Boolean))];
+      if (calNames.length === 0) {
+        alert(`${currentRocYear} 年度行事曆目前尚無指定講師的排課記錄。`);
+        setStatus('');
+        return;
+      }
+      calNames.forEach(n => {
+        if (!allMasterInstructors.some(m => m.name.trim() === n)) {
+          allMasterInstructors.push({ staff_number: '999', name: n, status: '服務中', hire_type: '' });
+        }
+        if (!selectedInstructorNames.includes(n)) {
+          selectedInstructorNames.push(n);
+        }
+      });
+      const masterOrder = new Map(allMasterInstructors.map((item, i) => [item.name.trim(), i]));
+      selectedInstructorNames.sort((a, b) => (masterOrder.get(a) ?? 999) - (masterOrder.get(b) ?? 999));
+      if (!currentInstructor && selectedInstructorNames.length > 0) {
+        currentInstructor = selectedInstructorNames[0];
+      }
+      saveSelectedInstructorsLocal();
+      renderInstructorPicker();
+      renderInstructorSelect();
+      renderActiveView();
+      setStatus(`已自動勾選 ${calNames.length} 位行事曆有排課講師`);
+    } catch (e) {
+      setStatus('讀取行事曆失敗', true);
+    }
+  }
 
   function renderInstructorSelect() {
     const sel = document.getElementById('instructorSelect');
     const prev = sel.value || currentInstructor;
-    sel.innerHTML = instructorNames.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
+    if (selectedInstructorNames.length === 0) {
+      sel.innerHTML = `<option value="">（請先在下方勾選本年度講師）</option>`;
+      currentInstructor = '';
+      return;
+    }
+    sel.innerHTML = selectedInstructorNames.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
     if ([...sel.options].some(o => o.value === prev)) {
       sel.value = prev;
       currentInstructor = prev;
-    } else if (instructorNames.length > 0) {
-      currentInstructor = instructorNames[0];
+    } else {
+      currentInstructor = selectedInstructorNames[0];
       sel.value = currentInstructor;
     }
   }
@@ -391,10 +596,15 @@
     const inp = document.getElementById('customInstructorInput');
     const val = inp.value.trim();
     if (!val) return;
-    if (!instructorNames.includes(val)) {
-      instructorNames.push(val);
-      renderInstructorSelect();
+    if (!allMasterInstructors.some(m => m.name.trim() === val)) {
+      allMasterInstructors.push({ staff_number: '999', name: val, status: '服務中', hire_type: '' });
     }
+    if (!selectedInstructorNames.includes(val)) {
+      selectedInstructorNames.push(val);
+    }
+    saveSelectedInstructorsLocal();
+    renderInstructorPicker();
+    renderInstructorSelect();
     document.getElementById('instructorSelect').value = val;
     currentInstructor = val;
     inp.value = '';
@@ -425,9 +635,15 @@
   }
 
   async function onFilterChange() {
-    currentRocYear = parseInt(document.getElementById('rocYearSelect').value, 10) || 115;
-    currentInstructor = document.getElementById('instructorSelect').value || '林熙鈴';
-    await loadYearData();
+    const newYear = parseInt(document.getElementById('rocYearSelect').value, 10) || 115;
+    const yearChanged = (newYear !== currentRocYear);
+    currentRocYear = newYear;
+    currentInstructor = document.getElementById('instructorSelect').value || '';
+    if (yearChanged) {
+      await loadYearData();
+    } else {
+      renderActiveView();
+    }
   }
 
   function getLocalStorageKey() {
@@ -470,18 +686,33 @@
       summaryOverrides = {};
     }
 
-    // 確保每位在統計表上的講師名稱都出現在選單中
-    Object.keys(summaryOverrides).forEach(k => {
-      const namePart = k.split('__')[0];
-      if (namePart && !instructorNames.includes(namePart)) {
-        instructorNames.push(namePart);
+    const savedChecked = localStorage.getItem(getSelectedInstStorageKey());
+    if (savedChecked) {
+      try {
+        selectedInstructorNames = JSON.parse(savedChecked);
+      } catch (e) {
+        selectedInstructorNames = [];
       }
-    });
+    } else {
+      const fromRecords = [...new Set(records.map(r => (r.instructor_name || '').trim()).filter(Boolean))];
+      const activeFromMaster = allMasterInstructors
+        .filter(i => (i.status || '服務中') === '服務中')
+        .map(i => i.name.trim());
+      selectedInstructorNames = [...new Set([...activeFromMaster, ...fromRecords])];
+      saveSelectedInstructorsLocal();
+    }
+
     records.forEach(r => {
-      if (r.instructor_name && !instructorNames.includes(r.instructor_name)) {
-        instructorNames.push(r.instructor_name);
+      const n = (r.instructor_name || '').trim();
+      if (n && !allMasterInstructors.some(m => m.name.trim() === n)) {
+        allMasterInstructors.push({ staff_number: '999', name: n, status: '服務中', hire_type: '' });
       }
     });
+
+    const masterOrder = new Map(allMasterInstructors.map((item, i) => [item.name.trim(), i]));
+    selectedInstructorNames.sort((a, b) => (masterOrder.get(a) ?? 999) - (masterOrder.get(b) ?? 999));
+
+    renderInstructorPicker();
     renderInstructorSelect();
 
     setStatus(loadedFromDb ? `已同步 ${currentRocYear} 年度雲端資料` : `已載入 ${currentRocYear} 年度本機資料`);
@@ -515,6 +746,7 @@
   }
 
   function addRow() {
+    if (!currentInstructor) { alert('請先在上方勾選至少一位講師！'); return; }
     const entryType = (currentMode === 'claim') ? 'claim' : 'actual';
     const newItem = {
       id: 'tmp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -552,6 +784,7 @@
   }
 
   async function syncFromCalendar() {
+    if (!currentInstructor) { alert('請先在上方勾選至少一位講師！'); return; }
     const adYear = currentRocYear + 1911;
     setStatus('正在讀取行事曆課程...');
     try {
@@ -611,6 +844,7 @@
   }
 
   async function saveCurrentInstructorRecords() {
+    if (!currentInstructor) { alert('請先在上方勾選至少一位講師！'); return; }
     localStorage.setItem(getLocalStorageKey(), JSON.stringify(records));
 
     const instRows = records.filter(
@@ -859,7 +1093,13 @@
 
   function renderSummaryTable() {
     document.getElementById('summarySheetTitle').textContent = `${currentRocYear}年度講師鐘點費統計`;
-    const cols = instructorNames;
+    const cols = selectedInstructorNames;
+    if (cols.length === 0) {
+      document.getElementById('summaryTableHead').innerHTML = '';
+      document.getElementById('summaryTableBody').innerHTML =
+        '<tr><td class="center-col" style="padding:18px; color:#64748b;">請先在上方「勾選本年度要建立鐘點費資料的講師」區塊勾選授課老師。</td></tr>';
+      return;
+    }
 
     const thead = document.getElementById('summaryTableHead');
     thead.innerHTML = `
