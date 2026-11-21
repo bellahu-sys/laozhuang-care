@@ -272,11 +272,11 @@
             改用行事曆計算實際鐘點費
           </label>
           <div id="calendarCalcControls" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
-            <label style="font-size:0.86rem; font-weight:bold;">每日時數：</label>
-            <input type="number" id="calDefaultHoursInput" value="1" min="0.5" step="0.5" style="width:70px;">
-            <label style="font-size:0.86rem; font-weight:bold;">每小時費用：</label>
-            <input type="number" id="calDefaultRateInput" value="1000" min="0" step="50" style="width:90px;">
-            <button type="button" class="btn btn-teal btn-sm" onclick="calculateFromCalendar()">依行事曆帶入天數並計算</button>
+            <label style="font-size:0.86rem; font-weight:bold;">預設每日時數：</label>
+            <input type="text" inputmode="decimal" id="calDefaultHoursInput" value="1" style="width:65px; text-align:right;">
+            <label style="font-size:0.86rem; font-weight:bold;">預設每小時費用（選填）：</label>
+            <input type="text" inputmode="decimal" id="calDefaultRateInput" value="" placeholder="留空則各列自填" style="width:125px; text-align:right;">
+            <button type="button" class="btn btn-teal btn-sm" onclick="calculateFromCalendar()">依行事曆帶入天數</button>
           </div>
         </div>
       </div>
@@ -777,10 +777,18 @@
   }
 
   async function calculateFromCalendar() {
-    if (!currentFeeInstructor) { alert('請先選擇講師'); return; }
+    const targets = (showAllCheckedInstructorsInFee && checkedInstructors.length > 0)
+      ? checkedInstructors
+      : (currentFeeInstructor ? [currentFeeInstructor] : []);
+    if (targets.length === 0) { alert('請先選擇或勾選講師'); return; }
+
     const adYear = currentYear + 1911;
-    const defHours = Number(document.getElementById('calDefaultHoursInput').value || 1);
-    const defRate = Number(document.getElementById('calDefaultRateInput').value || 0);
+    const rawH = document.getElementById('calDefaultHoursInput').value.trim();
+    const defHours = rawH !== '' ? Number(rawH) : 1;
+    const rawR = document.getElementById('calDefaultRateInput').value.trim();
+    const hasDefRate = rawR !== '' && Number.isFinite(Number(rawR));
+    const defRate = hasDefRate ? Number(rawR) : '';
+
     setStatus('讀取行事曆排課資料...');
 
     try {
@@ -789,40 +797,59 @@
         .select('*')
         .gte('course_date', `${adYear}-01-01`)
         .lte('course_date', `${adYear}-12-31`)
-        .eq('instructor_name', currentFeeInstructor)
+        .in('instructor_name', targets)
         .order('course_date', { ascending: true });
 
       if (error || !data || data.length === 0) {
-        alert(`行事曆中查無「${currentFeeInstructor}」${currentYear} 年排課記錄`);
+        alert(`行事曆中查無所選講師 ${currentYear} 年排課記錄`);
         setStatus('');
         return;
       }
 
-      const map = new Map();
-      data.forEach(c => {
-        const cName = c.course_name || '課程';
-        if (!map.has(cName)) map.set(cName, []);
-        const p = String(c.course_date || '').split('-');
-        if (p.length === 3) map.get(cName).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
-      });
+      let totalImported = 0;
 
-      feeRows = [];
-      map.forEach((dates, cName) => {
-        const days = dates.length;
-        const period = dates.length > 1 ? `${dates[0]}-${dates[dates.length - 1]}` : (dates[0] || '');
-        feeRows.push({
-          id: 'cal_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
-          course_name: cName,
-          period_text: period,
-          days,
-          hours: defHours,
-          rate: defRate,
-          amount: calcFeeAmount(days, defHours, defRate),
-          remark: '行事曆自動計算'
+      targets.forEach(instName => {
+        const instSchedules = data.filter(c => (c.instructor_name || '').trim() === instName);
+        if (instSchedules.length === 0) return;
+
+        const map = new Map();
+        instSchedules.forEach(c => {
+          const cleanName = String(c.course_name || '課程').replace('｜', ' - ');
+          if (!feeCourseOptions.includes(cleanName)) {
+            feeCourseOptions.push(cleanName);
+          }
+          if (!map.has(cleanName)) map.set(cleanName, []);
+          const p = String(c.course_date || '').split('-');
+          if (p.length === 3) map.get(cleanName).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
         });
+
+        const builtRows = [];
+        map.forEach((dates, cName) => {
+          const days = dates.length;
+          const period = dates.length > 1 ? `${dates[0]}-${dates[dates.length - 1]}` : (dates[0] || '');
+          builtRows.push({
+            id: 'cal_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            course_name: cName,
+            period_text: period,
+            days,
+            hours: defHours,
+            rate: defRate,
+            amount: hasDefRate ? calcFeeAmount(days, defHours, defRate) : 0,
+            remark: ''
+          });
+        });
+
+        totalImported += builtRows.length;
+        if (showAllCheckedInstructorsInFee) {
+          multiFeeMap[instName] = builtRows;
+        }
+        if (instName === currentFeeInstructor || targets.length === 1) {
+          feeRows = builtRows;
+        }
       });
 
-      setStatus(`已依行事曆計算 ${feeRows.length} 筆課程鐘點費`);
+      renderFeeCourseSelect();
+      setStatus(`已依行事曆帶入 ${totalImported} 筆課程天數，請依各課程主題填入「費用 / 1H」`);
       renderFeeTable();
     } catch (e) {
       setStatus('讀取行事曆失敗', true);
@@ -879,14 +906,11 @@
     const hasCustom = currentVal && !feeCourseOptions.includes(currentVal);
     const customOpt = hasCustom ? `<option value="${escapeAttr(currentVal)}" selected>${escapeHtml(currentVal)}</option>` : '';
     return `
-      <div style="display:flex; gap:3px; align-items:center;">
-        <select onchange="onFeeFieldChange('${rowId}', 'course_name', this.value, ${ownerArg}); this.nextElementSibling.value = this.value;" style="flex:1; min-width:0;">
-          <option value="">— 選擇課程 —</option>
-          ${customOpt}
-          ${opts}
-        </select>
-        <input type="text" value="${escapeAttr(currentVal)}" placeholder="或直接輸入" oninput="onFeeFieldChange('${rowId}', 'course_name', this.value, ${ownerArg})" style="width:92px;">
-      </div>
+      <select onchange="onFeeFieldChange('${rowId}', 'course_name', this.value, ${ownerArg})" style="width:100%;">
+        <option value="">— 選擇課程 —</option>
+        ${customOpt}
+        ${opts}
+      </select>
     `;
   }
 
