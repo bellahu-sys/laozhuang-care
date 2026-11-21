@@ -792,13 +792,15 @@
 
         const map = new Map();
         instSchedules.forEach(c => {
-          const cleanName = String(c.course_name || '課程').replace('｜', ' - ');
-          if (!feeCourseOptions.includes(cleanName)) {
-            feeCourseOptions.push(cleanName);
+          const rawName = String(c.course_name || '課程').replace('｜', ' - ').trim();
+          // Strip trailing lesson index like -1, -2, ... -12 so series lessons merge into 1 row with total days
+          const mergedName = rawName.replace(/-\d+$/, '').trim() || rawName;
+          if (!feeCourseOptions.includes(mergedName)) {
+            feeCourseOptions.push(mergedName);
           }
-          if (!map.has(cleanName)) map.set(cleanName, []);
+          if (!map.has(mergedName)) map.set(mergedName, []);
           const p = String(c.course_date || '').split('-');
-          if (p.length === 3) map.get(cleanName).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
+          if (p.length === 3) map.get(mergedName).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
         });
 
         const builtRows = [];
