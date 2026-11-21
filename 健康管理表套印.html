@@ -49,6 +49,7 @@
     .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: #1e4237; }
     .btn-secondary { background: #64748b; color: white; }
+    .btn-secondary:hover { background: #475569; }
     .btn-generate { background: #0284c7; color: white; font-size: 1.05rem; padding: 12px 24px; display: block; width: 100%; max-width: 380px; margin: 20px auto 0 auto; }
     .btn-generate:hover { background: #0369a1; }
     .table-box { max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
@@ -67,45 +68,45 @@
 <body>
 
 <nav class="topbar">
-  <a href="index.html" class="brand">🏠 老庄社區照顧關懷據點｜雲端系統</a>
+  <a href="index.html" class="brand">老庄社區照顧關懷據點｜雲端系統</a>
   <div class="nav-menu">
     <div class="nav-item">
-      <a href="index.html" class="nav-btn">🏠 系統首頁</a>
+      <a href="index.html" class="nav-btn">系統首頁</a>
     </div>
 
     <div class="nav-item">
-      <button type="button" class="nav-btn">👥 人事資料 ▾</button>
+      <button type="button" class="nav-btn">人事資料 ▾</button>
       <div class="dropdown-content">
         <div class="dropdown-divider">長輩個案管理</div>
-        <a href="個案翻閱本.html">📖 個案資料翻閱本</a>
-        <a href="個案資料表.html">📋 新增個案基本資料</a>
-        <a href="個案清單.html">🔍 個案名冊查詢與服務狀況</a>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
         <div class="dropdown-divider">工作人員與師資</div>
-        <a href="講師資料.html">🎓 講師資料管理</a>
-        <a href="臨時人員資料.html">🧑‍💼 臨時人員資料管理</a>
-        <a href="#" onclick="alert('志工資料表預留擴充中，歡迎隨時提供 Excel 欄位建立！'); return false;">🤝 志工資料管理（預留）</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="#" onclick="alert('志工資料表預留擴充中，歡迎隨時提供 Excel 欄位建立！'); return false;">志工資料管理（預留）</a>
       </div>
     </div>
 
     <div class="nav-item">
-      <button type="button" class="nav-btn">🗂️ 行政類 ▾</button>
+      <button type="button" class="nav-btn">行政類 ▾</button>
       <div class="dropdown-content">
-        <a href="聯絡電話.html">☎️ 聯絡電話總表（全站通訊錄）</a>
+        <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
       </div>
     </div>
 
     <div class="nav-item">
-      <button type="button" class="nav-btn">🖨️ 報表套印 ▾</button>
+      <button type="button" class="nav-btn">報表套印 ▾</button>
       <div class="dropdown-content">
-        <a href="個案基本資料表套印.html">📄 個案基本資料表套印</a>
-        <a href="健康管理表套印.html">🩺 長輩健康管理表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
       </div>
     </div>
   </div>
 </nav>
 
 <div class="container">
-  <h1>🩺 據點長輩健康管理表｜Word 批次套印（一人一頁）</h1>
+  <h1>據點長輩健康管理表｜Word 批次套印（一人一頁）</h1>
 
   <div class="step-box">
     <div class="step-title">步驟 1：確認 Word 範本檔（健康管理表_套印範本.docx）</div>
@@ -148,17 +149,20 @@
   </div>
 
   <button type="button" class="btn-generate" onclick="generateWord()">
-    📄 產生並下載 Word 檔案（已選 <span id="selectedCount">0</span> 人）
+    產生並下載 Word 檔案（已選 <span id="selectedCount">0</span> 人）
   </button>
 </div>
 
 <script>
-  if (sessionStorage.getItem('care_auth') !== 'true') {
-    const input = prompt('🔒 請輸入老庄據點系統通行密碼：');
-    if (input === STATION_PASSCODE) {
+  const passcode = (typeof STATION_PASSCODE !== 'undefined') ? STATION_PASSCODE : 'laozhuang2026';
+  const authSaved = localStorage.getItem('care_auth') === 'true' || sessionStorage.getItem('care_auth') === 'true';
+  if (!authSaved) {
+    const input = prompt('請輸入老庄據點系統通行密碼：');
+    if (input === passcode) {
       sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
     } else {
-      document.body.innerHTML = '<div style="text-align:center;margin-top:80px;font-family:sans-serif;"><h2>⛔ 密碼錯誤，無法存取系統</h2><button onclick="location.reload()" style="padding:10px 20px;font-size:1rem;">重新輸入</button></div>';
+      document.body.innerHTML = '<div style="text-align:center;margin-top:80px;font-family:sans-serif;"><h2>密碼錯誤，無法存取系統</h2><button onclick="location.reload()" style="padding:10px 20px;font-size:1rem;">重新輸入</button></div>';
     }
   }
 
@@ -169,15 +173,28 @@
   let selectedIds = new Set();
   let cachedTemplateBuffer = null;
 
+  document.getElementById('templateFile').addEventListener('change', async function (e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    try {
+      cachedTemplateBuffer = await file.arrayBuffer();
+      const statusEl = document.getElementById('templateStatus');
+      statusEl.style.color = '#166534';
+      statusEl.textContent = `已選取範本檔：「${file.name}」，可勾選名單產生 Word！`;
+    } catch (err) {
+      alert('讀取範本檔失敗：' + err.message);
+    }
+  });
+
   async function tryAutoLoadTemplate() {
     if (window.location.protocol.startsWith('http')) {
       try {
-        const res = await fetch('健康管理表_套印範本.docx');
+        const res = await fetch(encodeURI('健康管理表_套印範本.docx') + '?v=' + Date.now(), { cache: 'no-store' });
         if (res.ok) {
           cachedTemplateBuffer = await res.arrayBuffer();
           const statusEl = document.getElementById('templateStatus');
           statusEl.style.color = '#166534';
-          statusEl.textContent = '✅ 已自動從雲端載入「健康管理表_套印範本.docx」，可直接勾選名單產生 Word！';
+          statusEl.textContent = '已自動從雲端載入「健康管理表_套印範本.docx」，可直接勾選名單產生 Word！';
         }
       } catch (e) {}
     }
@@ -187,27 +204,39 @@
     const tbody = document.getElementById('caseList');
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">讀取中...</td></tr>';
 
-    const [casesRes, statusRes] = await Promise.all([
-      supabaseClient.from('cases').select('*').order('case_number', { ascending: true }),
-      supabaseClient.from('case_service_status').select('*').order('effective_date', { ascending: false }).order('id', { ascending: false })
-    ]);
+    try {
+      const [casesRes, statusRes] = await Promise.all([
+        supabaseClient.from('cases').select('*').order('case_number', { ascending: true }),
+        supabaseClient.from('case_service_status').select('*').order('effective_date', { ascending: false }).order('id', { ascending: false })
+      ]);
 
-    if (casesRes.error) {
-      tbody.innerHTML = `<tr><td colspan="7" style="color:red; text-align:center;">讀取失敗：${casesRes.error.message}</td></tr>`;
-      return;
+      if (casesRes.error) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:#b91c1c; text-align:center; padding:20px;">讀取失敗：${escapeHtml(casesRes.error.message)}</td></tr>`;
+        return;
+      }
+
+      allCases = casesRes.data || [];
+      latestStatusMap = {};
+      if (!statusRes.error && Array.isArray(statusRes.data)) {
+        statusRes.data.forEach(row => {
+          if (!latestStatusMap[row.case_id]) {
+            latestStatusMap[row.case_id] = row.status;
+          }
+        });
+      }
+
+      filterTable();
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="7" style="color:#b91c1c; text-align:center; padding:20px;">連線發生錯誤：${escapeHtml(err.message)}</td></tr>`;
     }
+  }
 
-    allCases = casesRes.data || [];
-    latestStatusMap = {};
-    if (!statusRes.error && Array.isArray(statusRes.data)) {
-      statusRes.data.forEach(row => {
-        if (!latestStatusMap[row.case_id]) {
-          latestStatusMap[row.case_id] = row.status;
-        }
-      });
-    }
-
-    filterTable();
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   function filterTable() {
@@ -219,4 +248,172 @@
       const matchActive = !activeOnly || st === '服務中';
       const matchKw = !kw ||
         (c.case_number && String(c.case_number).toLowerCase().includes(kw)) ||
-        (c.name && c.name.toLowerCase().includes(kw));
+        (c.name && String(c.name).toLowerCase().includes(kw)) ||
+        (c.gov_system_id && String(c.gov_system_id).toLowerCase().includes(kw));
+      return matchActive && matchKw;
+    });
+
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('caseList');
+    if (!filteredCases.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#64748b;">查無符合條件的長輩名單</td></tr>';
+      syncMasterCheck();
+      updateSelectedCount();
+      return;
+    }
+
+    tbody.innerHTML = filteredCases.map(c => {
+      const st = latestStatusMap[c.id] || '服務中';
+      const checked = selectedIds.has(c.id) ? 'checked' : '';
+      const pillClass = st === '服務中' ? 'st-ok' : 'st-stop';
+      return `
+        <tr>
+          <td class="check-col">
+            <input type="checkbox" class="row-check" value="${escapeHtml(c.id)}" ${checked} onchange="toggleRow('${escapeHtml(c.id)}', this.checked)">
+          </td>
+          <td>${escapeHtml(c.case_number || '')}</td>
+          <td><span class="st-pill ${pillClass}">${escapeHtml(st)}</span></td>
+          <td><strong>${escapeHtml(c.name || '')}</strong></td>
+          <td>${escapeHtml(c.gender || '')}</td>
+          <td>${escapeHtml(c.birth_date || '')}</td>
+          <td>${escapeHtml(c.address || '')}</td>
+        </tr>
+      `;
+    }).join('');
+
+    syncMasterCheck();
+    updateSelectedCount();
+  }
+
+  function toggleRow(id, isChecked) {
+    if (isChecked) {
+      selectedIds.add(id);
+    } else {
+      selectedIds.delete(id);
+    }
+    syncMasterCheck();
+    updateSelectedCount();
+  }
+
+  function toggleAll(isChecked) {
+    filteredCases.forEach(c => {
+      if (isChecked) {
+        selectedIds.add(c.id);
+      } else {
+        selectedIds.delete(c.id);
+      }
+    });
+    document.querySelectorAll('.row-check').forEach(cb => {
+      cb.checked = isChecked;
+    });
+    syncMasterCheck();
+    updateSelectedCount();
+  }
+
+  function syncMasterCheck() {
+    const master = document.getElementById('masterCheck');
+    if (!filteredCases.length) {
+      master.checked = false;
+      return;
+    }
+    master.checked = filteredCases.every(c => selectedIds.has(c.id));
+  }
+
+  function updateSelectedCount() {
+    document.getElementById('selectedCount').textContent = selectedIds.size;
+  }
+
+  function xmlEscape(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  function generateWord() {
+    if (!cachedTemplateBuffer) {
+      alert('請先在步驟 1 選取或確認「健康管理表_套印範本.docx」！');
+      return;
+    }
+    if (selectedIds.size === 0) {
+      alert('請先在步驟 2 勾選至少一位長輩！');
+      return;
+    }
+    if (typeof window.PizZip === 'undefined') {
+      alert('PizZip 套件尚未載入完成，請確認網路連線或重新整理網頁。');
+      return;
+    }
+
+    const targets = allCases.filter(c => selectedIds.has(c.id));
+    try {
+      const zip = new window.PizZip(cachedTemplateBuffer);
+      const docXmlFile = zip.file('word/document.xml');
+      if (!docXmlFile) {
+        alert('範本檔案格式不正確，找不到 word/document.xml');
+        return;
+      }
+
+      let xml = docXmlFile.asText();
+      const bodyStartIdx = xml.indexOf('<w:body>');
+      const bodyEndIdx = xml.lastIndexOf('</w:body>');
+      if (bodyStartIdx === -1 || bodyEndIdx === -1) {
+        alert('無法解析 Word 文件主體內容');
+        return;
+      }
+
+      const prefix = xml.slice(0, bodyStartIdx + 8);
+      const bodyInner = xml.slice(bodyStartIdx + 8, bodyEndIdx);
+      const suffix = xml.slice(bodyEndIdx);
+
+      const sectPrMatch = bodyInner.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/);
+      const sectPr = sectPrMatch ? sectPrMatch[0] : '';
+      const contentOnly = sectPr ? bodyInner.replace(sectPr, '') : bodyInner;
+      const pageBreakPara = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+
+      const mergedPages = targets.map((person, idx) => {
+        let filled = contentOnly;
+        const replacements = {
+          '{{case_number}}': person.case_number || '',
+          '{{name}}': person.name || '',
+          '{{gender}}': person.gender || '',
+          '{{birth_date}}': person.birth_date || '',
+          '{{phone}}': person.phone || person.mobile || '',
+          '{{address}}': person.address || '',
+          '{{id_number}}': person.id_number || '',
+          '{{gov_system_id}}': person.gov_system_id || ''
+        };
+        Object.entries(replacements).forEach(([tag, val]) => {
+          filled = filled.split(tag).join(xmlEscape(val));
+        });
+        return filled + (idx < targets.length - 1 ? pageBreakPara : '');
+      }).join('');
+
+      zip.file('word/document.xml', prefix + mergedPages + sectPr + suffix);
+      const blob = zip.generate({
+        type: 'blob',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `據點長輩健康管理表_批次套印_${targets.length}人.docx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      alert('產生 Word 失敗：' + err.message);
+    }
+  }
+
+  tryAutoLoadTemplate();
+  loadCases();
+</script>
+</body>
+</html>
