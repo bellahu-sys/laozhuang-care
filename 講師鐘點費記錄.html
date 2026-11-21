@@ -249,7 +249,7 @@
         </select>
 
         <label style="font-weight:bold;">講師姓名：</label>
-        <select id="feeInstructorSelect" onchange="onFeeContextChange()"></select>
+        <select id="feeInstructorSelect" onchange="onFeeContextChange(true)"></select>
 
         <div class="picker-dropdown-wrap">
           <button type="button" class="btn btn-outline btn-sm" onclick="togglePickerPanel('feeInstPickerPanel')">勾選本年度講師 ▾</button>
@@ -465,6 +465,9 @@
     localStorage.setItem(getCheckedInstKey(), JSON.stringify(checkedInstructors));
   }
 
+  let multiFeeMap = {}; // { [instructorName]: rows[] }
+  let showAllCheckedInstructorsInFee = false;
+
   function onInstructorCheckChange(name, isChecked) {
     if (isChecked) {
       if (!checkedInstructors.includes(name)) checkedInstructors.push(name);
@@ -477,10 +480,20 @@
     checkedInstructors.sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
     localStorage.setItem(getCheckedInstKey(), JSON.stringify(checkedInstructors));
 
+    // Whenever user checks/unchecks instructors in "勾選本年度講師", show all checked instructors together on the page
+    showAllCheckedInstructorsInFee = checkedInstructors.length > 0;
+    if (isChecked) {
+      currentFeeInstructor = name;
+    }
+
     renderPickerPanels();
     renderFeeInstructorSelect();
     if (activeTab === 'fee') {
-      loadFeeRecordsForInstructor();
+      if (showAllCheckedInstructorsInFee) {
+        loadAllCheckedInstructorsFee();
+      } else {
+        loadFeeRecordsForInstructor();
+      }
     } else if (activeTab === 'taxInstructor') {
       renderTaxInstructorTable();
     }
@@ -564,17 +577,84 @@
     }
   }
 
-  async function onFeeContextChange() {
+  async function onFeeContextChange(fromDropdown = false) {
     currentYear = parseInt(document.getElementById('feeYearSelect').value, 10) || 115;
     loadCheckedInstructorsForYear();
     renderPickerPanels();
     renderFeeInstructorSelect();
     renderFeeCourseSelect();
-    await loadFeeRecordsForInstructor();
+    if (fromDropdown) {
+      const selVal = document.getElementById('feeInstructorSelect').value;
+      if (selVal) currentFeeInstructor = selVal;
+      showAllCheckedInstructorsInFee = false;
+      await loadFeeRecordsForInstructor();
+    } else if (showAllCheckedInstructorsInFee && checkedInstructors.length > 0) {
+      await loadAllCheckedInstructorsFee();
+    } else {
+      await loadFeeRecordsForInstructor();
+    }
+  }
+
+  function getFeeStorageKeyFor(instName) {
+    return `lz_fee_detail_${currentYear}_${instName}`;
   }
 
   function getFeeStorageKey() {
-    return `lz_fee_detail_${currentYear}_${currentFeeInstructor}`;
+    return getFeeStorageKeyFor(currentFeeInstructor);
+  }
+
+  async function fetchSingleInstructorRows(instName) {
+    if (!instName) return [];
+    try {
+      const { data, error } = await supabaseClient
+        .from('instructor_fee_records')
+        .select('*')
+        .eq('roc_year', currentYear)
+        .eq('instructor_name', instName)
+        .eq('entry_type', 'actual')
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data.map(r => ({
+          id: r.id,
+          course_name: r.course_name || '',
+          period_text: r.period_text || '',
+          days: r.days ?? '',
+          hours: r.hours ?? '',
+          rate: r.rate ?? '',
+          amount: Number(r.amount || 0),
+          remark: r.remark || ''
+        }));
+      }
+    } catch (e) {}
+    const raw = localStorage.getItem(getFeeStorageKeyFor(instName));
+    if (raw) {
+      try { return JSON.parse(raw); } catch (e) { return []; }
+    }
+    return [];
+  }
+
+  async function loadAllCheckedInstructorsFee() {
+    document.getElementById('feeSheetTitle').textContent =
+      `${currentYear}年度 ${checkedInstructors.join('、')} 講師鐘點費用`;
+    multiFeeMap = {};
+    for (const name of checkedInstructors) {
+      const rows = await fetchSingleInstructorRows(name);
+      multiFeeMap[name] = rows.length > 0 ? rows : [{
+        id: 'init_' + name + '_' + Date.now(),
+        course_name: document.getElementById('feeCourseSelect')?.value || '關懷課程',
+        period_text: '',
+        days: '',
+        hours: 1,
+        rate: '',
+        amount: 0,
+        remark: ''
+      }];
+    }
+    if (currentFeeInstructor && multiFeeMap[currentFeeInstructor]) {
+      feeRows = multiFeeMap[currentFeeInstructor];
+    }
+    renderFeeTable();
   }
 
   async function loadFeeRecordsForInstructor() {
@@ -587,39 +667,7 @@
       return;
     }
 
-    let loaded = false;
-    try {
-      const { data, error } = await supabaseClient
-        .from('instructor_fee_records')
-        .select('*')
-        .eq('roc_year', currentYear)
-        .eq('instructor_name', currentFeeInstructor)
-        .eq('entry_type', 'actual')
-        .order('sort_order', { ascending: true })
-        .order('id', { ascending: true });
-      if (!error && Array.isArray(data) && data.length > 0) {
-        feeRows = data.map(r => ({
-          id: r.id,
-          course_name: r.course_name || '',
-          period_text: r.period_text || '',
-          days: r.days ?? '',
-          hours: r.hours ?? '',
-          rate: r.rate ?? '',
-          amount: Number(r.amount || 0),
-          remark: r.remark || ''
-        }));
-        loaded = true;
-      }
-    } catch (e) {}
-
-    if (!loaded) {
-      const raw = localStorage.getItem(getFeeStorageKey());
-      if (raw) {
-        try { feeRows = JSON.parse(raw); } catch (e) { feeRows = []; }
-      } else {
-        feeRows = [];
-      }
-    }
+    feeRows = await fetchSingleInstructorRows(currentFeeInstructor);
     renderFeeTable();
   }
 
@@ -633,9 +681,11 @@
   }
 
   function addFeeRowFromToolbar() {
-    if (!currentFeeInstructor) { alert('請先勾選講師'); return; }
+    const targetInst = currentFeeInstructor || checkedInstructors[0] || '';
+    if (!targetInst) { alert('請先勾選講師'); return; }
+    currentFeeInstructor = targetInst;
     const courseName = document.getElementById('feeCourseSelect').value || '關懷課程';
-    feeRows.push({
+    const newRow = {
       id: 'row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
       course_name: courseName,
       period_text: '',
@@ -644,23 +694,80 @@
       rate: '',
       amount: 0,
       remark: ''
-    });
-    renderFeeTable();
-  }
-
-  function onFeeFieldChange(rowId, field, value) {
-    const item = feeRows.find(r => String(r.id) === String(rowId));
-    if (!item) return;
-    item[field] = value;
-    if (['days', 'hours', 'rate'].includes(field)) {
-      const hasNum = String(item.days ?? '').trim() !== '' && String(item.rate ?? '').trim() !== '';
-      item.amount = hasNum ? calcFeeAmount(item.days, item.hours, item.rate) : 0;
+    };
+    if (showAllCheckedInstructorsInFee && multiFeeMap[targetInst]) {
+      multiFeeMap[targetInst].push(newRow);
+    } else {
+      feeRows.push(newRow);
     }
     renderFeeTable();
   }
 
-  function deleteFeeRow(rowId) {
-    feeRows = feeRows.filter(r => String(r.id) !== String(rowId));
+  // Update field smoothly without losing keyboard focus or requiring backspace before typing!
+  function onFeeFieldChange(rowId, field, value, instOwner = null) {
+    let list = feeRows;
+    if (instOwner && multiFeeMap[instOwner]) {
+      list = multiFeeMap[instOwner];
+    } else if (showAllCheckedInstructorsInFee) {
+      for (const k of Object.keys(multiFeeMap)) {
+        const hit = multiFeeMap[k].find(r => String(r.id) === String(rowId));
+        if (hit) { list = multiFeeMap[k]; break; }
+      }
+    }
+    const item = list.find(r => String(r.id) === String(rowId));
+    if (!item) return;
+    item[field] = value;
+
+    const tr = document.querySelector(`tr[data-fee-row-id="${rowId}"]`);
+    if (['days', 'hours', 'rate'].includes(field)) {
+      const hasNum = String(item.days ?? '').trim() !== '' && String(item.rate ?? '').trim() !== '';
+      item.amount = hasNum ? calcFeeAmount(item.days, item.hours, item.rate) : 0;
+      if (tr) {
+        const amtCell = tr.querySelector('.row-amount-cell');
+        if (amtCell) amtCell.textContent = fmtNum(item.amount);
+      }
+      refreshFeeTotalsDom();
+    }
+  }
+
+  function refreshFeeTotalsDom() {
+    if (showAllCheckedInstructorsInFee) {
+      let grandDays = 0;
+      let grandAmt = 0;
+      checkedInstructors.forEach(name => {
+        const rows = multiFeeMap[name] || [];
+        const dSum = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
+        const aSum = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+        grandDays += dSum;
+        grandAmt += aSum;
+        const secTotal = document.getElementById(`inst_subtotal_${name}`);
+        if (secTotal) {
+          secTotal.querySelector('.sub-days-val').textContent = dSum > 0 ? fmtNum(dSum) : '';
+          secTotal.querySelector('.sub-amt-val').textContent = fmtNum(aSum);
+        }
+      });
+      const gRow = document.getElementById('fee_grand_total_row');
+      if (gRow) {
+        gRow.querySelector('.grand-days-val').textContent = grandDays > 0 ? fmtNum(grandDays) : '';
+        gRow.querySelector('.grand-amt-val').textContent = fmtNum(grandAmt);
+      }
+    } else {
+      const totalDays = feeRows.reduce((s, r) => s + (Number(r.days) || 0), 0);
+      const totalAmt = feeRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+      const tRow = document.getElementById('fee_single_total_row');
+      if (tRow) {
+        tRow.querySelector('.single-days-val').textContent = totalDays > 0 ? fmtNum(totalDays) : '';
+        tRow.querySelector('.single-amt-val').textContent = fmtNum(totalAmt);
+      }
+    }
+  }
+
+  function deleteFeeRow(rowId, instOwner = null) {
+    if (instOwner && multiFeeMap[instOwner]) {
+      multiFeeMap[instOwner] = multiFeeMap[instOwner].filter(r => String(r.id) !== String(rowId));
+    } else {
+      feeRows = feeRows.filter(r => String(r.id) !== String(rowId));
+    }
     renderFeeTable();
   }
 
@@ -723,66 +830,148 @@
   }
 
   async function saveFeeRecords() {
-    if (!currentFeeInstructor) { alert('請先選擇講師'); return; }
-    localStorage.setItem(getFeeStorageKey(), JSON.stringify(feeRows));
-    try {
-      await supabaseClient
-        .from('instructor_fee_records')
-        .delete()
-        .eq('roc_year', currentYear)
-        .eq('instructor_name', currentFeeInstructor)
-        .eq('entry_type', 'actual');
+    const targets = showAllCheckedInstructorsInFee && checkedInstructors.length > 0
+      ? checkedInstructors
+      : (currentFeeInstructor ? [currentFeeInstructor] : []);
+    if (targets.length === 0) { alert('請先選擇或勾選講師'); return; }
 
-      if (feeRows.length > 0) {
-        const payload = feeRows.map((r, idx) => ({
-          roc_year: currentYear,
-          instructor_name: currentFeeInstructor,
-          entry_type: 'actual',
-          plan_name: null,
-          course_name: r.course_name || '',
-          period_text: r.period_text || '',
-          days: r.days === '' ? null : Number(r.days),
-          hours: r.hours === '' ? null : Number(r.hours),
-          rate: r.rate === '' ? null : Number(r.rate),
-          amount: Number(r.amount || 0),
-          remark: r.remark || '',
-          sort_order: idx + 1
-        }));
-        const { error } = await supabaseClient.from('instructor_fee_records').insert(payload);
-        if (error) throw error;
+    try {
+      for (const instName of targets) {
+        const rowsToSave = showAllCheckedInstructorsInFee ? (multiFeeMap[instName] || []) : feeRows;
+        localStorage.setItem(getFeeStorageKeyFor(instName), JSON.stringify(rowsToSave));
+        await supabaseClient
+          .from('instructor_fee_records')
+          .delete()
+          .eq('roc_year', currentYear)
+          .eq('instructor_name', instName)
+          .eq('entry_type', 'actual');
+
+        if (rowsToSave.length > 0) {
+          const payload = rowsToSave.map((r, idx) => ({
+            roc_year: currentYear,
+            instructor_name: instName,
+            entry_type: 'actual',
+            plan_name: null,
+            course_name: r.course_name || '',
+            period_text: r.period_text || '',
+            days: r.days === '' ? null : Number(r.days),
+            hours: r.hours === '' ? null : Number(r.hours),
+            rate: r.rate === '' ? null : Number(r.rate),
+            amount: Number(r.amount || 0),
+            remark: r.remark || '',
+            sort_order: idx + 1
+          }));
+          const { error } = await supabaseClient.from('instructor_fee_records').insert(payload);
+          if (error) throw error;
+        }
       }
-      setStatus(`已儲存 ${currentYear} 年 ${currentFeeInstructor} 鐘點費`);
+      setStatus(`已儲存 ${currentYear} 年 ${targets.join('、')} 鐘點費`);
     } catch (e) {
       setStatus('已儲存至本機');
     }
   }
 
+  function buildCourseDropdownCell(rowId, currentVal, instOwner = null) {
+    const ownerArg = instOwner ? `'${escapeAttr(instOwner)}'` : 'null';
+    const opts = feeCourseOptions.map(c =>
+      `<option value="${escapeAttr(c)}" ${currentVal === c ? 'selected' : ''}>${escapeHtml(c)}</option>`
+    ).join('');
+    const hasCustom = currentVal && !feeCourseOptions.includes(currentVal);
+    const customOpt = hasCustom ? `<option value="${escapeAttr(currentVal)}" selected>${escapeHtml(currentVal)}</option>` : '';
+    return `
+      <div style="display:flex; gap:3px; align-items:center;">
+        <select onchange="onFeeFieldChange('${rowId}', 'course_name', this.value, ${ownerArg}); this.nextElementSibling.value = this.value;" style="flex:1; min-width:0;">
+          <option value="">— 選擇課程 —</option>
+          ${customOpt}
+          ${opts}
+        </select>
+        <input type="text" value="${escapeAttr(currentVal)}" placeholder="或直接輸入" oninput="onFeeFieldChange('${rowId}', 'course_name', this.value, ${ownerArg})" style="width:92px;">
+      </div>
+    `;
+  }
+
+  function buildFeeRowHtml(r, instOwner = null) {
+    const ownerArg = instOwner ? `'${escapeAttr(instOwner)}'` : 'null';
+    return `
+      <tr data-fee-row-id="${r.id}">
+        <td>${buildCourseDropdownCell(r.id, r.course_name, instOwner)}</td>
+        <td><input type="text" value="${escapeAttr(r.period_text)}" oninput="onFeeFieldChange('${r.id}', 'period_text', this.value, ${ownerArg})" placeholder="如：1/5-4/13"></td>
+        <td><input type="text" inputmode="decimal" class="num-input" value="${r.days ?? ''}" oninput="onFeeFieldChange('${r.id}', 'days', this.value, ${ownerArg})" placeholder="輸入天數"></td>
+        <td><input type="text" inputmode="decimal" class="num-input" value="${r.hours ?? ''}" oninput="onFeeFieldChange('${r.id}', 'hours', this.value, ${ownerArg})" placeholder="時數"></td>
+        <td><input type="text" inputmode="decimal" class="num-input" value="${r.rate ?? ''}" oninput="onFeeFieldChange('${r.id}', 'rate', this.value, ${ownerArg})" placeholder="每小時費用"></td>
+        <td class="num-col row-amount-cell" style="font-weight:bold;">${fmtNum(r.amount)}</td>
+        <td><input type="text" value="${escapeAttr(r.remark)}" oninput="onFeeFieldChange('${r.id}', 'remark', this.value, ${ownerArg})"></td>
+        <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteFeeRow('${r.id}', ${ownerArg})">刪除</button></td>
+      </tr>
+    `;
+  }
+
   function renderFeeTable() {
     const tbody = document.getElementById('feeTableBody');
+
+    if (showAllCheckedInstructorsInFee && checkedInstructors.length > 0) {
+      let html = '';
+      let grandDays = 0;
+      let grandAmt = 0;
+
+      checkedInstructors.forEach(instName => {
+        const rows = multiFeeMap[instName] || [];
+        const subDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
+        const subAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+        grandDays += subDays;
+        grandAmt += subAmt;
+
+        html += `
+          <tr>
+            <td colspan="8" style="background:#e2e8f0; font-weight:bold; color:#0f172a; padding:6px 10px;">
+              講師：${escapeHtml(instName)}
+            </td>
+          </tr>
+        `;
+        html += rows.map(r => buildFeeRowHtml(r, instName)).join('');
+        html += `
+          <tr class="total-row" id="inst_subtotal_${escapeAttr(instName)}" style="background:#f1f5f9;">
+            <td class="center-col">${escapeHtml(instName)} 小計</td>
+            <td></td>
+            <td class="num-col sub-days-val">${subDays > 0 ? fmtNum(subDays) : ''}</td>
+            <td></td>
+            <td></td>
+            <td class="num-col sub-amt-val">${fmtNum(subAmt)}</td>
+            <td></td>
+            <td class="no-print"></td>
+          </tr>
+        `;
+      });
+
+      html += `
+        <tr class="total-row" id="fee_grand_total_row">
+          <td class="center-col">總計</td>
+          <td></td>
+          <td class="num-col grand-days-val">${grandDays > 0 ? fmtNum(grandDays) : ''}</td>
+          <td></td>
+          <td></td>
+          <td class="num-col grand-amt-val">${fmtNum(grandAmt)}</td>
+          <td></td>
+          <td class="no-print"></td>
+        </tr>
+      `;
+      tbody.innerHTML = html;
+      return;
+    }
+
     const totalDays = feeRows.reduce((s, r) => s + (Number(r.days) || 0), 0);
     const totalAmt = feeRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
-    let html = feeRows.map(r => `
-      <tr>
-        <td><input type="text" value="${escapeAttr(r.course_name)}" oninput="onFeeFieldChange('${r.id}', 'course_name', this.value)"></td>
-        <td><input type="text" value="${escapeAttr(r.period_text)}" oninput="onFeeFieldChange('${r.id}', 'period_text', this.value)" placeholder="如：1/5-4/13"></td>
-        <td><input type="number" class="num-input" value="${r.days ?? ''}" oninput="onFeeFieldChange('${r.id}', 'days', this.value)"></td>
-        <td><input type="number" class="num-input" value="${r.hours ?? ''}" oninput="onFeeFieldChange('${r.id}', 'hours', this.value)"></td>
-        <td><input type="number" class="num-input" value="${r.rate ?? ''}" oninput="onFeeFieldChange('${r.id}', 'rate', this.value)"></td>
-        <td class="num-col" style="font-weight:bold;">${fmtNum(r.amount)}</td>
-        <td><input type="text" value="${escapeAttr(r.remark)}" oninput="onFeeFieldChange('${r.id}', 'remark', this.value)"></td>
-        <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteFeeRow('${r.id}')">刪除</button></td>
-      </tr>
-    `).join('');
+    let html = feeRows.map(r => buildFeeRowHtml(r, null)).join('');
 
     html += `
-      <tr class="total-row">
+      <tr class="total-row" id="fee_single_total_row">
         <td class="center-col">總計</td>
         <td></td>
-        <td class="num-col">${totalDays > 0 ? fmtNum(totalDays) : ''}</td>
+        <td class="num-col single-days-val">${totalDays > 0 ? fmtNum(totalDays) : ''}</td>
         <td></td>
         <td></td>
-        <td class="num-col">${fmtNum(totalAmt)}</td>
+        <td class="num-col single-amt-val">${fmtNum(totalAmt)}</td>
         <td></td>
         <td class="no-print"></td>
       </tr>
