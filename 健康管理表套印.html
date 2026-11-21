@@ -359,10 +359,28 @@
   function replaceTemplateTag(xmlStr, tagName, value) {
     const escaped = xmlEscape(value);
     const flexiblePattern = new RegExp(
-      '\{\{(?:<[^>]+>|\s)*' + tagName + '(?:<[^>]+>|\s)*\}\}',
-      'g'
+      '(?:\{\{|｛｛)(?:<[^>]+>|[\s\u00A0\u3000])*' + tagName + '(?:<[^>]+>|[\s\u00A0\u3000])*(?:\}\}|｝｝)',
+      'gi'
     );
     return xmlStr.replace(flexiblePattern, escaped);
+  }
+
+  function applyReplacementsToXml(xmlStr, person) {
+    let out = xmlStr;
+    const replacements = {
+      case_number: person.case_number || '',
+      name: person.name || '',
+      gender: person.gender || '',
+      birth_date: person.birth_date || '',
+      phone: person.phone || person.mobile || '',
+      address: person.address || '',
+      id_number: person.id_number || '',
+      gov_system_id: person.gov_system_id || ''
+    };
+    Object.entries(replacements).forEach(([tagName, val]) => {
+      out = replaceTemplateTag(out, tagName, val);
+    });
+    return out;
   }
 
   function generateWord() {
@@ -390,7 +408,7 @@
         return;
       }
 
-      let xml = docXmlFile.asText();
+      const xml = docXmlFile.asText();
       const bodyStartMatch = xml.match(/<w:body[^>]*>/);
       const bodyEndIdx = xml.lastIndexOf('</w:body>');
       if (!bodyStartMatch || bodyEndIdx === -1) {
@@ -409,24 +427,27 @@
       const pageBreakPara = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
 
       const mergedPages = targets.map((person, idx) => {
-        let filled = contentOnly;
-        const replacements = {
-          case_number: person.case_number || '',
-          name: person.name || '',
-          gender: person.gender || '',
-          birth_date: person.birth_date || '',
-          phone: person.phone || person.mobile || '',
-          address: person.address || '',
-          id_number: person.id_number || '',
-          gov_system_id: person.gov_system_id || ''
-        };
-        Object.entries(replacements).forEach(([tagName, val]) => {
-          filled = replaceTemplateTag(filled, tagName, val);
-        });
+        const filled = applyReplacementsToXml(contentOnly, person);
         return filled + (idx < targets.length - 1 ? pageBreakPara : '');
       }).join('');
 
+      // Check if {{ name }} was actually replaced at least once
+      const rawNameMatches = contentOnly.match(/(?:\{\{|｛｛)(?:<[^>]+>|[\s 　])*name(?:<[^>]+>|[\s 　})*(?:\}\}|｝｝)/gi);
+      if (!rawNameMatches || rawNameMatches.length === 0) {
+        const plainTextPreview = contentOnly.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
+        alert('提醒：在範本內文未找到 {{ name }} 標記！請確認 Word 範本是否已填入 {{ name }}。
+目前範本文字片段：' + plainTextPreview);
+      }
+
       zip.file('word/document.xml', prefix + mergedPages + sectPr + suffix);
+
+      Object.keys(zip.files).forEach(fileName => {
+        if (/^word\/(header|footer)\d*\.xml$/i.test(fileName)) {
+          const partXml = zip.file(fileName).asText();
+          zip.file(fileName, applyReplacementsToXml(partXml, targets[0]));
+        }
+      });
+
       const blob = zip.generate({
         type: 'blob',
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
