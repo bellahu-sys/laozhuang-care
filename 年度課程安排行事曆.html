@@ -260,27 +260,33 @@
     }
 
     /* 右側：置頂的「各計畫日期總覽與核銷複製盒（可依計畫展開收合）」 */
+    .panel {
+      min-width: 0;
+    }
     .summary-top-box {
       background: #f0fdfa; border: 1.5px solid #5eead4; border-radius: 8px;
-      padding: 10px 14px; margin-bottom: 14px;
+      padding: 10px 14px; margin-bottom: 14px; max-width: 100%; overflow: hidden;
     }
     .summary-top-header {
       display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 8px;
+      flex-wrap: wrap; gap: 8px; width: 100%;
+    }
+    .summary-top-controls {
+      display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-left: auto;
     }
     .summary-top-title {
       font-weight: bold; font-size: 0.98rem; color: #115e59;
     }
     .plan-accordion-list {
-      margin-top: 6px; display: flex; flex-direction: row; flex-wrap: nowrap;
-      overflow-x: auto; gap: 6px; align-items: flex-start; padding-bottom: 2px;
+      margin-top: 8px; display: flex; flex-direction: row; flex-wrap: wrap;
+      gap: 8px; align-items: flex-start; width: 100%;
     }
     .plan-accordion-card {
       background: #fff; border: 1px solid #cbd5e1; border-radius: 7px; overflow: hidden;
-      flex: 0 0 auto; width: auto;
+      flex: 0 0 auto; max-width: 100%;
     }
     .plan-accordion-card.is-open {
-      flex: 1 1 auto; min-width: 320px; max-width: 100%;
+      flex: 1 1 340px; min-width: 280px; max-width: 100%;
     }
     .plan-accordion-header {
       display: flex; justify-content: space-between; align-items: center;
@@ -423,12 +429,23 @@
     }
     .calendar-grid td:hover .add-day-btn { color: var(--primary); border-color: #cbd5e1; }
 
-    /* 單堂課程卡片 */
+    /* 單堂課程卡片（支援直接拖曳複製到其他日期） */
     .course-chip {
       border-radius: 6px; padding: 5px 7px; margin-bottom: 5px;
-      font-size: 0.82rem; line-height: 1.32; position: relative;
+      font-size: 0.82rem; line-height: 1.34; position: relative;
       border-left: 4px solid #16a34a; background: #f0fdf4;
-      cursor: pointer;
+      cursor: grab; user-select: none; transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .course-chip:active { cursor: grabbing; }
+    .course-chip:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+    .chip-copy-btn {
+      float: right; font-size: 0.68rem; padding: 0 4px; border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.18); background: rgba(255,255,255,0.85);
+      color: #334155; cursor: pointer; margin-left: 3px;
+    }
+    .chip-copy-btn:hover { background: #2c5e4f; color: #fff; border-color: #2c5e4f; }
+    .chip-topic {
+      font-weight: bold; color: #1e293b; margin-top: 2px;
     }
     .course-chip.type-多元 { border-left-color: #2563eb; background: #eff6ff; }
     .course-chip.type-伯公 { border-left-color: #d97706; background: #fffbeb; }
@@ -558,9 +575,14 @@
         <select id="planTypeInput"></select>
       </div>
       <div>
-        <label>課程名稱前綴</label>
-        <input type="text" id="coursePrefixInput" value="" placeholder="如：多元1、插花">
+        <label>課程分類（核銷合併）</label>
+        <input type="text" id="coursePrefixInput" value="" placeholder="如：老幼同樂、多元1">
       </div>
+    </div>
+
+    <div class="form-group">
+      <label>課程主題（選填，顯示於第二行）</label>
+      <input type="text" id="courseTopicInput" value="" placeholder="如：客家文化互動">
     </div>
 
     <div class="form-row-2 form-group">
@@ -677,8 +699,8 @@
     <!-- 直接放在月曆最上方的「各計畫排定日期總覽＆一鍵複製盒（依計畫展開收合）」 -->
     <div class="summary-top-box">
       <div class="summary-top-header">
-        <div class="summary-top-title">各計畫課程排定日期總覽（核銷專用一鍵複製・點擊計畫展開）</div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <div class="summary-top-title">各計畫課程排定日期總覽</div>
+        <div class="summary-top-controls">
           <select id="summaryPlanFilter" style="width:auto; padding:4px 8px; font-size:0.84rem;" onchange="renderScheduleSummary()">
             <option value="ALL">全部計畫</option>
           </select>
@@ -712,8 +734,8 @@
     <!-- 關懷固定課預設與清除重排工具列 -->
     <div class="batch-bar">
       <button type="button" class="btn btn-outline" onclick="openCareWeekdayModal()">設定關懷課表</button>
-      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForMonth()">複製本月課程</button>
-      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForYear()">複製全年課程</button>
+      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForMonth()">填滿本月課程</button>
+      <button type="button" class="btn btn-outline" onclick="fillDefaultCareForYear()">填滿全年課程</button>
       <div style="margin-left:auto; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
         <input type="text" id="clearPrefixInput" placeholder="原名稱如：插花" style="width:115px; padding:6px 8px;">
         <input type="text" id="renameNewPrefixInput" placeholder="新名稱如：藝術插花" style="width:125px; padding:6px 8px;">
@@ -754,9 +776,13 @@
         <select id="modalPlanType" onchange="onModalPlanTypeChange()"></select>
       </div>
       <div>
-        <label id="modalNameLabel">課程名稱（將顯示於簽到表）</label>
-        <input type="text" id="modalCourseName" placeholder="如：多元1-1 或 關懷核銷">
+        <label id="modalNameLabel">課程分類（核銷合併計算）</label>
+        <input type="text" id="modalCourseName" placeholder="如：老幼同樂 或 多元1-1">
       </div>
+    </div>
+    <div class="form-group" id="modalTopicGroup">
+      <label>課程主題（選填）</label>
+      <input type="text" id="modalCourseTopic" placeholder="如：客家文化互動">
     </div>
     <div id="modalColorGroup" class="form-group" style="display:none;">
       <label>提醒標籤色彩</label>
@@ -834,6 +860,26 @@
   let reminderBlocks = [];
   let activeDraggedBlock = null;
   let activeDraggedReminder = null;
+  let activeDraggedCalendarCourse = null;
+
+  function parseCourseNameParts(rawName) {
+    const str = String(rawName || '').trim();
+    if (!str) return { category: '', topic: '' };
+    const sepIdx = str.indexOf('｜');
+    if (sepIdx !== -1) {
+      return {
+        category: str.slice(0, sepIdx).trim(),
+        topic: str.slice(sepIdx + 1).trim()
+      };
+    }
+    return { category: str, topic: '' };
+  }
+
+  function formatFullCourseName(category, topic) {
+    const cat = String(category || '').trim();
+    const top = String(topic || '').trim();
+    return top ? `${cat}｜${top}` : cat;
+  }
   let lastSummaryGroups = [];
   let planOpenState = {};
 
@@ -1074,25 +1120,28 @@
   function createDragBlock(mode) {
     const planType = document.getElementById('planTypeInput').value;
     const prefix = document.getElementById('coursePrefixInput').value.trim();
+    const topic = document.getElementById('courseTopicInput').value.trim();
     const startNum = parseInt(document.getElementById('startNumInput').value, 10) || 1;
     const count = parseInt(document.getElementById('totalCountInput').value, 10) || 1;
     const reimburseTime = document.getElementById('reimburseTimeInput').value.trim() || '09:00-11:00';
     const actualTime = document.getElementById('actualTimeInput').value.trim();
     const instructor = document.getElementById('instructorInput').value.trim();
 
-    if (!prefix) { alert('請輸入課程名稱前綴（例如：多元1 或 插花）！'); return; }
+    if (!prefix) { alert('請輸入課程分類（例如：老幼同樂、多元1）！'); return; }
 
     if (mode === 'single') {
       for (let i = count - 1; i >= 0; i--) {
         const seq = startNum + i;
+        const catLabel = count > 1 ? `${prefix}-${seq}` : prefix;
         dragBlocks.unshift({
           id: 'blk_' + Date.now() + '_' + seq + '_' + Math.random().toString(36).slice(2, 6),
           mode: 'single',
           planType,
           prefix,
+          topic,
           startNum: seq,
           count: 1,
-          singleName: `${prefix}-${seq}`,
+          singleName: formatFullCourseName(catLabel, topic),
           reimburseTime,
           actualTime,
           instructor
@@ -1104,6 +1153,7 @@
         mode: 'series',
         planType,
         prefix,
+        topic,
         startNum,
         count,
         reimburseTime,
@@ -1123,14 +1173,16 @@
     const singles = [];
     for (let i = 0; i < b.count; i++) {
       const seq = b.startNum + i;
+      const catLabel = b.count > 1 ? `${b.prefix}-${seq}` : b.prefix;
       singles.push({
         id: 'blk_' + Date.now() + '_' + seq + '_' + Math.random().toString(36).slice(2, 6),
         mode: 'single',
         planType: b.planType,
         prefix: b.prefix,
+        topic: b.topic || '',
         startNum: seq,
         count: 1,
-        singleName: `${b.prefix}-${seq}`,
+        singleName: formatFullCourseName(catLabel, b.topic || ''),
         reimburseTime: b.reimburseTime,
         actualTime: b.actualTime,
         instructor: b.instructor
@@ -1177,11 +1229,12 @@
 
     pool.innerHTML = visibleBlocks.map(b => {
       const isSingle = b.mode === 'single';
-      const cName = isSingle ? (b.singleName || `${b.prefix}-${b.startNum}`) : '';
+      const cName = isSingle ? (b.singleName || formatFullCourseName(`${b.prefix}-${b.startNum}`, b.topic)) : '';
       const endNum = b.startNum + b.count - 1;
+      const topicSuffix = b.topic ? `｜${b.topic}` : '';
       const titleText = isSingle
         ? `[${b.planType}] ${cName}`
-        : `[${b.planType}] ${b.prefix}-${b.startNum} ~ ${b.prefix}-${endNum}（共 ${b.count} 堂）`;
+        : `[${b.planType}] ${b.prefix}-${b.startNum} ~ ${b.prefix}-${endNum}${topicSuffix}（共 ${b.count} 堂）`;
 
       return `
         <div class="drag-token plan-${b.planType} ${isSingle ? 'is-single' : ''}"
@@ -1240,6 +1293,7 @@
 
   function onPresetDragStart(ev, presetId) {
     activeDraggedBlock = null;
+    activeDraggedCalendarCourse = null;
     const p = reminderPresets.find(item => item.id === presetId);
     activeDraggedReminder = p ? { title: p.title, note: p.note || '', color: p.color || '#e11d48' } : null;
     ev.dataTransfer.effectAllowed = 'copy';
@@ -1460,6 +1514,7 @@
 
   function onReminderDragStart(ev, remId) {
     activeDraggedBlock = null;
+    activeDraggedCalendarCourse = null;
     activeDraggedReminder = reminderBlocks.find(r => r.id === remId) || null;
     ev.dataTransfer.effectAllowed = 'copy';
     ev.dataTransfer.setData('text/plain', remId);
@@ -1467,9 +1522,58 @@
 
   function onBlockDragStart(ev, blockId) {
     activeDraggedReminder = null;
+    activeDraggedCalendarCourse = null;
     activeDraggedBlock = dragBlocks.find(b => b.id === blockId) || null;
     ev.dataTransfer.effectAllowed = 'copy';
     ev.dataTransfer.setData('text/plain', blockId);
+  }
+
+  function onCalendarCourseDragStart(ev, courseId) {
+    ev.stopPropagation();
+    activeDraggedBlock = null;
+    activeDraggedReminder = null;
+    const found = yearCourses.find(c => c.id === courseId);
+    activeDraggedCalendarCourse = found ? { ...found } : null;
+    ev.dataTransfer.effectAllowed = 'copy';
+    ev.dataTransfer.setData('text/plain', 'cal_course_' + courseId);
+  }
+
+  function duplicateCourseToNextWeek(ev, courseId) {
+    ev.stopPropagation();
+    const c = yearCourses.find(item => item.id === courseId);
+    if (!c) return;
+    const parts = c.course_date.split('-').map(Number);
+    const nextDt = new Date(parts[0], parts[1] - 1, parts[2] + 7);
+    const nextIso = `${nextDt.getFullYear()}-${pad2(nextDt.getMonth() + 1)}-${pad2(nextDt.getDate())}`;
+    if (!confirm(`要將此堂「${c.course_name.replace('｜', ' - ')}」複製到下週（${nextIso}）嗎？\n（提示：您也可以直接按住課程卡片拖曳到任意日期複製！）`)) return;
+    copySingleCourseToDate(c, nextIso);
+  }
+
+  async function copySingleCourseToDate(srcCourse, targetIsoDate) {
+    const replaceCare = document.getElementById('replaceCareCheckbox')?.checked;
+    setStatus(`正在複製課程至 ${targetIsoDate}...`);
+    if (replaceCare && srcCourse.plan_type && srcCourse.plan_type !== '關懷' && srcCourse.plan_type !== '提醒') {
+      await supabaseClient
+        .from('course_schedules')
+        .delete()
+        .eq('course_date', targetIsoDate)
+        .eq('plan_type', '關懷');
+    }
+    const { error } = await supabaseClient.from('course_schedules').insert([{
+      course_date: targetIsoDate,
+      plan_type: srcCourse.plan_type,
+      course_name: srcCourse.course_name,
+      time_slot: srcCourse.time_slot || null,
+      actual_time_slot: srcCourse.actual_time_slot || null,
+      instructor_name: srcCourse.instructor_name || null
+    }]);
+    if (error) {
+      alert('複製課程失敗：' + error.message);
+      setStatus('寫入失敗', true);
+      return;
+    }
+    await loadYearCourses();
+    setStatus(`已將「${srcCourse.course_name.replace('｜', ' ')}」複製到 ${targetIsoDate}！`);
   }
 
   async function onYearChange() {
@@ -1605,12 +1709,20 @@
               </div>
             `;
           }
+          const nameParts = parseCourseNameParts(c.course_name);
           return `
-            <div class="course-chip type-${pType}" style="border-left-color:${escapeHtml(getPlanColor(pType))}; background:${hexToRgbaBg(getPlanColor(pType), 0.1)};" onclick="openEditModal(${c.id}); event.stopPropagation();">
-              <div><span class="chip-plan-badge">${pType}</span><span class="chip-title">${escapeHtml(c.course_name)}</span></div>
-              ${c.time_slot ? `<div class="chip-reimburse-time">核銷：${escapeHtml(c.time_slot)}</div>` : ''}
+            <div class="course-chip type-${pType}"
+                 draggable="true"
+                 ondragstart="onCalendarCourseDragStart(event, ${c.id})"
+                 style="border-left-color:${escapeHtml(getPlanColor(pType))}; background:${hexToRgbaBg(getPlanColor(pType), 0.1)};"
+                 onclick="openEditModal(${c.id}); event.stopPropagation();"
+                 title="點擊編輯，或直接按住拖曳到其他日期格子複製">
+              <button type="button" class="chip-copy-btn no-print" onclick="duplicateCourseToNextWeek(event, ${c.id})" title="複製到下週同日（或直接按住卡片拖曳到目標日期）">複製</button>
+              <div><span class="chip-plan-badge">${escapeHtml(pType)}</span><span class="chip-title">${escapeHtml(nameParts.category)}</span></div>
+              ${nameParts.topic ? `<div class="chip-topic">${escapeHtml(nameParts.topic)}</div>` : ''}
+              ${c.time_slot ? `<div class="chip-reimburse-time">${escapeHtml(c.time_slot)}</div>` : ''}
               ${c.actual_time_slot ? `<div class="chip-actual-time">實際：${escapeHtml(c.actual_time_slot)}</div>` : ''}
-              ${c.instructor_name ? `<div class="chip-instructor">講師：${escapeHtml(c.instructor_name)}</div>` : ''}
+              ${c.instructor_name ? `<div class="chip-instructor">${escapeHtml(c.instructor_name)}</div>` : ''}
             </div>
           `;
         }).join('');
@@ -1683,6 +1795,13 @@
       return;
     }
 
+    if (activeDraggedCalendarCourse) {
+      const src = activeDraggedCalendarCourse;
+      activeDraggedCalendarCourse = null;
+      await copySingleCourseToDate(src, startIsoDate);
+      return;
+    }
+
     if (!activeDraggedBlock) return;
 
     const blk = activeDraggedBlock;
@@ -1720,9 +1839,13 @@
 
     const insertRows = scheduledDates.map((dIso, idx) => {
       const seq = blk.startNum + idx;
-      const cName = (blk.mode === 'single')
-        ? (blk.singleName || `${blk.prefix}-${blk.startNum}`)
-        : (blk.count > 1 ? `${blk.prefix}-${seq}` : `${blk.prefix}-${blk.startNum}`);
+      let cName = '';
+      if (blk.mode === 'single') {
+        cName = blk.singleName || formatFullCourseName(`${blk.prefix}-${blk.startNum}`, blk.topic || '');
+      } else {
+        const baseCat = blk.count > 1 ? `${blk.prefix}-${seq}` : blk.prefix;
+        cName = formatFullCourseName(baseCat, blk.topic || '');
+      }
       return {
         course_date: dIso,
         plan_type: blk.planType,
@@ -1754,7 +1877,8 @@
   // 置頂：各計畫課程排定日期總覽與核銷複製功能（依計畫分類展開／收合）
   // =========================================================================
   function getSeriesBaseName(rawName) {
-    return String(rawName || '').replace(/-\d+$/, '').trim();
+    const parts = parseCourseNameParts(rawName);
+    return String(parts.category || '').replace(/-\d+$/, '').trim();
   }
 
   function togglePlanCard(planName) {
@@ -1819,7 +1943,7 @@
     const groupMap = new Map();
     filtered.forEach(c => {
       const plan = c.plan_type || '關懷';
-      const displayTitle = mergeSeries ? getSeriesBaseName(c.course_name) : c.course_name;
+      const displayTitle = mergeSeries ? getSeriesBaseName(c.course_name) : String(c.course_name || '').replace('｜', ' - ');
       const key = `${plan}__${displayTitle}`;
       if (!groupMap.has(key)) {
         groupMap.set(key, {
@@ -1995,7 +2119,8 @@
   // =========================================================================
   function onModalPlanTypeChange() {
     const isReminder = document.getElementById('modalPlanType').value === '提醒';
-    document.getElementById('modalNameLabel').textContent = isReminder ? '提醒標題' : '課程名稱（將顯示於簽到表）';
+    document.getElementById('modalNameLabel').textContent = isReminder ? '提醒標題' : '課程分類（核銷合併計算）';
+    document.getElementById('modalTopicGroup').style.display = isReminder ? 'none' : 'block';
     document.getElementById('modalColorGroup').style.display = isReminder ? 'block' : 'none';
     document.getElementById('modalTimeLabel').textContent = isReminder ? '提醒備註說明（選填）' : '核銷時間（主視覺）';
     document.getElementById('modalActualGroup').style.display = isReminder ? 'none' : 'block';
@@ -2013,6 +2138,7 @@
     document.getElementById('modalDateIso').value = isoDate;
     document.getElementById('modalPlanType').value = '關懷';
     document.getElementById('modalCourseName').value = '';
+    document.getElementById('modalCourseTopic').value = '';
     document.getElementById('modalReimburseTime').value = '09:00-11:00';
     document.getElementById('modalActualTime').value = '';
     document.getElementById('modalReminderColor').value = '#e11d48';
@@ -2026,11 +2152,13 @@
     const c = yearCourses.find(item => item.id === courseId);
     if (!c) return;
     const isReminder = (c.plan_type === '提醒');
+    const parts = parseCourseNameParts(c.course_name || '');
     document.getElementById('modalTitle').textContent = isReminder ? `編輯提醒事項（${c.course_date}）` : `編輯課程（${c.course_date}）`;
     document.getElementById('modalCourseId').value = c.id;
     document.getElementById('modalDateIso').value = c.course_date;
     document.getElementById('modalPlanType').value = c.plan_type || '關懷';
-    document.getElementById('modalCourseName').value = c.course_name || '';
+    document.getElementById('modalCourseName').value = isReminder ? (c.course_name || '') : parts.category;
+    document.getElementById('modalCourseTopic').value = isReminder ? '' : parts.topic;
     document.getElementById('modalReimburseTime').value = isReminder ? (c.time_slot || '') : (c.time_slot || '09:00-11:00');
     document.getElementById('modalActualTime').value = isReminder ? '' : (c.actual_time_slot || '');
     document.getElementById('modalReminderColor').value = (isReminder && c.actual_time_slot && c.actual_time_slot.startsWith('#')) ? c.actual_time_slot : '#e11d48';
@@ -2050,14 +2178,16 @@
     const courseDate = document.getElementById('modalDateIso').value;
     const planType = document.getElementById('modalPlanType').value;
     const isReminder = (planType === '提醒');
-    const courseName = document.getElementById('modalCourseName').value.trim();
+    const rawCategory = document.getElementById('modalCourseName').value.trim();
+    const rawTopic = document.getElementById('modalCourseTopic').value.trim();
+    const courseName = isReminder ? rawCategory : formatFullCourseName(rawCategory, rawTopic);
     const timeSlot = document.getElementById('modalReimburseTime').value.trim();
     const actualTimeSlot = isReminder
       ? (document.getElementById('modalReminderColor').value || '#e11d48')
       : document.getElementById('modalActualTime').value.trim();
     const instructorName = isReminder ? '' : document.getElementById('modalInstructor').value.trim();
 
-    if (!courseName) { alert(isReminder ? '請輸入提醒標題！' : '請輸入課程名稱！'); return; }
+    if (!rawCategory) { alert(isReminder ? '請輸入提醒標題！' : '請輸入課程分類！'); return; }
 
     const payload = {
       course_date: courseDate,
@@ -2236,27 +2366,30 @@
       if (c.plan_type === '提醒') return false;
       const d = String(c.course_date || '');
       if (d < `${adYear}-01-01` || d > `${adYear}-12-31`) return false;
-      const name = String(c.course_name || '');
-      return name === oldPrefix || name.startsWith(oldPrefix + '-');
+      const parts = parseCourseNameParts(c.course_name || '');
+      const cat = parts.category;
+      return cat === oldPrefix || cat.startsWith(oldPrefix + '-');
     });
 
     if (targets.length === 0) {
-      alert(`查無 ${currentRocYear} 年度名稱為「${oldPrefix}」或「${oldPrefix}-編號」的課程！`);
+      alert(`查無 ${currentRocYear} 年度分類為「${oldPrefix}」或「${oldPrefix}-編號」的課程！`);
       return;
     }
 
-    if (!confirm(`確定要將 ${currentRocYear} 年度共 ${targets.length} 堂「${oldPrefix}」課程改為「${newPrefix}」（保留後方堂數編號）嗎？`)) return;
+    if (!confirm(`確定要將 ${currentRocYear} 年度共 ${targets.length} 堂「${oldPrefix}」課程分類改為「${newPrefix}」（保留後方堂數編號與主題）嗎？`)) return;
 
-    setStatus('正在批次修改課程名稱...');
+    setStatus('正在批次修改課程分類...');
     for (const item of targets) {
-      const oldName = String(item.course_name || '');
-      let updatedName = newPrefix;
-      if (oldName.startsWith(oldPrefix + '-')) {
-        updatedName = newPrefix + oldName.slice(oldPrefix.length);
+      const parts = parseCourseNameParts(item.course_name || '');
+      const oldCat = parts.category;
+      let updatedCat = newPrefix;
+      if (oldCat.startsWith(oldPrefix + '-')) {
+        updatedCat = newPrefix + oldCat.slice(oldPrefix.length);
       } else {
-        const suffixMatch = oldName.match(/(-\d+)$/);
-        if (suffixMatch) updatedName = newPrefix + suffixMatch[1];
+        const suffixMatch = oldCat.match(/(-\d+)$/);
+        if (suffixMatch) updatedCat = newPrefix + suffixMatch[1];
       }
+      const updatedName = formatFullCourseName(updatedCat, parts.topic);
       const { error } = await supabaseClient
         .from('course_schedules')
         .update({ course_name: updatedName })
