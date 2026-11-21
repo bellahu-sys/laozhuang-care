@@ -356,6 +356,15 @@
       .replace(/'/g, '&apos;');
   }
 
+  function replaceTemplateTag(xmlStr, tagName, value) {
+    const escaped = xmlEscape(value);
+    const flexiblePattern = new RegExp(
+      '\{\{(?:<[^>]+>|\s)*' + tagName + '(?:<[^>]+>|\s)*\}\}',
+      'g'
+    );
+    return xmlStr.replace(flexiblePattern, escaped);
+  }
+
   function generateWord() {
     if (!cachedTemplateBuffer) {
       alert('請先在步驟 1 選取或確認「健康管理表_套印範本.docx」！');
@@ -382,15 +391,16 @@
       }
 
       let xml = docXmlFile.asText();
-      const bodyStartIdx = xml.indexOf('<w:body>');
+      const bodyStartMatch = xml.match(/<w:body[^>]*>/);
       const bodyEndIdx = xml.lastIndexOf('</w:body>');
-      if (bodyStartIdx === -1 || bodyEndIdx === -1) {
+      if (!bodyStartMatch || bodyEndIdx === -1) {
         alert('無法解析 Word 文件主體內容');
         return;
       }
 
-      const prefix = xml.slice(0, bodyStartIdx + 8);
-      const bodyInner = xml.slice(bodyStartIdx + 8, bodyEndIdx);
+      const bodyStartIdx = bodyStartMatch.index + bodyStartMatch[0].length;
+      const prefix = xml.slice(0, bodyStartIdx);
+      const bodyInner = xml.slice(bodyStartIdx, bodyEndIdx);
       const suffix = xml.slice(bodyEndIdx);
 
       const sectPrMatch = bodyInner.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/);
@@ -401,17 +411,17 @@
       const mergedPages = targets.map((person, idx) => {
         let filled = contentOnly;
         const replacements = {
-          '{{case_number}}': person.case_number || '',
-          '{{name}}': person.name || '',
-          '{{gender}}': person.gender || '',
-          '{{birth_date}}': person.birth_date || '',
-          '{{phone}}': person.phone || person.mobile || '',
-          '{{address}}': person.address || '',
-          '{{id_number}}': person.id_number || '',
-          '{{gov_system_id}}': person.gov_system_id || ''
+          case_number: person.case_number || '',
+          name: person.name || '',
+          gender: person.gender || '',
+          birth_date: person.birth_date || '',
+          phone: person.phone || person.mobile || '',
+          address: person.address || '',
+          id_number: person.id_number || '',
+          gov_system_id: person.gov_system_id || ''
         };
-        Object.entries(replacements).forEach(([tag, val]) => {
-          filled = filled.split(tag).join(xmlEscape(val));
+        Object.entries(replacements).forEach(([tagName, val]) => {
+          filled = replaceTemplateTag(filled, tagName, val);
         });
         return filled + (idx < targets.length - 1 ? pageBreakPara : '');
       }).join('');
