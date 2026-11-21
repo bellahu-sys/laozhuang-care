@@ -170,6 +170,8 @@
         <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
         <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
         <a href="長照與延緩核銷統計.html">長照與延緩核銷統計（補助經費收支明細表）</a>
+        <div class="dropdown-divider">食材費收據管理</div>
+        <a href="食材費收據管理.html">關懷與長照食材費收據匯入／統計</a>
         <div class="dropdown-divider">其他計畫核銷</div>
         <a href="多元核銷記錄.html">多元核銷</a>
         <a href="伯公核銷記錄.html">伯公核銷</a>
@@ -307,6 +309,7 @@
     <div class="reimburse-tabs" role="tablist">
       <button type="button" class="reimburse-tab-btn active" onclick="switchReimburseTab('care', this)">關懷核銷</button>
       <button type="button" class="reimburse-tab-btn" onclick="switchReimburseTab('ltc_delay', this)">長照與延緩核銷</button>
+      <button type="button" class="reimburse-tab-btn" onclick="switchReimburseTab('food', this)">食材費</button>
       <button type="button" class="reimburse-tab-btn" onclick="switchReimburseTab('multi', this)">多元核銷</button>
       <button type="button" class="reimburse-tab-btn" onclick="switchReimburseTab('bogong', this)">伯公核銷</button>
     </div>
@@ -358,7 +361,20 @@
       </div>
     </div>
 
-    <!-- 3. 多元核銷 -->
+    <!-- 3. 食材費（關懷核銷食材費 / 長照核銷食材費） -->
+    <div id="tab-food" class="reimburse-panel">
+      <div class="card-grid">
+        <a href="食材費收據管理.html" class="module-card highlight-fee">
+          <div>
+            <div class="module-name">關懷與長照食材費收據匯入／統計</div>
+            <div class="module-desc">匯入 Gemini 技能生成的每月關懷與長照食材費收據（TSV / 表格），自動分張計算小計與總計，並分別檢視「關懷核銷食材費」與「長照核銷食材費」。</div>
+          </div>
+          <span class="module-badge fee-badge">食材費收據匯入 ＋ 分類統計</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 4. 多元核銷 -->
     <div id="tab-multi" class="reimburse-panel">
       <div class="card-grid">
         <a href="多元核銷記錄.html" class="module-card highlight-fee">
@@ -371,7 +387,7 @@
       </div>
     </div>
 
-    <!-- 4. 伯公核銷 -->
+    <!-- 5. 伯公核銷 -->
     <div id="tab-bogong" class="reimburse-panel">
       <div class="card-grid">
         <a href="伯公核銷記錄.html" class="module-card highlight-fee">
