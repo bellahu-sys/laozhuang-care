@@ -281,24 +281,7 @@
         </div>
       </div>
 
-      <div class="sheet-title-banner" id="feeSheetTitle">115年度 講師鐘點費用</div>
-      <div style="overflow-x:auto;">
-        <table class="excel-table">
-          <thead>
-            <tr>
-              <th style="width:17%;">課程名稱</th>
-              <th style="width:20%;">課程期間</th>
-              <th style="width:9%;">天數</th>
-              <th style="width:9%;">時數</th>
-              <th style="width:12%;">費用 / 1H</th>
-              <th style="width:13%;">合計</th>
-              <th style="width:13%;">備註</th>
-              <th class="no-print" style="width:7%;">操作</th>
-            </tr>
-          </thead>
-          <tbody id="feeTableBody"></tbody>
-        </table>
-      </div>
+      <div id="feeTablesContainer"></div>
     </div>
 
     <!-- 2. 個人所得稅計算-講師 -->
@@ -323,7 +306,7 @@
         <button type="button" class="btn btn-primary btn-sm" onclick="saveTaxInstructorData()">儲存</button>
       </div>
 
-      <div class="chip-list no-print" id="taxCourseChipList" style="margin-bottom:12px;"></div>
+      <div class="chip-list no-print" id="taxCourseChipList" style="display:none;"></div>
 
       <div class="sheet-title-banner" id="taxInstTitle">115年度講師鐘點費統計</div>
       <div style="overflow-x:auto;">
@@ -371,7 +354,7 @@
   let feeCourseOptions = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
 
   // 2. 個人所得稅-講師：課程清單與矩陣 rows: [{ id, course_name, values: { [name]: numberOrText } }]
-  let taxCourseOptions = ['關懷1-3月', '關懷4-6月', '關懷7-9月', '關懷10-12月', '延緩1期', '延緩2期', '多元', '伯公', '上課次數'];
+  let taxCourseOptions = ['關懷1-3月', '關懷4-6月', '關懷7-9月', '關懷10-12月', '延緩1期', '延緩2期', '多元', '伯公'];
   let taxMatrixRows = [];
 
   // 3. 個人所得稅_臨時人員：從 temp_staff_hours 讀取
@@ -466,7 +449,7 @@
   }
 
   let multiFeeMap = {}; // { [instructorName]: rows[] }
-  let showAllCheckedInstructorsInFee = false;
+  let showAllCheckedInstructorsInFee = true;
 
   function onInstructorCheckChange(name, isChecked) {
     if (isChecked) {
@@ -635,13 +618,11 @@
   }
 
   async function loadAllCheckedInstructorsFee() {
-    document.getElementById('feeSheetTitle').textContent =
-      `${currentYear}年度 ${checkedInstructors.join('、')} 講師鐘點費用`;
     multiFeeMap = {};
     for (const name of checkedInstructors) {
       const rows = await fetchSingleInstructorRows(name);
       multiFeeMap[name] = rows.length > 0 ? rows : [{
-        id: 'init_' + name + '_' + Date.now(),
+        id: 'init_' + name + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
         course_name: document.getElementById('feeCourseSelect')?.value || '關懷課程',
         period_text: '',
         days: '',
@@ -658,9 +639,6 @@
   }
 
   async function loadFeeRecordsForInstructor() {
-    document.getElementById('feeSheetTitle').textContent =
-      `${currentYear}年度 ${currentFeeInstructor || ''} 講師鐘點費用`;
-
     if (!currentFeeInstructor) {
       feeRows = [];
       renderFeeTable();
@@ -930,77 +908,131 @@
     `;
   }
 
+  function buildFeeTableHeaderHtml() {
+    return `
+      <thead>
+        <tr>
+          <th style="width:17%;">課程名稱</th>
+          <th style="width:20%;">課程期間</th>
+          <th style="width:9%;">天數</th>
+          <th style="width:9%;">時數</th>
+          <th style="width:12%;">費用 / 1H</th>
+          <th style="width:13%;">合計</th>
+          <th style="width:13%;">備註</th>
+          <th class="no-print" style="width:7%;">操作</th>
+        </tr>
+      </thead>
+    `;
+  }
+
+  function addFeeRowForInstructor(instName) {
+    currentFeeInstructor = instName;
+    const sel = document.getElementById('feeInstructorSelect');
+    if (sel && [...sel.options].some(o => o.value === instName)) sel.value = instName;
+    const courseName = document.getElementById('feeCourseSelect').value || '關懷課程';
+    const newRow = {
+      id: 'row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      course_name: courseName,
+      period_text: '',
+      days: '',
+      hours: 1,
+      rate: '',
+      amount: 0,
+      remark: ''
+    };
+    if (!multiFeeMap[instName]) multiFeeMap[instName] = [];
+    multiFeeMap[instName].push(newRow);
+    renderFeeTable();
+  }
+
   function renderFeeTable() {
-    const tbody = document.getElementById('feeTableBody');
+    const container = document.getElementById('feeTablesContainer');
+    if (!container) return;
 
     if (showAllCheckedInstructorsInFee && checkedInstructors.length > 0) {
-      let html = '';
       let grandDays = 0;
       let grandAmt = 0;
 
-      checkedInstructors.forEach(instName => {
+      const blocksHtml = checkedInstructors.map(instName => {
         const rows = multiFeeMap[instName] || [];
         const subDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
         const subAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
         grandDays += subDays;
         grandAmt += subAmt;
 
-        html += `
-          <tr>
-            <td colspan="8" style="background:#e2e8f0; font-weight:bold; color:#0f172a; padding:6px 10px;">
-              講師：${escapeHtml(instName)}
-            </td>
-          </tr>
+        return `
+          <div style="margin-bottom:22px;">
+            <div class="sheet-title-banner" style="display:flex; justify-content:center; align-items:center; gap:10px; position:relative;">
+              <span>${currentYear}年度 ${escapeHtml(instName)} 講師鐘點費用</span>
+              <button type="button" class="btn btn-blue btn-sm no-print" onclick="addFeeRowForInstructor('${escapeAttr(instName)}')" style="font-size:0.78rem;">＋ 加入一列</button>
+            </div>
+            <div style="overflow-x:auto;">
+              <table class="excel-table">
+                ${buildFeeTableHeaderHtml()}
+                <tbody>
+                  ${rows.map(r => buildFeeRowHtml(r, instName)).join('')}
+                  <tr class="total-row" id="inst_subtotal_${escapeAttr(instName)}">
+                    <td class="center-col">總計</td>
+                    <td></td>
+                    <td class="num-col sub-days-val">${subDays > 0 ? fmtNum(subDays) : ''}</td>
+                    <td></td>
+                    <td></td>
+                    <td class="num-col sub-amt-val">${fmtNum(subAmt)}</td>
+                    <td></td>
+                    <td class="no-print"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         `;
-        html += rows.map(r => buildFeeRowHtml(r, instName)).join('');
-        html += `
-          <tr class="total-row" id="inst_subtotal_${escapeAttr(instName)}" style="background:#f1f5f9;">
-            <td class="center-col">${escapeHtml(instName)} 小計</td>
-            <td></td>
-            <td class="num-col sub-days-val">${subDays > 0 ? fmtNum(subDays) : ''}</td>
-            <td></td>
-            <td></td>
-            <td class="num-col sub-amt-val">${fmtNum(subAmt)}</td>
-            <td></td>
-            <td class="no-print"></td>
-          </tr>
-        `;
-      });
+      }).join('');
 
-      html += `
-        <tr class="total-row" id="fee_grand_total_row">
-          <td class="center-col">總計</td>
-          <td></td>
-          <td class="num-col grand-days-val">${grandDays > 0 ? fmtNum(grandDays) : ''}</td>
-          <td></td>
-          <td></td>
-          <td class="num-col grand-amt-val">${fmtNum(grandAmt)}</td>
-          <td></td>
-          <td class="no-print"></td>
-        </tr>
-      `;
-      tbody.innerHTML = html;
+      const grandSummaryHtml = checkedInstructors.length > 1 ? `
+        <div style="overflow-x:auto; margin-top:8px;">
+          <table class="excel-table">
+            <tbody>
+              <tr class="total-row" id="fee_grand_total_row" style="background:#cbd5e1;">
+                <td class="center-col" style="width:37%;">全部勾選講師合計（${checkedInstructors.length} 位）</td>
+                <td class="num-col grand-days-val" style="width:9%;">${grandDays > 0 ? fmtNum(grandDays) : ''}</td>
+                <td style="width:21%;"></td>
+                <td class="num-col grand-amt-val" style="width:13%;">${fmtNum(grandAmt)}</td>
+                <td style="width:13%;"></td>
+                <td class="no-print" style="width:7%;"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ` : '';
+
+      container.innerHTML = blocksHtml + grandSummaryHtml;
       return;
     }
 
     const totalDays = feeRows.reduce((s, r) => s + (Number(r.days) || 0), 0);
     const totalAmt = feeRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
-    let html = feeRows.map(r => buildFeeRowHtml(r, null)).join('');
-
-    html += `
-      <tr class="total-row" id="fee_single_total_row">
-        <td class="center-col">總計</td>
-        <td></td>
-        <td class="num-col single-days-val">${totalDays > 0 ? fmtNum(totalDays) : ''}</td>
-        <td></td>
-        <td></td>
-        <td class="num-col single-amt-val">${fmtNum(totalAmt)}</td>
-        <td></td>
-        <td class="no-print"></td>
-      </tr>
+    container.innerHTML = `
+      <div class="sheet-title-banner">${currentYear}年度 ${escapeHtml(currentFeeInstructor || '')} 講師鐘點費用</div>
+      <div style="overflow-x:auto;">
+        <table class="excel-table">
+          ${buildFeeTableHeaderHtml()}
+          <tbody>
+            ${feeRows.map(r => buildFeeRowHtml(r, null)).join('')}
+            <tr class="total-row" id="fee_single_total_row">
+              <td class="center-col">總計</td>
+              <td></td>
+              <td class="num-col single-days-val">${totalDays > 0 ? fmtNum(totalDays) : ''}</td>
+              <td></td>
+              <td></td>
+              <td class="num-col single-amt-val">${fmtNum(totalAmt)}</td>
+              <td></td>
+              <td class="no-print"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     `;
-    tbody.innerHTML = html;
   }
 
   // 2. 個人所得稅計算-講師
@@ -1121,8 +1153,9 @@
     const colSums = {};
     cols.forEach(n => { colSums[n] = 0; });
 
+    const filteredTaxCourseOptions = taxCourseOptions.filter(c => c !== '上課次數');
     const rowsHtml = taxMatrixRows.map(row => {
-      const courseOptsHtml = taxCourseOptions.map(c =>
+      const courseOptsHtml = filteredTaxCourseOptions.map(c =>
         `<option value="${escapeAttr(c)}" ${row.course_name === c ? 'selected' : ''}>${escapeHtml(c)}</option>`
       ).join('');
 
