@@ -216,11 +216,17 @@
       }
 
       allCases = casesRes.data || [];
+      const validIdSet = new Set(allCases.map(c => String(c.id)));
+      Array.from(selectedIds).forEach(id => {
+        if (!validIdSet.has(String(id))) selectedIds.delete(id);
+      });
+
       latestStatusMap = {};
       if (!statusRes.error && Array.isArray(statusRes.data)) {
         statusRes.data.forEach(row => {
-          if (!latestStatusMap[row.case_id]) {
-            latestStatusMap[row.case_id] = row.status;
+          const cid = String(row.case_id);
+          if (!latestStatusMap[cid]) {
+            latestStatusMap[cid] = row.status;
           }
         });
       }
@@ -244,7 +250,7 @@
     const activeOnly = document.getElementById('activeOnlyCheck').checked;
 
     filteredCases = allCases.filter(c => {
-      const st = latestStatusMap[c.id] || '服務中';
+      const st = latestStatusMap[String(c.id)] || '服務中';
       const matchActive = !activeOnly || st === '服務中';
       const matchKw = !kw ||
         (c.case_number && String(c.case_number).toLowerCase().includes(kw)) ||
@@ -266,13 +272,14 @@
     }
 
     tbody.innerHTML = filteredCases.map(c => {
-      const st = latestStatusMap[c.id] || '服務中';
-      const checked = selectedIds.has(c.id) ? 'checked' : '';
+      const idStr = String(c.id);
+      const st = latestStatusMap[idStr] || '服務中';
+      const checked = selectedIds.has(idStr) ? 'checked' : '';
       const pillClass = st === '服務中' ? 'st-ok' : 'st-stop';
       return `
         <tr>
           <td class="check-col">
-            <input type="checkbox" class="row-check" value="${escapeHtml(c.id)}" ${checked} onchange="toggleRow('${escapeHtml(c.id)}', this.checked)">
+            <input type="checkbox" class="row-check" value="${escapeHtml(idStr)}" ${checked} onchange="toggleRow('${escapeHtml(idStr)}', this.checked)">
           </td>
           <td>${escapeHtml(c.case_number || '')}</td>
           <td><span class="st-pill ${pillClass}">${escapeHtml(st)}</span></td>
@@ -289,10 +296,11 @@
   }
 
   function toggleRow(id, isChecked) {
+    const key = String(id);
     if (isChecked) {
-      selectedIds.add(id);
+      selectedIds.add(key);
     } else {
-      selectedIds.delete(id);
+      selectedIds.delete(key);
     }
     syncMasterCheck();
     updateSelectedCount();
@@ -300,10 +308,11 @@
 
   function toggleAll(isChecked) {
     filteredCases.forEach(c => {
+      const key = String(c.id);
       if (isChecked) {
-        selectedIds.add(c.id);
+        selectedIds.add(key);
       } else {
-        selectedIds.delete(c.id);
+        selectedIds.delete(key);
       }
     });
     document.querySelectorAll('.row-check').forEach(cb => {
@@ -319,11 +328,23 @@
       master.checked = false;
       return;
     }
-    master.checked = filteredCases.every(c => selectedIds.has(c.id));
+    master.checked = filteredCases.every(c => selectedIds.has(String(c.id)));
+  }
+
+  function getValidSelectedCases() {
+    if (!Array.isArray(allCases) || !allCases.length) return [];
+    const caseMap = new Map(allCases.map(c => [String(c.id), c]));
+    const result = [];
+    selectedIds.forEach(id => {
+      const found = caseMap.get(String(id));
+      if (found) result.push(found);
+    });
+    return result;
   }
 
   function updateSelectedCount() {
-    document.getElementById('selectedCount').textContent = selectedIds.size;
+    const validCases = getValidSelectedCases();
+    document.getElementById('selectedCount').textContent = validCases.length;
   }
 
   function xmlEscape(str) {
@@ -340,7 +361,10 @@
       alert('請先在步驟 1 選取或確認「健康管理表_套印範本.docx」！');
       return;
     }
-    if (selectedIds.size === 0) {
+
+    const targets = getValidSelectedCases();
+    document.getElementById('selectedCount').textContent = targets.length;
+    if (targets.length === 0) {
       alert('請先在步驟 2 勾選至少一位長輩！');
       return;
     }
@@ -349,7 +373,6 @@
       return;
     }
 
-    const targets = allCases.filter(c => selectedIds.has(c.id));
     try {
       const zip = new window.PizZip(cachedTemplateBuffer);
       const docXmlFile = zip.file('word/document.xml');
@@ -399,10 +422,11 @@
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       });
 
+      const count = targets.length;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `據點長輩健康管理表_批次套印_${targets.length}人.docx`;
+      a.download = `據點長輩健康管理表_批次套印_${count}人.docx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
