@@ -48,7 +48,7 @@
     button { padding: 9px 18px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.95rem; }
     .btn-primary { background: var(--primary); color: white; }
     .btn-primary:hover { background: #1e4237; }
-    .btn-secondary {{ background: #64748b; color: white; }}
+    .btn-secondary { background: #64748b; color: white; }
     .btn-generate { background: #0284c7; color: white; font-size: 1.05rem; padding: 12px 24px; display: block; width: 100%; max-width: 380px; margin: 20px auto 0 auto; }
     .btn-generate:hover { background: #0369a1; }
     .table-box { max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
@@ -189,7 +189,7 @@
 
     const [casesRes, statusRes] = await Promise.all([
       supabaseClient.from('cases').select('*').order('case_number', { ascending: true }),
-      supabaseClient.from('case_service_status').select('*').order('effective_date', { ascending: false }}).order('id', { ascending: false })
+      supabaseClient.from('case_service_status').select('*').order('effective_date', { ascending: false }).order('id', { ascending: false })
     ]);
 
     if (casesRes.error) {
@@ -220,157 +220,3 @@
       const matchKw = !kw ||
         (c.case_number && String(c.case_number).toLowerCase().includes(kw)) ||
         (c.name && c.name.toLowerCase().includes(kw));
-      return matchActive && matchKw;
-    });
-    renderTable();
-  }
-
-  function renderTable() {
-    const tbody = document.getElementById('caseList');
-    if (filteredCases.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">無符合條件的個案資料</td></tr>';
-      return;
-    }
-    tbody.innerHTML = filteredCases.map(c => {
-      const checked = selectedIds.has(c.id) ? 'checked' : '';
-      const st = latestStatusMap[c.id] || '服務中';
-      const pill = st === '服務中'
-        ? `<span class="st-pill st-ok">🟢 ${st}</span>`
-        : `<span class="st-pill st-stop">⚫ ${st}</span>`;
-      return `
-        <tr>
-          <td class="check-col"><input type="checkbox" ${checked} onchange="toggleOne(${c.id}, this.checked)"></td>
-          <td><strong>${c.case_number || ''}</strong></td>
-          <td>${pill}</td>
-          <td><strong>${c.name || ''}</strong></td>
-          <td>${c.gender || ''}</td>
-          <td>${c.birth_date || ''}</td>
-          <td>${c.address || ''}}</td>
-        </tr>
-      `;
-    }).join('');
-    updateCount();
-  }
-
-  function toggleOne(id, isChecked) {
-    if (isChecked) selectedIds.add(id);
-    else selectedIds.delete(id);
-    updateCount();
-  }
-
-  function toggleAll(checked) {
-    filteredCases.forEach(c => {
-      if (checked) selectedIds.add(c.id);
-      else selectedIds.delete(c.id);
-    });
-    document.getElementById('masterCheck').checked = checked;
-    renderTable();
-  }
-
-  function updateCount() {
-    document.getElementById('selectedCount').textContent = selectedIds.size;
-  }
-
-  function escapeXml(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
-  }
-
-  function processWordAndDownload(arrayBuffer, targetCases) {
-    try {
-      const zip = new PizZip(arrayBuffer);
-      let originalXml = zip.file("word/document.xml").asText();
-
-      const bodyStartMatch = originalXml.match(/<w:body[^>]*>/);
-      const bodyEndIndex = originalXml.lastIndexOf('</w:body>');
-      const bodyStartIndex = bodyStartMatch.index + bodyStartMatch[0].length;
-      const xmlHeader = originalXml.substring(0, bodyStartIndex);
-      const xmlFooter = originalXml.substring(bodyEndIndex);
-      let bodyContent = originalXml.substring(bodyStartIndex, bodyEndIndex);
-
-      let sectPr = '';
-      const sectPrMatch = bodyContent.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/);
-      if (sectPrMatch) {
-        sectPr = sectPrMatch[0];
-        bodyContent = bodyContent.replace(sectPr, '');
-      }
-
-      const pageBreakXml = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
-
-      const mergedPages = targetCases.map(c => {
-        const cNum = escapeXml(c.case_number || '');
-        const cName = escapeXml(c.name || '');
-        const cGender = escapeXml(c.gender || '');
-        const cBirth = escapeXml(c.birth_date || '');
-        const cAddr = escapeXml(c.address || '');
-
-        let pageXml = bodyContent;
-        pageXml = pageXml.replace(/\{\{([^}]*?)\}\}|\{\{([^}]*?)\}/g, (match) => {
-          const cleanText = match.replace(/<[^>]+>/g, '');
-          if (cleanText.includes('case_number')) return cNum;
-          if (cleanText.includes('name')) return cName;
-          if (cleanText.includes('gender')) return cGender;
-          if (cleanText.includes('birth_date')) return cBirth;
-          if (cleanText.includes('address')) return cAddr;
-          return match;
-        });
-        return pageXml;
-      });
-
-      const finalXml = xmlHeader + mergedPages.join(pageBreakXml) + sectPr + xmlFooter;
-      zip.file("word/document.xml", finalXml);
-
-      const out = zip.generate({
-        type: "blob",
-        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      });
-
-      const url = URL.createObjectURL(out);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `批次列印_據點長輩健康管理表(${targetCases.length}人).docx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      alert('❌ Word 套印發生錯誤：' + err.message);
-    }
-  }
-
-  function generateWord() {
-    if (typeof PizZip === 'undefined') {
-      alert('❌ 網頁套印元件尚未載入完成，請確認網路連線並按 F5 重新整理！');
-      return;
-    }
-
-    const targetCases = allCases.filter(c => selectedIds.has(c.id));
-    if (targetCases.length === 0) {
-      alert('請至少勾選一位要列印的長輩！');
-      return;
-    }
-
-    const fileInput = document.getElementById('templateFile');
-    if (fileInput.files.length > 0) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        processWordAndDownload(event.target.result, targetCases);
-      };
-      reader.readAsArrayBuffer(fileInput.files[0]);
-    } else if (cachedTemplateBuffer) {
-      processWordAndDownload(cachedTemplateBuffer, targetCases);
-    } else {
-      alert('請先在步驟 1 選擇「健康管理表_套印範本.docx」範本檔案！');
-    }
-  }
-
-  tryAutoLoadTemplate();
-  loadCases();
-</script>
-</body>
-</html>
