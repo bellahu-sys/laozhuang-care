@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>聯絡電話總表（行政類） - 老庄社區照顧關懷據點</title>
+  <title>聯絡電話</title>
   <script src="config.js"></script>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root { --primary: #2c5e4f; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
+    :root { --primary: #2c5e4f; --primary-dark: #1e4237; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
     * { box-sizing: border-box; font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; }
     body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
     nav.topbar {
@@ -27,7 +26,7 @@
     }
     .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
     .dropdown-content {
-      display: none; position: absolute; top: 100%; left: 0; min-width: 215px;
+      display: none; position: absolute; top: 100%; left: 0; min-width: 230px;
       background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
       border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
     }
@@ -39,63 +38,114 @@
     .dropdown-content a:last-child { border-bottom: none; }
     .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
-    .container { max-width: 1150px; margin: 0 auto 30px auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--primary); padding-bottom: 12px; margin-bottom: 18px; }
+
+    .container { max-width: 1180px; margin: 0 auto 36px auto; background: #fff; padding: 24px; border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--primary); padding-bottom: 12px; margin-bottom: 16px; }
     .header-bar h1 { color: var(--primary); font-size: 1.4rem; margin: 0; }
     .count-badge { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
-    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid var(--border); align-items: center; }
-    .filter-bar input[type="text"], .filter-bar select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 5px; font-size: 0.95rem; background: white; }
-    .filter-bar input[type="text"] { flex: 1 1 260px; }
-    button { padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.93rem; }
-    .btn-export { background: #15803d; color: white; margin-left: auto; }
-    .role-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.82rem; font-weight: bold; }
-    .r-case { background: #e0f2fe; color: #0369a1; }
-    .r-inst { background: #fef3c7; color: #92400e; }
-    .r-temp { background: #f3e8ff; color: #6b21a8; }
+
+    .mode-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .mode-tab {
+      padding: 8px 16px; border-radius: 7px; border: 1.5px solid var(--border);
+      background: #f8fafc; color: #334155; font-weight: bold; cursor: pointer; font-size: 0.95rem;
+    }
+    .mode-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border); align-items: center; }
+    .filter-bar input[type="text"], .filter-bar select { padding: 7px 11px; border: 1px solid var(--border); border-radius: 5px; font-size: 0.93rem; background: white; }
+    .filter-bar input[type="text"] { flex: 1 1 240px; }
+
+    button { padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: #2563eb; color: white; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid var(--border); }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 4px 9px; font-size: 0.8rem; }
+
+    .cat-tag { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+    .cat-gov { background: #dbeafe; color: #1e40af; }
+    .cat-oth { background: #fef3c7; color: #92400e; }
+
     .table-wrapper { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; min-width: 820px; }
-    th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; font-size: 0.95rem; }
+    th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; font-size: 0.92rem; vertical-align: top; }
     th { background: #e2e8f0; white-space: nowrap; }
     tr:hover { background: #f8fafc; }
     a.tel-link { color: #0284c7; font-weight: bold; text-decoration: none; }
     a.tel-link:hover { text-decoration: underline; }
+    .pre-wrap-text { white-space: pre-line; font-size: 0.86rem; color: #334155; }
+
+    /* 聯絡電話翻閱本樣式 */
+    .book-nav-bar {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+    }
+    .book-card {
+      border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; background: #fff;
+    }
+    .book-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+    }
+    @media (max-width: 768px) {
+      .book-grid { grid-template-columns: 1fr; }
+    }
+    .book-field-label { font-size: 0.82rem; font-weight: bold; color: #475569; margin-bottom: 4px; }
+    .book-field-val {
+      padding: 8px 11px; border: 1px solid #e2e8f0; border-radius: 6px;
+      background: #f8fafc; min-height: 38px; font-size: 0.95rem; white-space: pre-line;
+    }
+    .book-full { grid-column: 1 / -1; }
+
+    /* 新增聯絡電話表單區與彈窗 */
+    .add-form-box {
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px;
+    }
+    .form-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    @media (max-width: 768px) { .form-grid-2 { grid-template-columns: 1fr; } }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 0.86rem; font-weight: bold; color: #334155; margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 0.92rem; background: #fff;
+    }
+    .form-group textarea { min-height: 76px; resize: vertical; }
   </style>
 </head>
 <body>
 
 <nav class="topbar">
-  <a href="index.html" class="brand">🏠 老庄社區照顧關懷據點｜雲端系統</a>
+  <a href="index.html" class="brand">老庄社區照顧關懷據點｜雲端系統</a>
   <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
     <div class="nav-item">
-      <a href="index.html" class="nav-btn">🏠 系統首頁</a>
-    </div>
-
-    <div class="nav-item">
-      <button type="button" class="nav-btn">👥 人事資料 ▾</button>
+      <button type="button" class="nav-btn">人事資料 ▾</button>
       <div class="dropdown-content">
         <div class="dropdown-divider">長輩個案管理</div>
-        <a href="個案翻閱本.html">📖 個案資料翻閱本</a>
-        <a href="個案資料表.html">📋 新增個案基本資料</a>
-        <a href="個案清單.html">🔍 個案名冊查詢與服務狀況</a>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
         <div class="dropdown-divider">工作人員與師資</div>
-        <a href="講師資料.html">🎓 講師資料管理</a>
-        <a href="臨時人員資料.html">🧑‍💼 臨時人員資料管理</a>
-        <a href="#" onclick="alert('志工資料表預留擴充中，歡迎隨時提供 Excel 欄位建立！'); return false;">🤝 志工資料管理（預留）</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
       </div>
     </div>
-
     <div class="nav-item">
-      <button type="button" class="nav-btn">🗂️ 行政類 ▾</button>
+      <button type="button" class="nav-btn active">行政類 ▾</button>
       <div class="dropdown-content">
-        <a href="聯絡電話.html">☎️ 聯絡電話總表（全站通訊錄）</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
       </div>
     </div>
-
     <div class="nav-item">
-      <button type="button" class="nav-btn">🖨️ 報表套印 ▾</button>
+      <button type="button" class="nav-btn">報表套印 ▾</button>
       <div class="dropdown-content">
-        <a href="個案基本資料表套印.html">📄 個案基本資料表套印</a>
-        <a href="健康管理表套印.html">🩺 長輩健康管理表套印</a>
+        <a href="月報表套印中心.html">每月核銷 5 份簽到/出勤表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
       </div>
     </div>
   </div>
@@ -103,175 +153,359 @@
 
 <div class="container">
   <div class="header-bar">
-    <h1>☎️ 聯絡電話總表（全站通訊錄）</h1>
-    <span class="count-badge" id="totalCount">共 0 筆聯絡資訊</span>
+    <h1>聯絡電話</h1>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span id="statusText" style="font-size:0.86rem; font-weight:bold; color:#166534;"></span>
+      <span class="count-badge" id="totalCount">共 0 筆</span>
+    </div>
   </div>
 
-  <div class="filter-bar">
-    <input type="text" id="searchInput" placeholder="輸入姓名、電話號碼、緊急聯絡人或住址一秒搜尋..." onkeyup="applyFilters()">
-    <select id="roleFilter" onchange="applyFilters()">
-      <option value="">全部身分別（個案／講師／臨時人員）</option>
-      <option value="個案">👴 長輩個案</option>
-      <option value="講師">🎓 課程講師</option>
-      <option value="臨時人員">🧑‍💼 臨時人員</option>
-    </select>
-    <label style="font-size:0.9rem; display:inline-flex; align-items:center; gap:5px; cursor:pointer;">
-      <input type="checkbox" id="hasPhoneOnly" onchange="applyFilters()"> 只顯示有登記電話者
-    </label>
-    <button type="button" class="btn-export" onclick="exportCsv()">📥 匯出通訊錄 Excel</button>
+  <div class="mode-tabs">
+    <button type="button" class="mode-tab active" id="tabList" onclick="switchView('list')">聯絡電話總表</button>
+    <button type="button" class="mode-tab" id="tabBook" onclick="switchView('book')">聯絡電話翻閱本</button>
+    <button type="button" class="mode-tab" id="tabAdd" onclick="switchView('add')">新增聯絡電話</button>
   </div>
 
-  <div class="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:95px;">類別</th>
-          <th style="width:85px;">編號</th>
-          <th style="width:110px;">姓名</th>
-          <th>主要電話／手機</th>
-          <th>緊急聯絡人／備註電話</th>
-          <th>居住地址</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody">
-        <tr><td colspan="6" style="text-align:center; padding:25px;">正在彙整雲端通訊錄...</td></tr>
-      </tbody>
-    </table>
+  <!-- 1. 聯絡電話總表 -->
+  <div id="viewList">
+    <div class="filter-bar">
+      <input type="text" id="searchInput" placeholder="搜尋單位、聯絡人、說明、電話、手機、地址或備註..." oninput="applyFilters()">
+      <select id="categoryFilter" onchange="applyFilters()">
+        <option value="">全部類別</option>
+        <option value="政府各計畫承辦">政府各計畫承辦</option>
+        <option value="非政府機關／其它電話">非政府機關／其它電話</option>
+      </select>
+      <button type="button" class="btn btn-blue" onclick="switchView('add')">＋ 新增聯絡電話</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:140px;">類別</th>
+            <th style="width:155px;">單位</th>
+            <th style="width:125px;">聯絡人</th>
+            <th style="width:155px;">電話／手機</th>
+            <th style="width:180px;">說明</th>
+            <th>地址／備註</th>
+            <th style="width:70px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="7" style="text-align:center; padding:24px;">正在載入聯絡電話資料...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. 聯絡電話翻閱本 -->
+  <div id="viewBook" style="display:none;">
+    <div class="book-nav-bar">
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="goBookPage(0)">第一筆</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="goBookPage(bookIndex - 1)">上一筆</button>
+        <select id="bookJumpSelect" onchange="goBookPage(parseInt(this.value, 10))" style="padding:5px 8px; border:1px solid var(--border); border-radius:5px;"></select>
+        <button type="button" class="btn btn-outline btn-sm" onclick="goBookPage(bookIndex + 1)">下一筆</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="goBookPage(filteredContacts.length - 1)">最後一筆</button>
+      </div>
+      <div id="bookCounterText" style="font-weight:bold; color:var(--primary);">第 0 / 0 筆</div>
+    </div>
+
+    <div class="book-card" id="bookCardBody"></div>
+  </div>
+
+  <!-- 3. 新增聯絡電話 -->
+  <div id="viewAdd" style="display:none;">
+    <div class="add-form-box">
+      <h3 style="margin:0 0 14px 0; color:var(--primary); border-bottom:1px solid var(--border); padding-bottom:6px;">新增聯絡電話</h3>
+      <form id="addContactForm" onsubmit="submitNewContact(event)">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>類別</label>
+            <select id="addCategory" required>
+              <option value="政府各計畫承辦">政府各計畫承辦</option>
+              <option value="非政府機關／其它電話">非政府機關／其它電話</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>單位</label>
+            <input type="text" id="addUnit" placeholder="如：社會處、長照處、瓦斯行">
+          </div>
+          <div class="form-group">
+            <label>聯絡人</label>
+            <input type="text" id="addContactName" placeholder="如：溫沛晴、陳瑩軒">
+          </div>
+          <div class="form-group">
+            <label>說明</label>
+            <input type="text" id="addDescription" placeholder="如：關懷核銷、長照延緩核銷、叫瓦斯">
+          </div>
+          <div class="form-group">
+            <label>電話（室內電話／分機）</label>
+            <input type="text" id="addPhone" placeholder="如：037-558290 或 04-25892525">
+          </div>
+          <div class="form-group">
+            <label>手機</label>
+            <input type="text" id="addMobile" placeholder="如：0912-345678">
+          </div>
+          <div class="form-group">
+            <label>傳真號碼</label>
+            <input type="text" id="addFax" placeholder="選填">
+          </div>
+          <div class="form-group">
+            <label>電子信箱</label>
+            <input type="text" id="addEmail" placeholder="選填">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>地址</label>
+          <input type="text" id="addAddress" placeholder="選填">
+        </div>
+        <div class="form-group">
+          <label>備註</label>
+          <textarea id="addRemark" placeholder="選填，如送件方式、公文寄送地址或注意事項"></textarea>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button type="button" class="btn btn-outline" onclick="switchView('list')">返回總表</button>
+          <button type="submit" class="btn btn-primary">儲存聯絡電話</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 
 <script>
-  if (sessionStorage.getItem('care_auth') !== 'true') {
-    const input = prompt('🔒 請輸入老庄據點系統通行密碼：');
-    if (input === STATION_PASSCODE) sessionStorage.setItem('care_auth', 'true');
-    else document.body.innerHTML = '<div style="text-align:center;margin-top:80px;"><h2>⛔ 密碼錯誤</h2></div>';
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const input = prompt('請輸入老庄據點系統通行密碼：');
+    if (input === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<div style="text-align:center;margin-top:80px;"><h2>密碼錯誤</h2></div>';
+    }
   }
 
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   let allContacts = [];
   let filteredContacts = [];
+  let bookIndex = 0;
 
-  async function loadAllContacts() {
-    const tbody = document.getElementById('tableBody');
-    const [casesRes, instRes, tempRes] = await Promise.all([
-      supabaseClient.from('cases').select('case_number, name, phone, mobile, address, neighborhood, house_number, contact_person, contact_relation, contact_phone').order('case_number', { ascending: true }),
-      supabaseClient.from('instructors').select('staff_number, name, mobile, phone, address, hire_type, status').order('staff_number', { ascending: true }),
-      supabaseClient.from('temp_staff').select('staff_number, name, mobile, phone, address, status').order('staff_number', { ascending: true })
-    ]);
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('statusText');
+    el.style.color = isErr ? '#dc2626' : '#166534';
+    el.textContent = msg;
+  }
 
-    allContacts = [];
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
 
-    if (!casesRes.error && Array.isArray(casesRes.data)) {
-      casesRes.data.forEach(c => {
-        const emerg = c.contact_person ? `${c.contact_person}${c.contact_relation ? '（' + c.contact_relation + '）' : ''}：${c.contact_phone || ''}` : (c.contact_phone || '');
-        allContacts.push({
-          role: '個案',
-          num: c.case_number || '',
-          name: c.name || '',
-          primaryPhone: [c.phone, c.mobile].filter(Boolean).join(' / '),
-          secondaryInfo: emerg,
-          address: c.address || ''
-        });
-      });
+  function switchView(mode) {
+    document.getElementById('tabList').classList.toggle('active', mode === 'list');
+    document.getElementById('tabBook').classList.toggle('active', mode === 'book');
+    document.getElementById('tabAdd').classList.toggle('active', mode === 'add');
+
+    document.getElementById('viewList').style.display = (mode === 'list') ? 'block' : 'none';
+    document.getElementById('viewBook').style.display = (mode === 'book') ? 'block' : 'none';
+    document.getElementById('viewAdd').style.display = (mode === 'add') ? 'block' : 'none';
+
+    if (mode === 'book') {
+      renderBookView();
     }
+  }
 
-    if (!instRes.error && Array.isArray(instRes.data)) {
-      instRes.data.forEach(i => {
-        const phones = [i.mobile, i.phone].filter(Boolean).join(' / ');
-        allContacts.push({
-          role: '講師',
-          num: i.staff_number || '',
-          name: i.name || '',
-          primaryPhone: phones,
-          secondaryInfo: `${i.hire_type ? i.hire_type + '講師' : '講師'}（${i.status || ''}）`,
-          address: i.address || ''
-        });
-      });
+  async function loadContacts() {
+    setStatus('正在讀取業務聯絡電話...');
+    const { data, error } = await supabaseClient
+      .from('business_contacts')
+      .select('*')
+      .order('seq_no', { ascending: true })
+      .order('id', { ascending: true });
+
+    if (!error && Array.isArray(data)) {
+      allContacts = data;
+      setStatus(`已同步 ${allContacts.length} 筆聯絡電話`);
+    } else {
+      allContacts = [];
+      setStatus('尚未建立 business_contacts 資料表或讀取中', true);
     }
-
-    if (!tempRes.error && Array.isArray(tempRes.data)) {
-      tempRes.data.forEach(t => {
-        const phones = [t.mobile, t.phone].filter(Boolean).join(' / ');
-        allContacts.push({
-          role: '臨時人員',
-          num: t.staff_number || '',
-          name: t.name || '',
-          primaryPhone: phones,
-          secondaryInfo: `狀態：${t.status || ''}`,
-          address: t.address || ''
-        });
-      });
-    }
-
     applyFilters();
   }
 
   function applyFilters() {
-    const kw = document.getElementById('searchInput').value.trim().toLowerCase();
-    const role = document.getElementById('roleFilter').value;
-    const phoneOnly = document.getElementById('hasPhoneOnly').checked;
+    const kw = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+    const cat = document.getElementById('categoryFilter')?.value || '';
 
     filteredContacts = allContacts.filter(item => {
-      const matchRole = !role || item.role === role;
-      const matchPhone = !phoneOnly || Boolean(item.primaryPhone || item.secondaryInfo);
+      const matchCat = !cat || item.category === cat;
       const matchKw = !kw ||
-        item.name.toLowerCase().includes(kw) ||
-        item.num.toLowerCase().includes(kw) ||
-        item.primaryPhone.toLowerCase().includes(kw) ||
-        item.secondaryInfo.toLowerCase().includes(kw) ||
-        item.address.toLowerCase().includes(kw);
-      return matchRole && matchPhone && matchKw;
+        [item.category, item.unit_name, item.contact_name, item.description, item.phone, item.mobile, item.fax, item.email, item.address, item.remark]
+          .some(v => String(v || '').toLowerCase().includes(kw));
+      return matchCat && matchKw;
     });
+
+    if (bookIndex >= filteredContacts.length) bookIndex = 0;
     renderTable();
+    renderBookJumpOptions();
+    if (document.getElementById('viewBook').style.display !== 'none') {
+      renderBookView();
+    }
   }
 
-  function roleBadge(r) {
-    if (r === '個案') return '<span class="role-tag r-case">👴 個案</span>';
-    if (r === '講師') return '<span class="role-tag r-inst">🎓 講師</span>';
-    return '<span class="role-tag r-temp">🧑‍💼 臨時人員</span>';
-  }
-
-  function formatClickablePhone(ph) {
-    if (!ph) return '<span style="color:#94a3b8;">未登記</span>';
-    return ph.split('/').map(p => {
-      const clean = p.trim();
-      const tel = clean.replace(/[^0-9+]/g, '');
-      return tel ? `<a class="tel-link" href="tel:${tel}">${clean}</a>` : clean;
-    }).join(' / ');
+  function formatPhoneHtml(phone, mobile) {
+    const parts = [phone, mobile].filter(Boolean);
+    if (parts.length === 0) return '<span style="color:#94a3b8;">未登記</span>';
+    return parts.map(p => {
+      const clean = String(p).trim();
+      const tel = clean.replace(/[^0-9+#]/g, '');
+      return tel ? `<a class="tel-link" href="tel:${tel}">${escapeHtml(clean)}</a>` : escapeHtml(clean);
+    }).join('<br>');
   }
 
   function renderTable() {
     const tbody = document.getElementById('tableBody');
-    document.getElementById('totalCount').textContent = `顯示 ${filteredContacts.length} 筆（總計 ${allContacts.length} 筆）`;
+    document.getElementById('totalCount').textContent = `共 ${filteredContacts.length} 筆`;
+
     if (filteredContacts.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:25px; color:#64748b;">查無符合條件的聯絡資料</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:24px; color:#64748b;">查無聯絡電話資料</td></tr>';
       return;
     }
-    tbody.innerHTML = filteredContacts.map(c => `
-      <tr>
-        <td>${roleBadge(c.role)}</td>
-        <td>${c.num}</td>
-        <td><strong>${c.name}</strong></td>
-        <td>${formatClickablePhone(c.primaryPhone)}</td>
-        <td>${c.secondaryInfo}</td>
-        <td>${c.address}</td>
-      </tr>
-    `).join('');
+
+    tbody.innerHTML = filteredContacts.map(c => {
+      const badgeCls = c.category === '政府各計畫承辦' ? 'cat-gov' : 'cat-oth';
+      const addrRemark = [c.address, c.remark].filter(Boolean).join('
+');
+      return `
+        <tr>
+          <td><span class="cat-tag ${badgeCls}">${escapeHtml(c.category || '')}</span></td>
+          <td><strong>${escapeHtml(c.unit_name || '')}</strong></td>
+          <td>${escapeHtml(c.contact_name || '')}</td>
+          <td>${formatPhoneHtml(c.phone, c.mobile)}</td>
+          <td><div class="pre-wrap-text">${escapeHtml(c.description || '')}</div></td>
+          <td><div class="pre-wrap-text">${escapeHtml(addrRemark)}</div></td>
+          <td style="text-align:center;">
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteContact(${c.id})">刪除</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
 
-  function exportCsv() {
-    if (filteredContacts.length === 0) return alert('無可匯出資料');
-    const headers = ['類別', '編號', '姓名', '主要電話/手機', '緊急聯絡人/備註', '地址'];
-    const esc = v => `"${String(v || '').replace(/"/g, '""')}"`;
-    const rows = filteredContacts.map(c => [c.role, c.num, c.name, c.primaryPhone, c.secondaryInfo, c.address].map(esc).join(','));
-    const csv = '\uFEFF' + [headers.map(esc).join(','), ...rows].join('\r\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    a.download = `老庄據點全站聯絡電話總表_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
+  function renderBookJumpOptions() {
+    const sel = document.getElementById('bookJumpSelect');
+    if (!sel) return;
+    if (filteredContacts.length === 0) {
+      sel.innerHTML = '<option value="0">無資料</option>';
+      return;
+    }
+    sel.innerHTML = filteredContacts.map((c, idx) => {
+      const label = `${idx + 1}. [${c.category === '政府各計畫承辦' ? '政府' : '其它'}] ${c.unit_name || ''} ${c.contact_name || ''}`.trim();
+      return `<option value="${idx}" ${idx === bookIndex ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+    }).join('');
   }
 
-  loadAllContacts();
+  function goBookPage(idx) {
+    if (filteredContacts.length === 0) return;
+    if (idx < 0) idx = 0;
+    if (idx >= filteredContacts.length) idx = filteredContacts.length - 1;
+    bookIndex = idx;
+    const sel = document.getElementById('bookJumpSelect');
+    if (sel) sel.value = String(bookIndex);
+    renderBookView();
+  }
+
+  function renderBookView() {
+    const card = document.getElementById('bookCardBody');
+    const counter = document.getElementById('bookCounterText');
+    if (filteredContacts.length === 0) {
+      counter.textContent = '第 0 / 0 筆';
+      card.innerHTML = '<div style="text-align:center; padding:24px; color:#64748b;">目前無聯絡電話資料</div>';
+      return;
+    }
+    const c = filteredContacts[bookIndex];
+    counter.textContent = `第 ${bookIndex + 1} / ${filteredContacts.length} 筆`;
+
+    card.innerHTML = `
+      <div class="book-grid">
+        <div>
+          <div class="book-field-label">類別</div>
+          <div class="book-field-val">${escapeHtml(c.category || '')}</div>
+        </div>
+        <div>
+          <div class="book-field-label">單位</div>
+          <div class="book-field-val"><strong>${escapeHtml(c.unit_name || '')}</strong></div>
+        </div>
+        <div>
+          <div class="book-field-label">聯絡人</div>
+          <div class="book-field-val">${escapeHtml(c.contact_name || '')}</div>
+        </div>
+        <div>
+          <div class="book-field-label">電話／手機</div>
+          <div class="book-field-val">${formatPhoneHtml(c.phone, c.mobile)}</div>
+        </div>
+        <div>
+          <div class="book-field-label">傳真號碼</div>
+          <div class="book-field-val">${escapeHtml(c.fax || '')}</div>
+        </div>
+        <div>
+          <div class="book-field-label">電子信箱</div>
+          <div class="book-field-val">${escapeHtml(c.email || '')}</div>
+        </div>
+        <div class="book-full">
+          <div class="book-field-label">說明</div>
+          <div class="book-field-val">${escapeHtml(c.description || '')}</div>
+        </div>
+        <div class="book-full">
+          <div class="book-field-label">地址</div>
+          <div class="book-field-val">${escapeHtml(c.address || '')}</div>
+        </div>
+        <div class="book-full">
+          <div class="book-field-label">備註</div>
+          <div class="book-field-val">${escapeHtml(c.remark || '')}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function submitNewContact(ev) {
+    ev.preventDefault();
+    const payload = {
+      seq_no: allContacts.length + 1,
+      category: document.getElementById('addCategory').value,
+      unit_name: document.getElementById('addUnit').value.trim() || null,
+      contact_name: document.getElementById('addContactName').value.trim() || null,
+      description: document.getElementById('addDescription').value.trim() || null,
+      phone: document.getElementById('addPhone').value.trim() || null,
+      mobile: document.getElementById('addMobile').value.trim() || null,
+      fax: document.getElementById('addFax').value.trim() || null,
+      email: document.getElementById('addEmail').value.trim() || null,
+      address: document.getElementById('addAddress').value.trim() || null,
+      remark: document.getElementById('addRemark').value.trim() || null
+    };
+
+    const { error } = await supabaseClient.from('business_contacts').insert([payload]);
+    if (error) {
+      alert('儲存失敗：' + error.message);
+      return;
+    }
+
+    document.getElementById('addContactForm').reset();
+    await loadContacts();
+    switchView('list');
+    setStatus('已新增聯絡電話');
+  }
+
+  async function deleteContact(id) {
+    if (!confirm('確定要刪除這筆聯絡電話嗎？')) return;
+    const { error } = await supabaseClient.from('business_contacts').delete().eq('id', id);
+    if (error) {
+      alert('刪除失敗：' + error.message);
+      return;
+    }
+    await loadContacts();
+    setStatus('已刪除聯絡電話');
+  }
+
+  loadContacts();
 </script>
 </body>
 </html>
