@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>長照與延緩核銷統計（補助經費收支明細表）- 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --accent: #0284c7;
+      --bg: #f1f5f9;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 265px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1180px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 6px 0; font-size: 1.4rem; color: var(--primary); }
+    .sub-note { font-size: 0.9rem; color: #475569; margin: 0; }
+    h2 {
+      margin: 0 0 14px 0; font-size: 1.12rem; color: var(--primary);
+      border-bottom: 2px solid var(--primary); padding-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+
+    .form-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;
+      margin-bottom: 14px;
+    }
+    .field-group { display: flex; flex-direction: column; gap: 5px; }
+    .field-group label { font-size: 0.88rem; font-weight: bold; color: #334155; }
+    input[type="text"], input[type="number"], select {
+      padding: 8px 11px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.95rem; background: #fff;
+    }
+    input:focus, select:focus { outline: 2px solid #99f6e4; border-color: var(--primary); }
+    .num-input { text-align: right; font-weight: bold; }
+
+    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+    button.btn {
+      padding: 9px 16px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.93rem; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: var(--accent); color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-gray { background: #64748b; color: #fff; }
+    .btn-gray:hover { background: #475569; }
+    .btn-danger { background: #dc2626; color: #fff; padding: 5px 10px; font-size: 0.82rem; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-edit { background: #0d9488; color: #fff; padding: 5px 10px; font-size: 0.82rem; }
+    .btn-edit:hover { background: #0f766e; }
+
+    .pill-type {
+      display: inline-block; padding: 3px 9px; border-radius: 12px;
+      font-size: 0.8rem; font-weight: bold;
+    }
+    .pill-ltc { background: #dbeafe; color: #1e40af; }
+    .pill-delay { background: #fef3c7; color: #92400e; }
+
+    /* 官方「補助經費收支明細表」預覽樣式 */
+    .official-sheet-wrap { overflow-x: auto; }
+    table.official-table {
+      width: 100%; border-collapse: collapse; min-width: 820px;
+      background: #fff; color: #000; font-size: 0.96rem;
+    }
+    table.official-table th, table.official-table td {
+      border: 1.5px solid #000; padding: 9px 10px;
+    }
+    .sheet-org {
+      text-align: center; font-weight: bold; font-size: 1.05rem; color: #0369a1;
+      background: #f8fafc;
+    }
+    .sheet-title {
+      text-align: center; font-weight: bold; font-size: 1.15rem; letter-spacing: 1px;
+    }
+    .sheet-meta { font-size: 0.93rem; }
+    .sheet-meta .red-val { color: #dc2626; font-weight: bold; }
+    .sheet-meta .blue-val { color: #0369a1; font-weight: bold; }
+    .th-yellow { background: #ffff00; text-align: center; font-weight: bold; }
+    .th-yellow-red { background: #ffff00; text-align: center; font-weight: bold; color: #dc2626; }
+    .th-peach { background: #f8cbad; text-align: center; font-weight: bold; }
+    .th-peach-red { background: #f8cbad; text-align: center; font-weight: bold; color: #dc2626; }
+    .th-plain { background: #ffffff; text-align: center; font-weight: bold; }
+    .th-plain-red { background: #ffffff; text-align: center; font-weight: bold; color: #dc2626; }
+    .td-center { text-align: center; }
+    .td-right { text-align: right; font-variant-numeric: tabular-nums; }
+    .td-total-yellow { background: #ffff00; text-align: right; font-weight: bold; }
+    .td-total-peach { background: #f8cbad; text-align: right; font-weight: bold; }
+    .td-total-bold { font-weight: bold; text-align: right; }
+    .highlight-cum-box {
+      outline: 3px solid #db2777;
+      outline-offset: -3px;
+      background: #fdf2f8;
+      font-weight: bold;
+    }
+    .sign-row {
+      display: flex; justify-content: space-between; padding: 14px 8px 4px 8px;
+      font-weight: bold; color: #0369a1; font-size: 0.95rem;
+    }
+    .sign-row span.red-hint { color: #dc2626; }
+
+    /* 歷史核銷紀錄清單 */
+    table.history-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    table.history-table th, table.history-table td {
+      border-bottom: 1px solid #e2e8f0; padding: 9px 10px; text-align: left;
+    }
+    table.history-table th { background: #f1f5f9; color: #334155; }
+    table.history-table tr:hover { background: #f8fafc; }
+
+    .info-banner {
+      background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
+      padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; line-height: 1.5;
+      margin-bottom: 14px;
+    }
+    #syncStatus { font-size: 0.85rem; font-weight: bold; color: #0f766e; }
+
+    @media print {
+      nav.topbar, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card { border: none; box-shadow: none; padding: 0; }
+      .highlight-cum-box { outline: none !important; background: transparent !important; }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">聯絡電話</a>
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">長照與延緩核銷統計（補助經費收支明細表）</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="card no-print">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>長照與延緩核銷統計資料表</h1>
+        <p class="sub-note">同屬「社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫」，自動跨期累計「業務費」與「預防及延緩失能服務」核銷金額並計算餘額。</p>
+      </div>
+      <div id="syncStatus">雲端同步準備中...</div>
+    </div>
+  </div>
+
+  <!-- 區塊 1：計畫核定預算設定（當年度共用） -->
+  <div class="card no-print">
+    <h2>
+      <span>一、年度計畫核定預算設定（長照與延緩核銷共用年度核定額度）</span>
+      <button type="button" class="btn btn-primary" onclick="saveBudgetSettings()">儲存年度核定設定</button>
+    </h2>
+    <div class="form-grid">
+      <div class="field-group">
+        <label>會計年度（民國年）</label>
+        <input type="text" id="cfgYear" value="115" onchange="onYearChange()">
+      </div>
+      <div class="field-group">
+        <label>受補助單位名稱</label>
+        <input type="text" id="cfgOrg" value="苗栗縣卓蘭鎮老庄社區發展協會" oninput="renderSheet()">
+      </div>
+      <div class="field-group">
+        <label>補助計畫名稱</label>
+        <input type="text" id="cfgPlanName" value="115年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫" oninput="renderSheet()">
+      </div>
+      <div class="field-group">
+        <label>核定補助－業務費（元）</label>
+        <input type="number" id="cfgBudgetBiz" class="num-input" value="480000" step="1" oninput="renderSheet()">
+      </div>
+      <div class="field-group">
+        <label>核定補助－預防及延緩失能服務（元）</label>
+        <input type="number" id="cfgBudgetDelay" class="num-input" value="108000" step="1" oninput="renderSheet()">
+      </div>
+    </div>
+  </div>
+
+  <!-- 區塊 2：新增 / 編輯當次核銷紀錄 -->
+  <div class="card no-print">
+    <h2>
+      <span id="formHeading">二、登錄當次核銷紀錄（長照核銷 ／ 延緩核銷）</span>
+      <button type="button" class="btn btn-gray" onclick="resetForm()">清空表單 / 新增一筆</button>
+    </h2>
+    <div class="info-banner">
+      <strong>累計計算說明：</strong>系統會依照「核銷順序」自動將<strong>同年度所有已登錄的「長照核銷」與「延緩核銷」</strong>金額加總至「核銷累計金額」，並以核定補助金額減去累計金額算出「餘額」。
+      例如：先登錄 1-3 月長照核銷 120,000（累計 120,000），再登錄 4-6 月長照核銷 120,000（累計 240,000），接著登錄第 1 期延緩核銷 28,800 時，業務費累計即自動顯示 <strong>240,000</strong>、延緩服務累計顯示 <strong>28,800</strong>。
+    </div>
+    <input type="hidden" id="editingId" value="">
+    <div class="form-grid">
+      <div class="field-group">
+        <label>核銷類別</label>
+        <select id="recType" onchange="onTypeChange()">
+          <option value="長照核銷">長照核銷（業務費）</option>
+          <option value="延緩核銷">延緩核銷（預防及延緩失能服務費）</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>核銷順序（決定累計先後）</label>
+        <input type="number" id="recOrder" class="num-input" value="1" min="1" step="1" oninput="renderSheet()">
+      </div>
+      <div class="field-group">
+        <label>補助計畫編號</label>
+        <input type="text" id="recPlanCode" value="115P001321" oninput="renderSheet()">
+      </div>
+      <div class="field-group">
+        <label>總支出明細標題（期別/月份）</label>
+        <input type="text" id="recPeriodLabel" value="1-3月份 核銷" placeholder="例：1-3月份 核銷 或 第 1 期預防及延緩失能服務費核銷" oninput="renderSheet()">
+      </div>
+      <div class="field-group">
+        <label>當次核銷－業務費（元）</label>
+        <input type="number" id="recBizAmt" class="num-input" value="120000" step="1" oninput="renderSheet()">
+      </div>
+      <div class="field-group">
+        <label>當次核銷－預防及延緩失能服務（元）</label>
+        <input type="number" id="recDelayAmt" class="num-input" value="0" step="1" oninput="renderSheet()">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn btn-primary" onclick="saveRecord()">儲存此筆核銷並更新統計表</button>
+      <button type="button" class="btn btn-amber" onclick="loadSample115()">載入 115 年度範例（1-3月長照＋4-6月長照＋第1期延緩）</button>
+    </div>
+  </div>
+
+  <!-- 區塊 3：當年度長照與延緩核銷紀錄列表（點擊可切換預覽該期明細表） -->
+  <div class="card no-print">
+    <h2>
+      <span>三、當年度核銷歷程明細（點擊任一列可檢視該次收支明細表）</span>
+      <span style="font-size:0.86rem; color:#475569; font-weight:normal;">共 <strong id="recCount">0</strong> 筆核銷紀錄</span>
+    </h2>
+    <div style="overflow-x:auto;">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th style="width:65px;">順序</th>
+            <th style="width:105px;">核銷類別</th>
+            <th>補助計畫編號</th>
+            <th>總支出明細</th>
+            <th style="text-align:right;">當次業務費</th>
+            <th style="text-align:right;">當次延緩費</th>
+            <th style="text-align:right;">累計業務費</th>
+            <th style="text-align:right;">累計延緩費</th>
+            <th style="text-align:right;">總餘額</th>
+            <th style="width:165px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="historyTbody">
+          <tr><td colspan="10" style="text-align:center; color:#64748b; padding:18px;">尚無核銷紀錄，請在上方登錄或載入範例。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 區塊 4：接受衛生福利部長照服務發展基金補助經費收支明細表（可直接複製貼上 Excel / Word 或列印） -->
+  <div class="card">
+    <h2 class="no-print">
+      <span>四、補助經費收支明細表（即時預覽與一鍵複製）</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-blue" onclick="copyTableHtml()">一鍵複製表格（貼上 Excel / Word）</button>
+        <button type="button" class="btn btn-gray" onclick="window.print()">列印明細表</button>
+      </div>
+    </h2>
+
+    <div class="official-sheet-wrap" id="officialSheetContainer">
+      <table class="official-table" id="officialTable">
+        <tr>
+          <td colspan="7" class="sheet-org">受補助單位名稱：<span id="vOrg">苗栗縣卓蘭鎮老庄社區發展協會</span></td>
+        </tr>
+        <tr>
+          <td colspan="7" class="sheet-title">接受衛生福利部長照服務發展基金補助經費收支明細表</td>
+        </tr>
+        <tr class="sheet-meta">
+          <td colspan="2">會計年度：<span class="red-val" id="vYear">115</span></td>
+          <td colspan="2">補助計畫編號：<span class="blue-val" id="vPlanCode">115P001321</span></td>
+          <td colspan="3">補助計畫名稱：<span class="red-val" id="vPlanName">115年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫</span></td>
+        </tr>
+        <tr class="sheet-meta">
+          <td colspan="3">總收入明細</td>
+          <td colspan="4">總支出明細：<span class="blue-val" id="vPeriodLabel">1-3月份 核銷</span></td>
+        </tr>
+        <tr>
+          <th class="th-yellow" style="width:15%;">經費來源</th>
+          <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
+          <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
+          <th class="th-peach" style="width:17%;">補助項目</th>
+          <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
+          <th class="th-plain-red" style="width:13%;">核銷累計金額</th>
+          <th class="th-plain" style="width:13%;">餘額</th>
+        </tr>
+        <tr>
+          <td rowspan="3" class="td-center">衛生福利部補助款</td>
+          <td class="td-center">業務費</td>
+          <td class="td-right" id="vBudgetBiz">480,000</td>
+          <td class="td-center">業務費</td>
+          <td class="td-right" id="vCurBiz">120,000</td>
+          <td class="td-right" id="vCumBizCell"><span id="vCumBiz">120,000</span></td>
+          <td class="td-right" id="vRemBiz">360,000</td>
+        </tr>
+        <tr>
+          <td class="td-center">預防及延緩失能<br>服務</td>
+          <td class="td-right" id="vBudgetDelay">108,000</td>
+          <td class="td-center">預防及延緩失能服務</td>
+          <td class="td-right" id="vCurDelay">0</td>
+          <td class="td-right" id="vCumDelay">0</td>
+          <td class="td-right" id="vRemDelay">108,000</td>
+        </tr>
+        <tr>
+          <td class="td-total-yellow">總計</td>
+          <td class="td-right" id="vBudgetTotal">588,000</td>
+          <td class="td-total-peach">合計</td>
+          <td class="td-right" id="vCurTotal">120,000</td>
+          <td class="td-right" id="vCumTotal">120,000</td>
+          <td class="td-right" id="vRemTotal">468,000</td>
+        </tr>
+      </table>
+      <div class="sign-row">
+        <span>單位主辦：</span>
+        <span>單位負責人<span class="red-hint">（單位大小章）</span>：</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY_RECORDS = 'laozhuang_ltc_delay_records_v1';
+  const STORAGE_KEY_BUDGETS = 'laozhuang_ltc_delay_budgets_v1';
+
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
+  let allRecords = [];
+  let budgetsByYear = {};
+  let selectedRecordId = null;
+
+  function fmt(num) {
+    const n = Math.round(Number(num) || 0);
+    return n.toLocaleString('en-US');
+  }
+
+  function getYear() {
+    return (document.getElementById('cfgYear').value || '115').trim();
+  }
+
+  function loadLocalState() {
+    try {
+      allRecords = JSON.parse(localStorage.getItem(STORAGE_KEY_RECORDS) || '[]');
+    } catch (e) { allRecords = []; }
+    try {
+      budgetsByYear = JSON.parse(localStorage.getItem(STORAGE_KEY_BUDGETS) || '{}');
+    } catch (e) { budgetsByYear = {}; }
+  }
+
+  function persistLocalState() {
+    localStorage.setItem(STORAGE_KEY_RECORDS, JSON.stringify(allRecords));
+    localStorage.setItem(STORAGE_KEY_BUDGETS, JSON.stringify(budgetsByYear));
+  }
+
+  async function syncFromCloud() {
+    const statusEl = document.getElementById('syncStatus');
+    if (!supabaseClient) {
+      statusEl.textContent = '本機瀏覽器儲存模式（已就緒）';
+      return;
+    }
+    try {
+      const { data, error } = await supabaseClient
+        .from('ltc_delay_reimbursements')
+        .select('*')
+        .order('seq_order', { ascending: true });
+
+      if (!error && Array.isArray(data)) {
+        if (data.length > 0) {
+          allRecords = data.map(r => ({
+            id: String(r.id),
+            year: String(r.fiscal_year || '115'),
+            type: r.reimburse_type || '長照核銷',
+            order: Number(r.seq_order) || 1,
+            planCode: r.plan_code || '',
+            periodLabel: r.period_label || '',
+            bizAmt: Number(r.biz_amount) || 0,
+            delayAmt: Number(r.delay_amount) || 0
+          }));
+          persistLocalState();
+        }
+        statusEl.textContent = '✅ 已連線雲端資料庫同步';
+      } else {
+        statusEl.textContent = '本機儲存模式（若需雲端多機同步可建立 ltc_delay_reimbursements 資料表）';
+      }
+    } catch (e) {
+      statusEl.textContent = '本機儲存模式（已就緒）';
+    }
+  }
+
+  function applyYearBudgetToInputs() {
+    const yr = getYear();
+    const saved = budgetsByYear[yr];
+    if (saved) {
+      document.getElementById('cfgOrg').value = saved.org || '苗栗縣卓蘭鎮老庄社區發展協會';
+      document.getElementById('cfgPlanName').value = saved.planName || `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
+      document.getElementById('cfgBudgetBiz').value = saved.budgetBiz ?? 480000;
+      document.getElementById('cfgBudgetDelay').value = saved.budgetDelay ?? 108000;
+    } else {
+      document.getElementById('cfgPlanName').value = `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
+    }
+  }
+
+  function saveBudgetSettings() {
+    const yr = getYear();
+    budgetsByYear[yr] = {
+      org: document.getElementById('cfgOrg').value.trim(),
+      planName: document.getElementById('cfgPlanName').value.trim(),
+      budgetBiz: Number(document.getElementById('cfgBudgetBiz').value) || 0,
+      budgetDelay: Number(document.getElementById('cfgBudgetDelay').value) || 0
+    };
+    persistLocalState();
+    renderAll();
+    alert(`已儲存 ${yr} 年度計畫核定預算設定！`);
+  }
+
+  function onYearChange() {
+    applyYearBudgetToInputs();
+    selectedRecordId = null;
+    renderAll();
+  }
+
+  function onTypeChange() {
+    const type = document.getElementById('recType').value;
+    const yr = getYear();
+    if (!document.getElementById('editingId').value) {
+      if (type === '長照核銷') {
+        document.getElementById('recPlanCode').value = `${yr}P001321`;
+        document.getElementById('recPeriodLabel').value = '1-3月份 核銷';
+        document.getElementById('recBizAmt').value = 120000;
+        document.getElementById('recDelayAmt').value = 0;
+      } else {
+        document.getElementById('recPlanCode').value = `${yr}00K0201`;
+        document.getElementById('recPeriodLabel').value = '第 1 期預防及延緩失能服務費核銷';
+        document.getElementById('recBizAmt').value = 0;
+        document.getElementById('recDelayAmt').value = 28800;
+      }
+    }
+    renderSheet();
+  }
+
+  function getYearRecordsSorted() {
+    const yr = getYear();
+    return allRecords
+      .filter(r => String(r.year) === yr)
+      .sort((a, b) => (Number(a.order) - Number(b.order)) || String(a.id).localeCompare(String(b.id)));
+  }
+
+  function computeCumulativeList() {
+    const budgetBiz = Number(document.getElementById('cfgBudgetBiz').value) || 0;
+    const budgetDelay = Number(document.getElementById('cfgBudgetDelay').value) || 0;
+    const list = getYearRecordsSorted();
+    let cumBiz = 0;
+    let cumDelay = 0;
+
+    return list.map(item => {
+      cumBiz += Number(item.bizAmt) || 0;
+      cumDelay += Number(item.delayAmt) || 0;
+      const remBiz = budgetBiz - cumBiz;
+      const remDelay = budgetDelay - cumDelay;
+      return {
+        ...item,
+        cumBiz,
+        cumDelay,
+        curTotal: (Number(item.bizAmt) || 0) + (Number(item.delayAmt) || 0),
+        cumTotal: cumBiz + cumDelay,
+        remBiz,
+        remDelay,
+        remTotal: remBiz + remDelay
+      };
+    });
+  }
+
+  async function saveRecord() {
+    const yr = getYear();
+    const editingId = document.getElementById('editingId').value;
+    const rec = {
+      id: editingId || ('rec_' + Date.now()),
+      year: yr,
+      type: document.getElementById('recType').value,
+      order: Math.max(1, Number(document.getElementById('recOrder').value) || 1),
+      planCode: document.getElementById('recPlanCode').value.trim(),
+      periodLabel: document.getElementById('recPeriodLabel').value.trim(),
+      bizAmt: Number(document.getElementById('recBizAmt').value) || 0,
+      delayAmt: Number(document.getElementById('recDelayAmt').value) || 0
+    };
+
+    if (!rec.periodLabel) {
+      alert('請填寫「總支出明細標題（期別/月份）」！');
+      return;
+    }
+
+    if (editingId) {
+      const idx = allRecords.findIndex(r => String(r.id) === String(editingId));
+      if (idx !== -1) allRecords[idx] = rec;
+    } else {
+      allRecords.push(rec);
+    }
+
+    selectedRecordId = rec.id;
+    persistLocalState();
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('ltc_delay_reimbursements').upsert({
+          id: rec.id,
+          fiscal_year: rec.year,
+          reimburse_type: rec.type,
+          seq_order: rec.order,
+          plan_code: rec.planCode,
+          period_label: rec.periodLabel,
+          biz_amount: rec.bizAmt,
+          delay_amount: rec.delayAmt
+        });
+      } catch (e) {}
+    }
+
+    resetForm(false);
+    renderAll();
+  }
+
+  function resetForm(clearSelection = false) {
+    document.getElementById('editingId').value = '';
+    document.getElementById('formHeading').textContent = '二、登錄當次核銷紀錄（長照核銷 ／ 延緩核銷）';
+    const currentList = getYearRecordsSorted();
+    document.getElementById('recOrder').value = currentList.length + 1;
+    if (clearSelection) selectedRecordId = null;
+  }
+
+  function editRecord(id) {
+    const item = allRecords.find(r => String(r.id) === String(id));
+    if (!item) return;
+    document.getElementById('editingId').value = item.id;
+    document.getElementById('formHeading').textContent = `二、編輯核銷紀錄（順序 #${item.order} - ${item.periodLabel}）`;
+    document.getElementById('recType').value = item.type;
+    document.getElementById('recOrder').value = item.order;
+    document.getElementById('recPlanCode').value = item.planCode;
+    document.getElementById('recPeriodLabel').value = item.periodLabel;
+    document.getElementById('recBizAmt').value = item.bizAmt;
+    document.getElementById('recDelayAmt').value = item.delayAmt;
+    selectedRecordId = item.id;
+    renderAll();
+    window.scrollTo({ top: 140, behavior: 'smooth' });
+  }
+
+  async function deleteRecord(id) {
+    if (!confirm('確定要刪除此筆核銷紀錄嗎？刪除後後續期別的累計金額將自動重新計算。')) return;
+    allRecords = allRecords.filter(r => String(r.id) !== String(id));
+    if (String(selectedRecordId) === String(id)) selectedRecordId = null;
+    persistLocalState();
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('ltc_delay_reimbursements').delete().eq('id', id);
+      } catch (e) {}
+    }
+    renderAll();
+  }
+
+  function selectPreviewRecord(id) {
+    selectedRecordId = id;
+    renderAll();
+  }
+
+  function loadSample115() {
+    const yr = getYear();
+    if (allRecords.some(r => String(r.year) === yr)) {
+      if (!confirm(`目前 ${yr} 年度已有紀錄，是否要覆蓋並載入範例（1-3月長照、4-6月長照、第1期延緩）？`)) return;
+      allRecords = allRecords.filter(r => String(r.year) !== yr);
+    }
+    allRecords.push(
+      {
+        id: 'sample_115_1',
+        year: yr,
+        type: '長照核銷',
+        order: 1,
+        planCode: `${yr}P001321`,
+        periodLabel: '1-3月份 核銷',
+        bizAmt: 120000,
+        delayAmt: 0
+      },
+      {
+        id: 'sample_115_2',
+        year: yr,
+        type: '長照核銷',
+        order: 2,
+        planCode: `${yr}P001321`,
+        periodLabel: '4-6月份 核銷',
+        bizAmt: 120000,
+        delayAmt: 0
+      },
+      {
+        id: 'sample_115_3',
+        year: yr,
+        type: '延緩核銷',
+        order: 3,
+        planCode: `${yr}00K0201`,
+        periodLabel: '第 1 期預防及延緩失能服務費核銷',
+        bizAmt: 0,
+        delayAmt: 28800
+      }
+    );
+    selectedRecordId = 'sample_115_3';
+    persistLocalState();
+    resetForm(false);
+    renderAll();
+  }
+
+  function renderHistoryTable(computedList) {
+    const tbody = document.getElementById('historyTbody');
+    document.getElementById('recCount').textContent = computedList.length;
+    if (!computedList.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#64748b; padding:18px;">尚無核銷紀錄，請在上方登錄或點選「載入 115 年度範例」。</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = computedList.map(row => {
+      const isSelected = String(row.id) === String(selectedRecordId);
+      const pillCls = row.type === '長照核銷' ? 'pill-ltc' : 'pill-delay';
+      return `
+        <tr style="${isSelected ? 'background:#ecfdf5; font-weight:bold;' : 'cursor:pointer;'}" onclick="selectPreviewRecord('${row.id}')">
+          <td>#${row.order}</td>
+          <td><span class="pill-type ${pillCls}">${row.type}</span></td>
+          <td>${row.planCode}</td>
+          <td>${row.periodLabel} ${isSelected ? '（目前預覽）' : ''}</td>
+          <td style="text-align:right;">${fmt(row.bizAmt)}</td>
+          <td style="text-align:right;">${fmt(row.delayAmt)}</td>
+          <td style="text-align:right; color:#0369a1;">${fmt(row.cumBiz)}</td>
+          <td style="text-align:right; color:#b45309;">${fmt(row.cumDelay)}</td>
+          <td style="text-align:right; color:#166534;">${fmt(row.remTotal)}</td>
+          <td onclick="event.stopPropagation();">
+            <button type="button" class="btn btn-edit" onclick="editRecord('${row.id}')">編輯</button>
+            <button type="button" class="btn btn-danger" onclick="deleteRecord('${row.id}')">刪除</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderSheet(computedList) {
+    const list = computedList || computeCumulativeList();
+    const yr = getYear();
+    const org = document.getElementById('cfgOrg').value.trim();
+    const planName = document.getElementById('cfgPlanName').value.trim();
+    const budgetBiz = Number(document.getElementById('cfgBudgetBiz').value) || 0;
+    const budgetDelay = Number(document.getElementById('cfgBudgetDelay').value) || 0;
+    const budgetTotal = budgetBiz + budgetDelay;
+
+    let activeRow = list.find(r => String(r.id) === String(selectedRecordId));
+    if (!activeRow && list.length > 0) {
+      activeRow = list[list.length - 1];
+      selectedRecordId = activeRow.id;
+    }
+
+    document.getElementById('vOrg').textContent = org;
+    document.getElementById('vYear').textContent = yr;
+    document.getElementById('vPlanName').textContent = planName;
+    document.getElementById('vBudgetBiz').textContent = fmt(budgetBiz);
+    document.getElementById('vBudgetDelay').textContent = fmt(budgetDelay);
+    document.getElementById('vBudgetTotal').textContent = fmt(budgetTotal);
+
+    const cumBizCell = document.getElementById('vCumBizCell');
+
+    if (activeRow) {
+      document.getElementById('vPlanCode').textContent = activeRow.planCode;
+      document.getElementById('vPeriodLabel').textContent = activeRow.periodLabel;
+      document.getElementById('vCurBiz').textContent = fmt(activeRow.bizAmt);
+      document.getElementById('vCumBiz').textContent = fmt(activeRow.cumBiz);
+      document.getElementById('vRemBiz').textContent = fmt(activeRow.remBiz);
+
+      document.getElementById('vCurDelay').textContent = fmt(activeRow.delayAmt);
+      document.getElementById('vCumDelay').textContent = fmt(activeRow.cumDelay);
+      document.getElementById('vRemDelay').textContent = fmt(activeRow.remDelay);
+
+      document.getElementById('vCurTotal').textContent = fmt(activeRow.curTotal);
+      document.getElementById('vCumTotal').textContent = fmt(activeRow.cumTotal);
+      document.getElementById('vRemTotal').textContent = fmt(activeRow.remTotal);
+
+      // 當為延緩核銷且累計業務費大於當次業務費時，突顯跨期累計業務費（對應圖3框選重點）
+      if (activeRow.type === '延緩核銷' && activeRow.cumBiz > activeRow.bizAmt) {
+        cumBizCell.classList.add('highlight-cum-box');
+      } else {
+        cumBizCell.classList.remove('highlight-cum-box');
+      }
+    } else {
+      const curBiz = Number(document.getElementById('recBizAmt').value) || 0;
+      const curDelay = Number(document.getElementById('recDelayAmt').value) || 0;
+      document.getElementById('vPlanCode').textContent = document.getElementById('recPlanCode').value.trim();
+      document.getElementById('vPeriodLabel').textContent = document.getElementById('recPeriodLabel').value.trim();
+      document.getElementById('vCurBiz').textContent = fmt(curBiz);
+      document.getElementById('vCumBiz').textContent = fmt(curBiz);
+      document.getElementById('vRemBiz').textContent = fmt(budgetBiz - curBiz);
+      document.getElementById('vCurDelay').textContent = fmt(curDelay);
+      document.getElementById('vCumDelay').textContent = fmt(curDelay);
+      document.getElementById('vRemDelay').textContent = fmt(budgetDelay - curDelay);
+      document.getElementById('vCurTotal').textContent = fmt(curBiz + curDelay);
+      document.getElementById('vCumTotal').textContent = fmt(curBiz + curDelay);
+      document.getElementById('vRemTotal').textContent = fmt(budgetTotal - curBiz - curDelay);
+      cumBizCell.classList.remove('highlight-cum-box');
+    }
+  }
+
+  function renderAll() {
+    const computedList = computeCumulativeList();
+    renderSheet(computedList);
+    renderHistoryTable(computedList);
+  }
+
+  async function copyTableHtml() {
+    const container = document.getElementById('officialSheetContainer');
+    try {
+      const htmlBlob = new Blob([container.innerHTML], { type: 'text/html' });
+      const textBlob = new Blob([container.innerText], { type: 'text/plain' });
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+      ]);
+      alert('已複製「補助經費收支明細表」，可直接到 Excel 或 Word 按 Ctrl+V 貼上！');
+    } catch (err) {
+      const range = document.createRange();
+      range.selectNode(container);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('copy');
+      sel.removeAllRanges();
+      alert('已複製明細表內容，請至 Excel 或 Word 按 Ctrl+V 貼上！');
+    }
+  }
+
+  (async function init() {
+    loadLocalState();
+    await syncFromCloud();
+    applyYearBudgetToInputs();
+    resetForm(false);
+    renderAll();
+  })();
+</script>
+</body>
+</html>
