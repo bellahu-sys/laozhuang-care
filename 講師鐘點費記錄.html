@@ -268,10 +268,10 @@
       <div class="sub-box no-print">
         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
           <label style="display:inline-flex; align-items:center; gap:6px; font-weight:bold; cursor:pointer;">
-            <input type="checkbox" id="useCalendarActualChk" onchange="onCalendarModeToggle()">
+            <input type="checkbox" id="useCalendarActualChk" checked onchange="onCalendarModeToggle()">
             改用行事曆計算實際鐘點費
           </label>
-          <div id="calendarCalcControls" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
+          <div id="calendarCalcControls" style="display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <label style="font-size:0.86rem; font-weight:bold;">預設每日時數：</label>
             <input type="text" inputmode="decimal" id="calDefaultHoursInput" value="1" style="width:65px; text-align:right;">
             <label style="font-size:0.86rem; font-weight:bold;">預設每小時費用（選填）：</label>
@@ -396,6 +396,12 @@
   (async function init() {
     await loadInstructorsFromHr();
     await onFeeContextChange();
+    if (document.getElementById('useCalendarActualChk')?.checked) {
+      const hasAnyData = Object.values(multiFeeMap).some(arr => Array.isArray(arr) && arr.some(r => Number(r.days) > 0));
+      if (!hasAnyData) {
+        await calculateFromCalendar();
+      }
+    }
   })();
 
   async function loadInstructorsFromHr() {
@@ -706,6 +712,7 @@
       }
       refreshFeeTotalsDom();
     }
+    persistFeeLocal(instOwner || currentFeeInstructor);
   }
 
   function refreshFeeTotalsDom() {
@@ -740,12 +747,58 @@
     }
   }
 
+  function persistFeeLocal(instName) {
+    if (!instName) return;
+    const rows = showAllCheckedInstructorsInFee ? (multiFeeMap[instName] || []) : feeRows;
+    localStorage.setItem(getFeeStorageKeyFor(instName), JSON.stringify(rows));
+  }
+
+  async function saveFeeRecordsForInstructor(instName) {
+    if (!instName) { alert('請先選擇講師'); return; }
+    const rowsToSave = showAllCheckedInstructorsInFee ? (multiFeeMap[instName] || []) : feeRows;
+    localStorage.setItem(getFeeStorageKeyFor(instName), JSON.stringify(rowsToSave));
+    try {
+      await supabaseClient
+        .from('instructor_fee_records')
+        .delete()
+        .eq('roc_year', currentYear)
+        .eq('instructor_name', instName)
+        .eq('entry_type', 'actual');
+
+      if (rowsToSave.length > 0) {
+        const payload = rowsToSave.map((r, idx) => ({
+          roc_year: currentYear,
+          instructor_name: instName,
+          entry_type: 'actual',
+          plan_name: r.course_name || null,
+          course_name: r.course_name || '',
+          period_text: r.period_text || '',
+          days: r.days === '' ? null : Number(r.days),
+          hours: r.hours === '' ? null : Number(r.hours),
+          rate: r.rate === '' ? null : Number(r.rate),
+          amount: Number(r.amount || 0),
+          remark: r.remark || '',
+          sort_order: idx + 1
+        }));
+        const { error } = await supabaseClient.from('instructor_fee_records').insert(payload);
+        if (error) throw error;
+      }
+      setStatus(`已儲存 ${currentYear} 年 ${instName} 鐘點費`);
+      alert(`已儲存 ${currentYear} 年 ${instName} 鐘點費！`);
+    } catch (e) {
+      setStatus(`已儲存 ${instName} 鐘點費至本機`);
+      alert(`已儲存 ${currentYear} 年 ${instName} 鐘點費！`);
+    }
+  }
+
   function deleteFeeRow(rowId, instOwner = null) {
+    const owner = instOwner || currentFeeInstructor;
     if (instOwner && multiFeeMap[instOwner]) {
       multiFeeMap[instOwner] = multiFeeMap[instOwner].filter(r => String(r.id) !== String(rowId));
     } else {
       feeRows = feeRows.filter(r => String(r.id) !== String(rowId));
     }
+    persistFeeLocal(owner);
     renderFeeTable();
   }
 
@@ -914,7 +967,7 @@
     return `
       <thead>
         <tr>
-          <th style="width:17%;">課程名稱</th>
+          <th style="width:17%;">計畫名稱</th>
           <th style="width:20%;">課程期間</th>
           <th style="width:9%;">天數</th>
           <th style="width:9%;">時數</th>
@@ -967,6 +1020,7 @@
             <div class="sheet-title-banner" style="display:flex; justify-content:center; align-items:center; gap:10px; position:relative;">
               <span>${currentYear}年度 ${escapeHtml(instName)} 講師鐘點費用</span>
               <button type="button" class="btn btn-blue btn-sm no-print" onclick="addFeeRowForInstructor('${escapeAttr(instName)}')" style="font-size:0.78rem;">＋ 加入一列</button>
+              <button type="button" class="btn btn-primary btn-sm no-print" onclick="saveFeeRecordsForInstructor('${escapeAttr(instName)}')" style="font-size:0.78rem;">儲存</button>
             </div>
             <div style="overflow-x:auto;">
               <table class="excel-table">
