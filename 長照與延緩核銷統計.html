@@ -99,7 +99,6 @@
     .pill-ltc { background: #dbeafe; color: #1e40af; }
     .pill-delay { background: #fef3c7; color: #92400e; }
 
-    /* 官方「補助經費收支明細表」預覽樣式 */
     .official-sheet-wrap { overflow-x: auto; }
     table.official-table {
       width: 100%; border-collapse: collapse; min-width: 820px;
@@ -141,7 +140,6 @@
     }
     .sign-row span.red-hint { color: #dc2626; }
 
-    /* 歷史核銷紀錄清單 */
     table.history-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
     table.history-table th, table.history-table td {
       border-bottom: 1px solid #e2e8f0; padding: 9px 10px; text-align: left;
@@ -155,6 +153,15 @@
       margin-bottom: 14px;
     }
     #syncStatus { font-size: 0.85rem; font-weight: bold; color: #0f766e; }
+    input.sheet-cell-input {
+      width: 100%; border: 1px dashed #94a3b8; background: #fffef5;
+      text-align: right; font-size: 0.95rem; font-family: inherit;
+      padding: 3px 6px; border-radius: 3px; color: #000;
+      font-variant-numeric: tabular-nums;
+    }
+    input.sheet-cell-input:focus {
+      outline: 2px solid #0284c7; border-style: solid; background: #f0f9ff;
+    }
 
     @media print {
       nav.topbar, .no-print { display: none !important; }
@@ -250,14 +257,6 @@
         <input type="text" id="cfgYear" value="115" onchange="onYearChange()">
       </div>
       <div class="field-group">
-        <label>受補助單位名稱</label>
-        <input type="text" id="cfgOrg" value="苗栗縣卓蘭鎮老庄社區發展協會" oninput="renderSheet()">
-      </div>
-      <div class="field-group">
-        <label>補助計畫名稱</label>
-        <input type="text" id="cfgPlanName" value="115年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫" oninput="renderSheet()">
-      </div>
-      <div class="field-group">
         <label>核定補助－業務費（元）</label>
         <input type="number" id="cfgBudgetBiz" class="num-input" value="480000" step="1" oninput="renderSheet()">
       </div>
@@ -314,7 +313,7 @@
     </div>
   </div>
 
-  <!-- 區塊 3：當年度長照與延緩核銷紀錄列表（點擊可切換預覽該期明細表） -->
+  <!-- 區塊 3：當年度長照與延緩核銷紀錄列表 -->
   <div class="card no-print">
     <h2>
       <span>三、當年度核銷歷程明細（點擊任一列可檢視該次收支明細表）</span>
@@ -343,13 +342,12 @@
     </div>
   </div>
 
-  <!-- 區塊 4：接受衛生福利部長照服務發展基金補助經費收支明細表（可直接複製貼上 Excel / Word 或列印） -->
+  <!-- 區塊 4：接受衛生福利部長照服務發展基金補助經費收支明細表 -->
   <div class="card">
     <h2 class="no-print">
       <span>四、補助經費收支明細表（即時預覽與一鍵複製）</span>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button type="button" class="btn btn-blue" onclick="copyTableHtml()">一鍵複製表格（貼上 Excel / Word）</button>
-        <button type="button" class="btn btn-gray" onclick="window.print()">列印明細表</button>
       </div>
     </h2>
 
@@ -382,27 +380,27 @@
         <tr>
           <td rowspan="3" class="td-center">衛生福利部補助款</td>
           <td class="td-center">業務費</td>
-          <td class="td-right" id="vBudgetBiz">480,000</td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" id="sBudgetBiz" value="480,000" onchange="onManualSheetInput('budgetBiz', this.value)"></td>
           <td class="td-center">業務費</td>
-          <td class="td-right" id="vCurBiz">120,000</td>
-          <td class="td-right" id="vCumBizCell"><span id="vCumBiz">120,000</span></td>
-          <td class="td-right" id="vRemBiz">360,000</td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" id="sCurBiz" value="120,000" onchange="onManualSheetInput('curBiz', this.value)"></td>
+          <td class="td-right" id="vCumBizCell"><input type="text" class="sheet-cell-input" id="sCumBiz" value="120,000" onchange="onManualSheetInput('cumBiz', this.value)"></td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" id="sRemBiz" value="360,000" onchange="onManualSheetInput('remBiz', this.value)"></td>
         </tr>
         <tr>
           <td class="td-center">預防及延緩失能<br>服務</td>
-          <td class="td-right" id="vBudgetDelay">108,000</td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" id="sBudgetDelay" value="108,000" onchange="onManualSheetInput('budgetDelay', this.value)"></td>
           <td class="td-center">預防及延緩失能服務</td>
-          <td class="td-right" id="vCurDelay">0</td>
-          <td class="td-right" id="vCumDelay">0</td>
-          <td class="td-right" id="vRemDelay">108,000</td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" id="sCurDelay" value="0" onchange="onManualSheetInput('curDelay', this.value)"></td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" id="sCumDelay" value="0" onchange="onManualSheetInput('cumDelay', this.value)"></td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" id="sRemDelay" value="108,000" onchange="onManualSheetInput('remDelay', this.value)"></td>
         </tr>
         <tr>
           <td class="td-total-yellow">總計</td>
-          <td class="td-right" id="vBudgetTotal">588,000</td>
+          <td class="td-right"><input type="text" class="sheet-cell-input td-total-bold" id="sBudgetTotal" value="588,000" onchange="onManualSheetInput('budgetTotal', this.value)"></td>
           <td class="td-total-peach">合計</td>
-          <td class="td-right" id="vCurTotal">120,000</td>
-          <td class="td-right" id="vCumTotal">120,000</td>
-          <td class="td-right" id="vRemTotal">468,000</td>
+          <td class="td-right"><input type="text" class="sheet-cell-input td-total-bold" id="sCurTotal" value="120,000" onchange="onManualSheetInput('curTotal', this.value)"></td>
+          <td class="td-right"><input type="text" class="sheet-cell-input td-total-bold" id="sCumTotal" value="120,000" onchange="onManualSheetInput('cumTotal', this.value)"></td>
+          <td class="td-right"><input type="text" class="sheet-cell-input td-total-bold" id="sRemTotal" value="468,000" onchange="onManualSheetInput('remTotal', this.value)"></td>
         </tr>
       </table>
       <div class="sign-row">
@@ -416,6 +414,7 @@
 <script>
   const STORAGE_KEY_RECORDS = 'laozhuang_ltc_delay_records_v1';
   const STORAGE_KEY_BUDGETS = 'laozhuang_ltc_delay_budgets_v1';
+  const DEFAULT_ORG = '苗栗縣卓蘭鎮老庄社區發展協會';
 
   let supabaseClient = null;
   if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
@@ -431,6 +430,11 @@
   function fmt(num) {
     const n = Math.round(Number(num) || 0);
     return n.toLocaleString('en-US');
+  }
+
+  function parseNumVal(val) {
+    const n = parseFloat(String(val ?? '').replace(/[,，\s$元]/g, ''));
+    return Number.isFinite(n) ? Math.round(n) : 0;
   }
 
   function getYear() {
@@ -490,20 +494,16 @@
     const yr = getYear();
     const saved = budgetsByYear[yr];
     if (saved) {
-      document.getElementById('cfgOrg').value = saved.org || '苗栗縣卓蘭鎮老庄社區發展協會';
-      document.getElementById('cfgPlanName').value = saved.planName || `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
       document.getElementById('cfgBudgetBiz').value = saved.budgetBiz ?? 480000;
       document.getElementById('cfgBudgetDelay').value = saved.budgetDelay ?? 108000;
-    } else {
-      document.getElementById('cfgPlanName').value = `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
     }
   }
 
   function saveBudgetSettings() {
     const yr = getYear();
     budgetsByYear[yr] = {
-      org: document.getElementById('cfgOrg').value.trim(),
-      planName: document.getElementById('cfgPlanName').value.trim(),
+      org: DEFAULT_ORG,
+      planName: `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`,
       budgetBiz: Number(document.getElementById('cfgBudgetBiz').value) || 0,
       budgetDelay: Number(document.getElementById('cfgBudgetDelay').value) || 0
     };
@@ -567,6 +567,63 @@
         remTotal: remBiz + remDelay
       };
     });
+  }
+
+  function onManualSheetInput(fieldKey, rawVal) {
+    const num = parseNumVal(rawVal);
+    const yr = getYear();
+    const list = computeCumulativeList();
+    let activeRow = list.find(r => String(r.id) === String(selectedRecordId));
+    if (!activeRow && list.length > 0) {
+      activeRow = list[list.length - 1];
+      selectedRecordId = activeRow.id;
+    }
+
+    if (fieldKey === 'budgetBiz' || fieldKey === 'budgetDelay') {
+      if (fieldKey === 'budgetBiz') document.getElementById('cfgBudgetBiz').value = num;
+      if (fieldKey === 'budgetDelay') document.getElementById('cfgBudgetDelay').value = num;
+      budgetsByYear[yr] = {
+        ...(budgetsByYear[yr] || {}),
+        org: DEFAULT_ORG,
+        planName: `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`,
+        budgetBiz: Number(document.getElementById('cfgBudgetBiz').value) || 0,
+        budgetDelay: Number(document.getElementById('cfgBudgetDelay').value) || 0
+      };
+      persistLocalState();
+      renderAll();
+      return;
+    }
+
+    if (activeRow) {
+      const targetIdx = allRecords.findIndex(r => String(r.id) === String(activeRow.id));
+      if (targetIdx !== -1) {
+        if (fieldKey === 'curBiz') allRecords[targetIdx].bizAmt = num;
+        if (fieldKey === 'curDelay') allRecords[targetIdx].delayAmt = num;
+        if (fieldKey === 'cumBiz') {
+          const prevCum = list.slice(0, list.findIndex(r => String(r.id) === String(activeRow.id))).reduce((s, x) => s + (Number(x.bizAmt) || 0), 0);
+          allRecords[targetIdx].bizAmt = Math.max(0, num - prevCum);
+        }
+        if (fieldKey === 'cumDelay') {
+          const prevCum = list.slice(0, list.findIndex(r => String(r.id) === String(activeRow.id))).reduce((s, x) => s + (Number(x.delayAmt) || 0), 0);
+          allRecords[targetIdx].delayAmt = Math.max(0, num - prevCum);
+        }
+        persistLocalState();
+        renderAll();
+        return;
+      }
+    }
+
+    if (fieldKey === 'curBiz') document.getElementById('recBizAmt').value = num;
+    if (fieldKey === 'curDelay') document.getElementById('recDelayAmt').value = num;
+    const elMap = {
+      budgetBiz: 'sBudgetBiz', budgetDelay: 'sBudgetDelay', budgetTotal: 'sBudgetTotal',
+      curBiz: 'sCurBiz', curDelay: 'sCurDelay', curTotal: 'sCurTotal',
+      cumBiz: 'sCumBiz', cumDelay: 'sCumDelay', cumTotal: 'sCumTotal',
+      remBiz: 'sRemBiz', remDelay: 'sRemDelay', remTotal: 'sRemTotal'
+    };
+    if (elMap[fieldKey]) {
+      document.getElementById(elMap[fieldKey]).value = fmt(num);
+    }
   }
 
   async function saveRecord() {
@@ -737,8 +794,9 @@
   function renderSheet(computedList) {
     const list = computedList || computeCumulativeList();
     const yr = getYear();
-    const org = document.getElementById('cfgOrg').value.trim();
-    const planName = document.getElementById('cfgPlanName').value.trim();
+    const saved = budgetsByYear[yr] || {};
+    const org = saved.org || DEFAULT_ORG;
+    const planName = saved.planName || `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
     const budgetBiz = Number(document.getElementById('cfgBudgetBiz').value) || 0;
     const budgetDelay = Number(document.getElementById('cfgBudgetDelay').value) || 0;
     const budgetTotal = budgetBiz + budgetDelay;
@@ -752,28 +810,27 @@
     document.getElementById('vOrg').textContent = org;
     document.getElementById('vYear').textContent = yr;
     document.getElementById('vPlanName').textContent = planName;
-    document.getElementById('vBudgetBiz').textContent = fmt(budgetBiz);
-    document.getElementById('vBudgetDelay').textContent = fmt(budgetDelay);
-    document.getElementById('vBudgetTotal').textContent = fmt(budgetTotal);
+    document.getElementById('sBudgetBiz').value = fmt(budgetBiz);
+    document.getElementById('sBudgetDelay').value = fmt(budgetDelay);
+    document.getElementById('sBudgetTotal').value = fmt(budgetTotal);
 
     const cumBizCell = document.getElementById('vCumBizCell');
 
     if (activeRow) {
       document.getElementById('vPlanCode').textContent = activeRow.planCode;
       document.getElementById('vPeriodLabel').textContent = activeRow.periodLabel;
-      document.getElementById('vCurBiz').textContent = fmt(activeRow.bizAmt);
-      document.getElementById('vCumBiz').textContent = fmt(activeRow.cumBiz);
-      document.getElementById('vRemBiz').textContent = fmt(activeRow.remBiz);
+      document.getElementById('sCurBiz').value = fmt(activeRow.bizAmt);
+      document.getElementById('sCumBiz').value = fmt(activeRow.cumBiz);
+      document.getElementById('sRemBiz').value = fmt(activeRow.remBiz);
 
-      document.getElementById('vCurDelay').textContent = fmt(activeRow.delayAmt);
-      document.getElementById('vCumDelay').textContent = fmt(activeRow.cumDelay);
-      document.getElementById('vRemDelay').textContent = fmt(activeRow.remDelay);
+      document.getElementById('sCurDelay').value = fmt(activeRow.delayAmt);
+      document.getElementById('sCumDelay').value = fmt(activeRow.cumDelay);
+      document.getElementById('sRemDelay').value = fmt(activeRow.remDelay);
 
-      document.getElementById('vCurTotal').textContent = fmt(activeRow.curTotal);
-      document.getElementById('vCumTotal').textContent = fmt(activeRow.cumTotal);
-      document.getElementById('vRemTotal').textContent = fmt(activeRow.remTotal);
+      document.getElementById('sCurTotal').value = fmt(activeRow.curTotal);
+      document.getElementById('sCumTotal').value = fmt(activeRow.cumTotal);
+      document.getElementById('sRemTotal').value = fmt(activeRow.remTotal);
 
-      // 當為延緩核銷且累計業務費大於當次業務費時，突顯跨期累計業務費（對應圖3框選重點）
       if (activeRow.type === '延緩核銷' && activeRow.cumBiz > activeRow.bizAmt) {
         cumBizCell.classList.add('highlight-cum-box');
       } else {
@@ -784,15 +841,15 @@
       const curDelay = Number(document.getElementById('recDelayAmt').value) || 0;
       document.getElementById('vPlanCode').textContent = document.getElementById('recPlanCode').value.trim();
       document.getElementById('vPeriodLabel').textContent = document.getElementById('recPeriodLabel').value.trim();
-      document.getElementById('vCurBiz').textContent = fmt(curBiz);
-      document.getElementById('vCumBiz').textContent = fmt(curBiz);
-      document.getElementById('vRemBiz').textContent = fmt(budgetBiz - curBiz);
-      document.getElementById('vCurDelay').textContent = fmt(curDelay);
-      document.getElementById('vCumDelay').textContent = fmt(curDelay);
-      document.getElementById('vRemDelay').textContent = fmt(budgetDelay - curDelay);
-      document.getElementById('vCurTotal').textContent = fmt(curBiz + curDelay);
-      document.getElementById('vCumTotal').textContent = fmt(curBiz + curDelay);
-      document.getElementById('vRemTotal').textContent = fmt(budgetTotal - curBiz - curDelay);
+      document.getElementById('sCurBiz').value = fmt(curBiz);
+      document.getElementById('sCumBiz').value = fmt(curBiz);
+      document.getElementById('sRemBiz').value = fmt(budgetBiz - curBiz);
+      document.getElementById('sCurDelay').value = fmt(curDelay);
+      document.getElementById('sCumDelay').value = fmt(curDelay);
+      document.getElementById('sRemDelay').value = fmt(budgetDelay - curDelay);
+      document.getElementById('sCurTotal').value = fmt(curBiz + curDelay);
+      document.getElementById('sCumTotal').value = fmt(curBiz + curDelay);
+      document.getElementById('sRemTotal').value = fmt(budgetTotal - curBiz - curDelay);
       cumBizCell.classList.remove('highlight-cum-box');
     }
   }
@@ -805,6 +862,15 @@
 
   async function copyTableHtml() {
     const container = document.getElementById('officialSheetContainer');
+    const inputs = container.querySelectorAll('input.sheet-cell-input');
+    const prevStates = [];
+    inputs.forEach(inp => {
+      const span = document.createElement('span');
+      span.textContent = inp.value;
+      prevStates.push({ inp, span });
+      inp.parentNode.replaceChild(span, inp);
+    });
+
     try {
       const htmlBlob = new Blob([container.innerHTML], { type: 'text/html' });
       const textBlob = new Blob([container.innerText], { type: 'text/plain' });
@@ -821,6 +887,10 @@
       document.execCommand('copy');
       sel.removeAllRanges();
       alert('已複製明細表內容，請至 Excel 或 Word 按 Ctrl+V 貼上！');
+    } finally {
+      prevStates.forEach(({ inp, span }) => {
+        if (span.parentNode) span.parentNode.replaceChild(inp, span);
+      });
     }
   }
 
