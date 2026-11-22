@@ -316,7 +316,7 @@
 
       <div class="chip-list no-print" id="taxCourseChipList" style="display:none;"></div>
 
-      <div class="sheet-title-banner" id="taxInstTitle">115年度講師鐘點費統計</div>
+      <div class="sheet-title-banner" id="taxInstTitle">115年度講師核銷所得稅統計</div>
       <div style="overflow-x:auto;">
         <table class="excel-table">
           <thead id="taxInstHead"></thead>
@@ -1230,8 +1230,16 @@
     if (savedC) { try { taxCourseOptions = JSON.parse(savedC); } catch (e) {} }
     renderTaxCourseChips();
     const savedM = localStorage.getItem(getTaxMatrixKey());
-    if (savedM) { try { taxMatrixRows = JSON.parse(savedM); } catch (e) { taxMatrixRows = []; } }
-    else { taxMatrixRows = []; }
+    if (savedM) {
+      try { taxMatrixRows = JSON.parse(savedM); } catch (e) { taxMatrixRows = []; }
+    } else {
+      const defaultLabels = ['長照1-3月', '長照4-6月', '長照7-9月', '長照10-12月', '延緩1期', '延緩2期', '多元', '伯公', '上課次數'];
+      taxMatrixRows = defaultLabels.map((lbl, idx) => ({
+        id: 'tx_def_' + currentYear + '_' + idx,
+        course_name: lbl,
+        values: {}
+      }));
+    }
     renderTaxInstructorTable();
   }
 
@@ -1303,7 +1311,7 @@
   }
 
   function renderTaxInstructorTable() {
-    document.getElementById('taxInstTitle').textContent = `${currentYear}年度講師鐘點費統計`;
+    document.getElementById('taxInstTitle').textContent = `${currentYear}年度講師核銷所得稅統計`;
     const cols = checkedInstructors;
     const headEl = document.getElementById('taxInstHead');
     const bodyEl = document.getElementById('taxInstBody');
@@ -1316,7 +1324,7 @@
 
     headEl.innerHTML = `
       <tr>
-        <th style="width:160px;">課程名稱</th>
+        <th style="width:150px;"></th>
         ${cols.map(n => `<th>${escapeHtml(n)}</th>`).join('')}
         <th class="no-print" style="width:70px;">操作</th>
       </tr>
@@ -1325,41 +1333,51 @@
     const colSums = {};
     cols.forEach(n => { colSums[n] = 0; });
 
-    const filteredTaxCourseOptions = taxCourseOptions.filter(c => c !== '上課次數');
-    const rowsHtml = taxMatrixRows.map(row => {
-      const courseOptsHtml = filteredTaxCourseOptions.map(c =>
-        `<option value="${escapeAttr(c)}" ${row.course_name === c ? 'selected' : ''}>${escapeHtml(c)}</option>`
-      ).join('');
+    const beforeLessonRows = taxMatrixRows.filter(r => String(r.course_name || '').trim() !== '上課次數');
+    const lessonRows = taxMatrixRows.filter(r => String(r.course_name || '').trim() === '上課次數');
 
+    const buildManualRowHtml = (row) => {
+      const lbl = String(row.course_name || '').trim();
+      const isLessonRow = (lbl === '上課次數');
       const tds = cols.map(n => {
         const raw = row.values ? (row.values[n] ?? '') : '';
-        const numVal = Number(String(raw).replace(/,/g, ''));
-        if (String(raw).trim() !== '' && Number.isFinite(numVal) && row.course_name !== '上課次數') {
+        const cleanedStr = String(raw).replace(/,/g, '').trim();
+        const isPureNum = cleanedStr !== '' && /^-?\d+(\.\d+)?$/.test(cleanedStr);
+        const numVal = isPureNum ? Number(cleanedStr) : NaN;
+        if (!isLessonRow && isPureNum && Number.isFinite(numVal)) {
           colSums[n] += numVal;
         }
-        const disp = (String(raw).trim() !== '' && Number.isFinite(numVal)) ? fmtNum(numVal) : raw;
-        return `<td><input type="text" class="num-input" value="${escapeAttr(disp)}" onchange="onTaxCellChange('${row.id}', '${escapeAttr(n)}', this.value)"></td>`;
+        const disp = isPureNum ? fmtNum(numVal) : raw;
+        return `<td><input type="text" class="${isPureNum ? 'num-input' : 'center-col'}" value="${escapeAttr(disp)}" onchange="onTaxCellChange('${row.id}', '${escapeAttr(n)}', this.value)"></td>`;
       }).join('');
 
       return `
         <tr>
-          <td><select onchange="onTaxRowCourseChange('${row.id}', this.value)">${courseOptsHtml}</select></td>
+          <td><input type="text" list="taxCourseDatalist" value="${escapeAttr(row.course_name)}" placeholder="輸入或選取項目" onchange="onTaxRowCourseChange('${row.id}', this.value)"></td>
           ${tds}
           <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteTaxMatrixRow('${row.id}')">刪除</button></td>
         </tr>
       `;
-    }).join('');
+    };
 
+    const datalistHtml = `
+      <datalist id="taxCourseDatalist">
+        ${taxCourseOptions.map(c => `<option value="${escapeAttr(c)}">`).join('')}
+      </datalist>
+    `;
+
+    const beforeHtml = beforeLessonRows.map(buildManualRowHtml).join('');
     const totalTds = cols.map(n => `<td class="num-col">${fmtNum(colSums[n])}</td>`).join('');
-
-    bodyEl.innerHTML = `
-      ${rowsHtml}
+    const totalRowHtml = `
       <tr class="total-row">
         <td class="center-col">核銷金額</td>
         ${totalTds}
         <td class="no-print"></td>
       </tr>
     `;
+    const lessonHtml = lessonRows.map(buildManualRowHtml).join('');
+
+    bodyEl.innerHTML = datalistHtml + beforeHtml + totalRowHtml + lessonHtml;
   }
 
   async function loadTempStaffQuarterData() {
