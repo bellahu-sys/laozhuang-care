@@ -420,7 +420,7 @@
   (async function init() {
     await loadInstructorsFromHr();
     await onFeeContextChange();
-    setFeeInputMode('calendar');
+    renderFeeTable();
     const hasAnyData = Object.values(multiFeeMap).some(arr => Array.isArray(arr) && arr.some(r => Number(r.days) > 0));
     if (!hasAnyData) {
       await calculateFromCalendar();
@@ -1053,8 +1053,8 @@
         .order('course_date', { ascending: true });
 
       if (error || !data || data.length === 0) {
-        alert(`行事曆中查無所選講師 ${currentYear} 年排課記錄`);
-        setStatus('');
+        setStatus(`行事曆中查無 ${currentYear} 年排課記錄，可切換為「手動輸入」直接填寫`);
+        renderFeeTable();
         return;
       }
 
