@@ -446,19 +446,39 @@
     const rule = map[planName];
     if (!rule) return null;
     if (typeof rule === 'number') return { mode: 'per_hour', rate: rule, hours: 1 };
+    let mode = 'per_hour';
+    if (rule.mode === 'per_session') mode = 'per_session';
+    else if (rule.mode === 'none') mode = 'none';
     return {
-      mode: rule.mode === 'per_session' ? 'per_session' : 'per_hour',
+      mode,
       rate: (rule.rate !== undefined && rule.rate !== null && String(rule.rate).trim() !== '') ? Number(rule.rate) : '',
       hours: (rule.hours !== undefined && rule.hours !== null && String(rule.hours).trim() !== '') ? Number(rule.hours) : 1
     };
   }
 
+  function onRateModeSelectChange(selEl) {
+    const td = selEl.closest('td');
+    if (!td) return;
+    const amtInp = td.querySelector('.rate-cfg-amt');
+    const hrsInp = td.querySelector('.rate-cfg-hrs');
+    const isNone = selEl.value === 'none';
+    if (amtInp) {
+      amtInp.disabled = isNone;
+      if (isNone) amtInp.value = '';
+    }
+    if (hrsInp) {
+      hrsInp.disabled = isNone;
+      if (isNone) hrsInp.value = '';
+    }
+  }
+
   function calcRowTotalByRule(r, instName = null) {
     const owner = instName || currentFeeInstructor;
     const rule = getConfiguredPlanRule(owner, r.course_name);
+    const mode = (r.pay_mode) || (rule ? rule.mode : 'per_hour');
+    if (mode === 'none') return 0;
     const d = Number(r.days || 0);
     const rateVal = (r.rate !== '' && r.rate !== undefined && r.rate !== null) ? Number(r.rate) : (rule && rule.rate !== '' ? Number(rule.rate) : 0);
-    const mode = (r.pay_mode) || (rule ? rule.mode : 'per_hour');
     if (!d || !rateVal) return 0;
     if (mode === 'per_session') return Math.round(d * rateVal);
     const h = (r.hours !== '' && r.hours !== undefined && r.hours !== null && Number(r.hours) > 0)
@@ -622,9 +642,10 @@
         const rule = getConfiguredPlanRule(inst, plan) || { mode: 'per_hour', rate: '', hours: 1 };
         return `
           <td style="min-width:155px;">
-            <select class="rate-cfg-mode" data-inst="${escapeAttr(inst)}" data-plan="${escapeAttr(plan)}" style="margin-bottom:4px; font-size:0.82rem;">
-              <option value="per_hour" ${rule.mode === 'per_hour' ? 'selected' : ''}>1小時 / 多少錢</option>
-              <option value="per_session" ${rule.mode === 'per_session' ? 'selected' : ''}>1堂 / 多少錢（不計時數）</option>
+            <select class="rate-cfg-mode" data-inst="${escapeAttr(inst)}" data-plan="${escapeAttr(plan)}" onchange="onRateModeSelectChange(this)" style="margin-bottom:4px; font-size:0.82rem;">
+              <option value="per_hour" ${rule.mode === 'per_hour' ? 'selected' : ''}>費用/1H</option>
+              <option value="per_session" ${rule.mode === 'per_session' ? 'selected' : ''}>費用/1堂</option>
+              <option value="none" ${rule.mode === 'none' ? 'selected' : ''}>無</option>
             </select>
             <div style="display:flex; gap:4px; align-items:center;">
               <input type="text" inputmode="decimal" class="num-input rate-cfg-amt" data-inst="${escapeAttr(inst)}" data-plan="${escapeAttr(plan)}" value="${rule.rate}" placeholder="金額" style="width:76px; font-size:0.84rem;">
@@ -659,7 +680,9 @@
       const mode = modeMap.get(key) || 'per_hour';
       const rawHrs = hrsMap.get(key) || '1';
       if (!instructorPlanRates[inst]) instructorPlanRates[inst] = {};
-      if (rawAmt !== '' && Number.isFinite(Number(rawAmt))) {
+      if (mode === 'none') {
+        instructorPlanRates[inst][plan] = { mode: 'none', rate: '', hours: '' };
+      } else if (rawAmt !== '' && Number.isFinite(Number(rawAmt))) {
         instructorPlanRates[inst][plan] = {
           mode,
           rate: Number(rawAmt),
