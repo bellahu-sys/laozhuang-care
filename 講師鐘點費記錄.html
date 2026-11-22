@@ -1490,6 +1490,18 @@
     alert(`已儲存 ${currentYear} 年度個人所得稅計算-講師資料！`);
   }
 
+  let hiddenInTable2RowIds = (() => {
+    try { return JSON.parse(localStorage.getItem('lz_tax_tbl2_hidden_ids') || '[]'); } catch (e) { return []; }
+  })();
+
+  function deleteTaxTable2Row(rowId) {
+    if (!hiddenInTable2RowIds.includes(String(rowId))) {
+      hiddenInTable2RowIds.push(String(rowId));
+      localStorage.setItem('lz_tax_tbl2_hidden_ids', JSON.stringify(hiddenInTable2RowIds));
+    }
+    renderTaxInstructorTable();
+  }
+
   function renderTaxInstructorTable() {
     const wrap = document.getElementById('taxTablesMultiContainer');
     if (!wrap) return;
@@ -1517,13 +1529,36 @@
       groups.push({ grpNum: 1, cols: [...checkedInstructors] });
     }
 
-    const beforeLessonRows = taxMatrixRows.filter(r => String(r.course_name || '').trim() !== '上課次數');
-    const lessonRows = taxMatrixRows.filter(r => String(r.course_name || '').trim() === '上課次數');
+    // Snapshot all rows for Table 1 so Table 2 operations never affect Table 1
+    const allMasterRowsSnapshot = [...taxMatrixRows];
 
     const tablesHtml = groups.map((grp, idx) => {
       const cols = grp.cols;
+      const isSecondOrLaterTable = grp.grpNum >= 2;
+
+      let rowsForThisTable;
+      if (!isSecondOrLaterTable) {
+        rowsForThisTable = allMasterRowsSnapshot;
+      } else {
+        const bogongOnly = allMasterRowsSnapshot.filter(r => {
+          if (hiddenInTable2RowIds.includes(String(r.id))) return false;
+          const cname = String(r.course_name || '').trim();
+          return cname.includes('伯公');
+        });
+        rowsForThisTable = bogongOnly.length > 0 ? bogongOnly : [{
+          id: 'tx_bg_only_' + currentYear,
+          course_name: '伯公',
+          values: {}
+        }];
+      }
+
+      const beforeLessonRows = rowsForThisTable.filter(r => String(r.course_name || '').trim() !== '上課次數');
+      const lessonRows = rowsForThisTable.filter(r => String(r.course_name || '').trim() === '上課次數');
+
       const colSums = {};
       cols.forEach(n => { colSums[n] = 0; });
+
+      const delHandler = isSecondOrLaterTable ? 'deleteTaxTable2Row' : 'deleteTaxMatrixRow';
 
       const buildManualRowHtml = (row) => {
         const lbl = String(row.course_name || '').trim();
@@ -1544,7 +1579,7 @@
           <tr>
             <td><input type="text" list="taxCourseDatalist" value="${escapeAttr(row.course_name)}" placeholder="輸入或選取項目" onchange="onTaxRowCourseChange('${row.id}', this.value)"></td>
             ${tds}
-            <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteTaxMatrixRow('${row.id}')">刪除</button></td>
+            <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="${delHandler}('${row.id}')">刪除</button></td>
           </tr>
         `;
       };
