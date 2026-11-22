@@ -323,6 +323,22 @@
           <tbody id="taxInstBody"></tbody>
         </table>
       </div>
+
+      <!-- 伯公課程講師（吳貴英、詹細珍、詹益誠）獨立所得稅統計表 -->
+      <div style="margin-top:26px; padding-top:16px; border-top:2px solid var(--border);">
+        <div class="controls-row no-print" style="margin-bottom:8px;">
+          <strong style="color:var(--primary);">伯公課程講師所得稅統計（吳貴英、詹細珍、詹益誠）</strong>
+          <button type="button" class="btn btn-blue btn-sm" onclick="addBogongTaxRow()">＋ 新增一列</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="saveTaxInstructorData()">儲存</button>
+        </div>
+        <div class="sheet-title-banner" id="bogongTaxTitle">115年度伯公課程講師所得稅統計</div>
+        <div style="overflow-x:auto;">
+          <table class="excel-table">
+            <thead id="bogongTaxHead"></thead>
+            <tbody id="bogongTaxBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- 3. 個人所得稅計算_臨時人員 -->
@@ -385,6 +401,8 @@
 
   let taxCourseOptions = ['關懷1-3月', '關懷4-6月', '關懷7-9月', '關懷10-12月', '延緩1期', '延緩2期', '多元', '伯公'];
   let taxMatrixRows = [];
+  const BOGONG_INSTRUCTORS = ['吳貴英', '詹細珍', '詹益誠'];
+  let bogongTaxRows = [];
   let tempStaffList = [];
   let tempHoursRecords = [];
 
@@ -511,7 +529,10 @@
       { name: '鄧美續', status: '服務中', hire_type: '內聘' },
       { name: '蔡牡連', status: '服務中', hire_type: '內聘' },
       { name: '吳佩珊', status: '暫停', hire_type: '外聘' },
-      { name: '黃仲慧', status: '服務中', hire_type: '外聘' }
+      { name: '黃仲慧', status: '服務中', hire_type: '外聘' },
+      { name: '吳貴英', status: '服務中', hire_type: '' },
+      { name: '詹細珍', status: '服務中', hire_type: '' },
+      { name: '詹益誠', status: '服務中', hire_type: '' }
     ];
   }
 
@@ -739,6 +760,60 @@
     if (!instName) return;
     const rows = showAllCheckedInstructorsInFee ? (multiFeeMap[instName] || []) : feeRows;
     localStorage.setItem(getFeeStorageKeyFor(instName), JSON.stringify(rows));
+  }
+
+  function consolidateRowsByPlan(instName, rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return [];
+    const byPlan = new Map();
+    rows.forEach(r => {
+      let cname = String(r.course_name || '關懷課程').trim();
+      if (cname.includes('老幼同樂') || cname.includes('伯公')) cname = '伯公課程';
+      else if (cname.includes('多元')) cname = '多元課程';
+      else if (cname.includes('延緩')) {
+        const m = cname.match(/延緩\s*([1-3一二三])\s*期?/);
+        const numMap = { '一': '1', '二': '2', '三': '3' };
+        cname = m ? `延緩${numMap[m[1]] || m[1]}期` : '延緩1期';
+      } else if (cname.includes('樂齡')) cname = '樂齡-活躍老化';
+      else if (cname.includes('關懷')) cname = '關懷課程';
+
+      if (!byPlan.has(cname)) {
+        const rule = getConfiguredPlanRule(instName, cname);
+        byPlan.set(cname, {
+          id: r.id || ('plan_' + instName + '_' + cname),
+          course_name: cname,
+          _periods: [],
+          period_text: r.period_text || '',
+          days: 0,
+          hours: (r.hours !== '' && r.hours !== undefined && r.hours !== '') ? r.hours : (rule ? rule.hours : 1),
+          rate: (r.rate !== '' && r.rate !== undefined && r.rate !== '') ? r.rate : (rule ? rule.rate : ''),
+          pay_mode: r.pay_mode || (rule ? rule.mode : 'per_hour'),
+          amount: 0,
+          remark: r.remark || ''
+        });
+      }
+      const target = byPlan.get(cname);
+      target.days = Number(target.days || 0) + (Number(r.days) || 0);
+      if (r.period_text && String(r.period_text).trim() !== '') {
+        target._periods.push(String(r.period_text).trim());
+      }
+      if (r.rate !== '' && r.rate !== undefined && Number(r.rate) > 0 && !target.rate) target.rate = Number(r.rate);
+    });
+
+    const out = [];
+    byPlan.forEach(item => {
+      if (item._periods && item._periods.length > 1) {
+        const firstPart = item._periods[0].split('-')[0];
+        const lastRaw = item._periods[item._periods.length - 1];
+        const lastPart = lastRaw.includes('-') ? lastRaw.split('-')[1] : lastRaw;
+        item.period_text = `${firstPart}-${lastPart}`;
+      } else if (item._periods && item._periods.length === 1) {
+        item.period_text = item._periods[0];
+      }
+      delete item._periods;
+      item.amount = calcRowTotalByRule(item, instName);
+      out.push(item);
+    });
+    return out;
   }
 
   async function fetchSingleInstructorRows(instName) {
@@ -1107,7 +1182,9 @@
       let grandAmt = 0;
 
       const blocksHtml = checkedInstructors.map(instName => {
-        const rows = multiFeeMap[instName] || [];
+        const rawRows = multiFeeMap[instName] || [];
+        const rows = consolidateRowsByPlan(instName, rawRows);
+        multiFeeMap[instName] = rows;
         const subDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
         const subAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
         grandDays += subDays;
@@ -1165,6 +1242,7 @@
       return;
     }
 
+    feeRows = consolidateRowsByPlan(currentFeeInstructor, feeRows);
     const totalDays = feeRows.reduce((s, r) => s + (Number(r.days) || 0), 0);
     const totalAmt = feeRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
@@ -1240,7 +1318,17 @@
         values: {}
       }));
     }
+    const savedB = localStorage.getItem(getBogongTaxKey());
+    if (savedB) {
+      try { bogongTaxRows = JSON.parse(savedB); } catch (e) { bogongTaxRows = []; }
+    } else {
+      bogongTaxRows = [
+        { id: 'bg_def_' + currentYear + '_1', course_name: '伯公', values: {} },
+        { id: 'bg_def_' + currentYear + '_2', course_name: '上課次數', values: {} }
+      ];
+    }
     renderTaxInstructorTable();
+    renderBogongTaxTable();
   }
 
   function renderTaxCourseChips() {
@@ -1345,6 +1433,7 @@
       } catch (e) {}
     }
 
+    localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
     setStatus(`已儲存 ${currentYear} 年度個人所得稅計算-講師資料`);
     alert(`已儲存 ${currentYear} 年度個人所得稅計算-講師資料！`);
   }
@@ -1417,6 +1506,94 @@
     const lessonHtml = lessonRows.map(buildManualRowHtml).join('');
 
     bodyEl.innerHTML = datalistHtml + beforeHtml + totalRowHtml + lessonHtml;
+  }
+
+  function getBogongTaxKey() { return `lz_bogong_tax_matrix_${currentYear}`; }
+
+  function addBogongTaxRow() {
+    bogongTaxRows.push({
+      id: 'bg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      course_name: '伯公',
+      values: {}
+    });
+    localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
+    renderBogongTaxTable();
+  }
+
+  function deleteBogongTaxRow(rowId) {
+    bogongTaxRows = bogongTaxRows.filter(r => String(r.id) !== String(rowId));
+    localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
+    renderBogongTaxTable();
+  }
+
+  function onBogongRowCourseChange(rowId, val) {
+    const row = bogongTaxRows.find(r => String(r.id) === String(rowId));
+    if (row) {
+      row.course_name = val;
+      localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
+    }
+  }
+
+  function onBogongCellChange(rowId, instName, val) {
+    const row = bogongTaxRows.find(r => String(r.id) === String(rowId));
+    if (!row) return;
+    row.values[instName] = String(val).replace(/,/g, '').trim();
+    localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
+    renderBogongTaxTable();
+  }
+
+  function renderBogongTaxTable() {
+    const titleEl = document.getElementById('bogongTaxTitle');
+    const headEl = document.getElementById('bogongTaxHead');
+    const bodyEl = document.getElementById('bogongTaxBody');
+    if (!titleEl || !headEl || !bodyEl) return;
+
+    titleEl.textContent = `${currentYear}年度伯公課程講師所得稅統計`;
+    headEl.innerHTML = `
+      <tr>
+        <th style="width:150px;"></th>
+        ${BOGONG_INSTRUCTORS.map(n => `<th>${escapeHtml(n)}</th>`).join('')}
+        <th class="no-print" style="width:70px;">操作</th>
+      </tr>
+    `;
+
+    const colSums = {};
+    BOGONG_INSTRUCTORS.forEach(n => { colSums[n] = 0; });
+
+    const beforeLesson = bogongTaxRows.filter(r => String(r.course_name || '').trim() !== '上課次數');
+    const lessonRows = bogongTaxRows.filter(r => String(r.course_name || '').trim() === '上課次數');
+
+    const buildRow = (row) => {
+      const isLesson = String(row.course_name || '').trim() === '上課次數';
+      const tds = BOGONG_INSTRUCTORS.map(n => {
+        const raw = row.values ? (row.values[n] ?? '') : '';
+        const cleaned = String(raw).replace(/,/g, '').trim();
+        const isNum = cleaned !== '' && /^-?\d+(\.\d+)?$/.test(cleaned);
+        const numVal = isNum ? Number(cleaned) : NaN;
+        if (!isLesson && isNum && Number.isFinite(numVal)) colSums[n] += numVal;
+        const disp = isNum ? fmtNum(numVal) : raw;
+        return `<td><input type="text" class="${isNum ? 'num-input' : 'center-col'}" value="${escapeAttr(disp)}" onchange="onBogongCellChange('${row.id}', '${escapeAttr(n)}', this.value)"></td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td><input type="text" list="taxCourseDatalist" value="${escapeAttr(row.course_name)}" onchange="onBogongRowCourseChange('${row.id}', this.value)"></td>
+          ${tds}
+          <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteBogongTaxRow('${row.id}')">刪除</button></td>
+        </tr>
+      `;
+    };
+
+    const beforeHtml = beforeLesson.map(buildRow).join('');
+    const totalRowHtml = `
+      <tr class="total-row">
+        <td class="center-col">核銷金額</td>
+        ${BOGONG_INSTRUCTORS.map(n => `<td class="num-col">${fmtNum(colSums[n])}</td>`).join('')}
+        <td class="no-print"></td>
+      </tr>
+    `;
+    const lessonHtml = lessonRows.map(buildRow).join('');
+    bodyEl.innerHTML = beforeHtml + totalRowHtml + lessonHtml;
   }
 
   async function loadTempStaffQuarterData() {
