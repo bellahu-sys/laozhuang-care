@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>長照講師核銷記錄</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --accent: #0284c7;
+      --bg: #f1f5f9;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1180px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 6px 0; font-size: 1.4rem; color: var(--primary); }
+    .sub-note { font-size: 0.9rem; color: #475569; margin: 0; }
+    h2 {
+      margin: 0 0 14px 0; font-size: 1.12rem; color: var(--primary);
+      border-bottom: 2px solid var(--primary); padding-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+
+    .toolbar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      background: #f8fafc; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    input[type="text"], input[type="number"], select {
+      padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.94rem; background: #fff;
+    }
+    input:focus, select:focus { outline: 2px solid #99f6e4; border-color: var(--primary); }
+
+    button.btn {
+      padding: 8px 15px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: var(--accent); color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-teal { background: #0d9488; color: #fff; }
+    .btn-teal:hover { background: #0f766e; }
+    .btn-gray { background: #64748b; color: #fff; }
+    .btn-gray:hover { background: #475569; }
+    .btn-danger { background: #dc2626; color: #fff; padding: 4px 9px; font-size: 0.82rem; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    .voucher-sheet-wrap {
+      border: 1px solid #cbd5e1; border-radius: 8px; padding: 20px;
+      background: #fff; overflow-x: auto;
+    }
+    .voucher-header-org {
+      text-align: center; font-weight: bold; font-size: 1.18rem; color: #000;
+      margin-bottom: 4px; letter-spacing: 1px;
+    }
+    .voucher-header-sub {
+      text-align: center; font-size: 1.05rem; color: #000; margin-bottom: 12px;
+    }
+    .voucher-meta-row {
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+      font-size: 0.96rem; color: #000; margin-bottom: 6px;
+    }
+    .voucher-meta-row .red-txt { color: #dc2626; font-weight: bold; }
+    .voucher-meta-row .blue-txt { color: #0369a1; font-weight: bold; }
+
+    table.voucher-table {
+      width: 100%; border-collapse: collapse; min-width: 820px;
+      color: #000; font-size: 0.95rem;
+    }
+    table.voucher-table th, table.voucher-table td {
+      border: 1.5px solid #000; padding: 5px 7px;
+    }
+    table.voucher-table th {
+      background: #ffffff; text-align: center; font-weight: normal;
+    }
+    .th-red-hint { color: #dc2626; font-size: 0.82rem; display: block; }
+    .td-center { text-align: center; }
+    .td-right { text-align: right; font-variant-numeric: tabular-nums; }
+    .td-sub-label { text-align: right; font-weight: bold; }
+    .highlight-yellow { background: #ffff00; padding: 1px 6px; font-weight: bold; }
+
+    table.voucher-table input.cell-edit {
+      width: 100%; border: 1px solid #cbd5e1; border-radius: 3px;
+      padding: 4px 6px; font-size: 0.93rem; background: #fffef7; color: #000;
+      display: block;
+    }
+    table.voucher-table input.cell-edit:focus {
+      outline: 2px solid #0284c7; border-color: #0284c7; background: #f0f9ff;
+    }
+    table.voucher-table input.cell-num {
+      text-align: right; font-variant-numeric: tabular-nums; font-weight: bold;
+    }
+    table.voucher-table input.cell-ctr {
+      text-align: center;
+    }
+
+    .voucher-notes {
+      margin-top: 10px; font-size: 0.92rem; color: #000; line-height: 1.65;
+    }
+    .voucher-notes .red-note { color: #dc2626; font-weight: bold; }
+
+    .info-banner {
+      background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
+      padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; line-height: 1.55;
+      margin-bottom: 14px;
+    }
+    #syncStatus { font-size: 0.85rem; font-weight: bold; color: #0f766e; }
+
+    @media print {
+      nav.topbar, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card, .voucher-sheet-wrap { border: none; box-shadow: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案翻閱本.html">個案資料翻閱本</a>
+        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費統計</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩核銷統計（收支明細表）</a>
+        <a href="長照講師核銷記錄.html">2. 長照講師核銷記錄</a>
+        <div class="dropdown-divider">食材費收據管理</div>
+        <a href="食材費收據管理.html">關懷與長照食材費收據匯入／統計</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="card no-print">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>長照講師核銷記錄</h1>
+        <p class="sub-note">接受衛生福利部補助經費支出憑證明細表 — 可手動輸入或帶入當月「長照食材費收據」與「講師鐘點費」，一鍵複製貼上 Word 核銷文件。</p>
+      </div>
+      <div id="syncStatus">雲端同步準備中...</div>
+    </div>
+  </div>
+
+  <div class="card no-print">
+    <h2>
+      <span>一、月份選擇與長照食材費／講師鐘點費合併工具</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" onclick="saveMonthChanges()">儲存本月變更</button>
+        <button type="button" class="btn btn-amber" onclick="loadSampleApril()">載入 115 年 4 月範例</button>
+        <button type="button" class="btn btn-gray" onclick="clearCurrentMonth()">清除本月資料</button>
+      </div>
+    </h2>
+
+    <div class="toolbar">
+      <label><strong>會計年度（民國年）：</strong>
+        <select id="rocYearSelect" onchange="onYearMonthChange()">
+          <option value="115">115 年</option>
+          <option value="116">116 年</option>
+          <option value="117">117 年</option>
+        </select>
+      </label>
+      <label><strong>月份：</strong>
+        <select id="monthSelect" onchange="onYearMonthChange()">
+          <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
+          <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
+          <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
+          <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+        </select>
+      </label>
+      <label><strong>補助計畫編號：</strong>
+        <input type="text" id="planCodeInput" value="11500K0201" style="width:140px;" oninput="renderSheet()">
+      </label>
+      <label><strong>計畫名稱：</strong>
+        <input type="text" id="planNameInput" value="115年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫" style="width:360px;" oninput="renderSheet()">
+      </label>
+    </div>
+
+    <div class="info-banner">
+      <strong>一鍵合併提示：</strong>可帶入當月「長照核銷食材費」收據（憑證編號 1）與講師鐘點費列（憑證編號 2），自動依憑證編號分類計算「<span class="highlight-yellow">食材費小計</span>」與「<span class="highlight-yellow">講師費小計</span>」，也可直接在下方表格逐格修改。
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-teal" onclick="importLtcFoodFromReceipts()">＋ 帶入本月「長照食材費收據」（憑證 1）</button>
+      <button type="button" class="btn btn-blue" onclick="importInstructorsTemplate()">＋ 帶入講師鐘點費列（憑證 2）</button>
+      <button type="button" class="btn btn-primary" onclick="addBlankRow()">＋ 新增一列空白明細</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="no-print">
+      <span id="sheetHeading">二、115 年 4 月接受衛生福利部補助經費支出憑證明細表</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" onclick="saveMonthChanges()">儲存本月變更</button>
+        <button type="button" class="btn btn-blue" onclick="copyOfficialTable()">一鍵複製明細表（貼上 Word 核銷文件）</button>
+      </div>
+    </h2>
+
+    <datalist id="summaryPresets">
+      <option value="食材費">
+      <option value="健康促進講師費(林熙鈴)">
+      <option value="健康促進講師費(張國堂)">
+      <option value="健康促進講師費(鄧美續)">
+      <option value="健康促進講師費(吳佩珊)">
+    </datalist>
+
+    <div class="voucher-sheet-wrap" id="officialCopyArea">
+      <div class="voucher-header-org">苗栗縣卓蘭鎮老庄社區發展協會</div>
+      <div class="voucher-header-sub">接受衛生福利部補助經費支出憑證明細表</div>
+      <div class="voucher-meta-row">
+        <span>會計年度：<span class="red-txt" id="vYear">115</span></span>
+        <span>補助計畫編號：<span class="blue-txt" id="vPlanCode">11500K0201</span></span>
+      </div>
+      <div class="voucher-meta-row">
+        <span>補助計畫名稱：<span id="vPlanName">115年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫</span></span>
+      </div>
+
+      <table class="voucher-table" id="voucherTable">
+        <thead>
+          <tr>
+            <th colspan="3" style="width:15%;">支出日期</th>
+            <th rowspan="2" style="width:31%;">摘要</th>
+            <th rowspan="2" style="width:10%;">支出憑<br>證編號</th>
+            <th colspan="3" style="width:34%;">金　　　額（新臺幣元）</th>
+            <th rowspan="2" class="no-print" style="width:10%;">操作</th>
+          </tr>
+          <tr>
+            <th style="width:5%;">年</th>
+            <th style="width:5%;">月</th>
+            <th style="width:5%;">日</th>
+            <th style="width:11.5%;">合計<span class="th-red-hint">(實際支出金額)</span></th>
+            <th style="width:11%;">自籌<span class="th-red-hint">(不可空白)</span></th>
+            <th style="width:11.5%;">補助<span class="th-red-hint">(申請補助金額)</span></th>
+          </tr>
+        </thead>
+        <tbody id="voucherTbody"></tbody>
+      </table>
+
+      <div class="voucher-notes">
+        <div>填表說明：</div>
+        <div>1. <strong>一張憑證填寫一列。摘要填寫：收據之用途別(如：食材費、活動材料費、文具材料費)</strong></div>
+        <div class="red-note">2. 請依支出憑證編號順序填列，並依補助項目分類列計金額（小計），俾利查核。</div>
+        <div>3. 如接受二個以上政府機關補助者，應列明各機關補助項目及金額(並填列於自籌欄位)。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY_MONTHLY_VOUCHERS = 'laozhuang_monthly_instructor_vouchers_v1';
+  const STORAGE_KEY_FOOD_RECEIPTS = 'laozhuang_food_receipts_v1';
+
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
+  let allRows = [];
+  let cachedInstructorNames = ['林熙鈴', '張國堂', '鄧美續', '吳佩珊'];
+
+  (function initCurrentYM() {
+    const today = new Date();
+    const rocY = String(today.getFullYear() - 1911);
+    const m = String(today.getMonth() + 1);
+    const ySel = document.getElementById('rocYearSelect');
+    const mSel = document.getElementById('monthSelect');
+    if ([...ySel.options].some(o => o.value === rocY)) ySel.value = rocY;
+    mSel.value = m;
+  })();
+
+  function fmt(num) { return Math.round(Number(num) || 0).toLocaleString('en-US'); }
+  function parseNum(v) {
+    if (v === '' || v === null || v === undefined) return 0;
+    const n = parseFloat(String(v).replace(/[,，\s$元]/g, ''));
+    return Number.isFinite(n) ? Math.round(n) : 0;
+  }
+  function escAttr(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function loadLocal() {
+    try { allRows = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_VOUCHERS) || '[]'); }
+    catch (e) { allRows = []; }
+  }
+
+  function saveLocal() {
+    localStorage.setItem(STORAGE_KEY_MONTHLY_VOUCHERS, JSON.stringify(allRows));
+  }
+
+  async function syncFromCloud() {
+    const statusEl = document.getElementById('syncStatus');
+    if (!supabaseClient) {
+      statusEl.textContent = '本機瀏覽器儲存模式（已就緒）';
+      return;
+    }
+    try {
+      const [vRes, iRes] = await Promise.all([
+        supabaseClient.from('ltc_voucher_details').select('*').order('day', { ascending: true }),
+        supabaseClient.from('instructors').select('name').order('id', { ascending: true })
+      ]);
+
+      if (!vRes.error && Array.isArray(vRes.data) && vRes.data.length > 0) {
+        allRows = vRes.data.map(r => ({
+          id: String(r.id),
+          rocYear: String(r.roc_year || '115'),
+          month: Number(r.month) || 4,
+          day: r.day !== null && r.day !== undefined && Number(r.day) > 0 ? String(r.day) : '',
+          category: r.category || '講師費',
+          summary: r.summary || '',
+          voucherNo: r.voucher_no !== null && r.voucher_no !== undefined ? String(r.voucher_no) : '',
+          totalAmt: Number(r.total_amt) || 0,
+          selfAmt: Number(r.self_amt) || 0,
+          grantAmt: Number(r.grant_amt) || 0
+        }));
+        saveLocal();
+      }
+
+      if (!iRes.error && Array.isArray(iRes.data) && iRes.data.length > 0) {
+        const names = iRes.data.map(x => (x.name || '').trim()).filter(Boolean);
+        if (names.length > 0) cachedInstructorNames = names;
+      }
+
+      const dl = document.getElementById('summaryPresets');
+      dl.innerHTML = '<option value="食材費">' +
+        cachedInstructorNames.map(n => `<option value="健康促進講師費(${n})">`).join('');
+
+      statusEl.textContent = !vRes.error ? '✅ 已連線雲端資料庫同步' : '本機儲存模式（已就緒）';
+    } catch (e) {
+      statusEl.textContent = '本機儲存模式（已就緒）';
+    }
+  }
+
+  function ensureMonthSlots(yr, m, minRows = 12) {
+    const existing = allRows.filter(r => String(r.rocYear) === String(yr) && Number(r.month) === Number(m));
+    const needed = Math.max(0, minRows - existing.length);
+    for (let i = 0; i < needed; i++) {
+      allRows.push({
+        id: 'mv_' + yr + '_' + m + '_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 5),
+        rocYear: String(yr),
+        month: Number(m),
+        day: '',
+        category: '講師費',
+        summary: '',
+        voucherNo: '',
+        totalAmt: 0,
+        selfAmt: 0,
+        grantAmt: 0
+      });
+    }
+  }
+
+  function addBlankRow() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+    allRows.push({
+      id: 'mv_' + yr + '_' + m + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      rocYear: String(yr),
+      month: m,
+      day: '',
+      category: '講師費',
+      summary: '',
+      voucherNo: '',
+      totalAmt: 0,
+      selfAmt: 0,
+      grantAmt: 0
+    });
+    saveLocal();
+    renderSheet();
+  }
+
+  function onYearMonthChange() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+    document.getElementById('planCodeInput').value = `${yr}00K0201`;
+    document.getElementById('planNameInput').value = `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
+    ensureMonthSlots(yr, m, 12);
+    renderSheet();
+  }
+
+  function isRowActive(r) {
+    return (r.summary && r.summary.trim() !== '') ||
+      (Number(r.totalAmt) || 0) !== 0 ||
+      (Number(r.selfAmt) || 0) !== 0 ||
+      (Number(r.grantAmt) || 0) !== 0;
+  }
+
+  function isFoodRow(r) {
+    return r.category === '食材費' || String(r.voucherNo).trim() === '1' || (r.summary || '').includes('食材');
+  }
+
+  function sumItems(items) {
+    return items.reduce((acc, r) => {
+      acc.total += Number(r.totalAmt) || 0;
+      acc.self += Number(r.selfAmt) || 0;
+      acc.grant += Number(r.grantAmt) || 0;
+      return acc;
+    }, { total: 0, self: 0, grant: 0 });
+  }
+
+  function onCellEdit(id, field, val) {
+    const item = allRows.find(r => String(r.id) === String(id));
+    if (!item) return;
+
+    if (field === 'month') item.month = Math.min(12, Math.max(1, parseNum(val) || item.month));
+    else if (field === 'day') item.day = String(val ?? '').trim();
+    else if (field === 'summary') {
+      item.summary = val;
+      if (val.includes('食材')) { item.category = '食材費'; if (!item.voucherNo) item.voucherNo = '1'; }
+      else if (val.includes('講師')) { item.category = '講師費'; if (!item.voucherNo) item.voucherNo = '2'; }
+    } else if (field === 'voucherNo') {
+      item.voucherNo = String(val ?? '').trim();
+      if (item.voucherNo === '1') item.category = '食材費';
+      else if (item.voucherNo === '2') item.category = '講師費';
+    } else if (field === 'totalAmt') {
+      item.totalAmt = parseNum(val);
+      item.grantAmt = Math.max(0, item.totalAmt - (Number(r.selfAmt) || 0));
+      const gInp = document.getElementById(`inp_grant_${id}`);
+      if (gInp) gInp.value = item.grantAmt;
+    } else if (field === 'selfAmt') {
+      item.selfAmt = parseNum(val);
+      item.grantAmt = Math.max(0, (Number(item.totalAmt) || 0) - item.selfAmt);
+      const gInp = document.getElementById(`inp_grant_${id}`);
+      if (gInp) gInp.value = item.grantAmt;
+    } else if (field === 'grantAmt') {
+      item.grantAmt = parseNum(val);
+    }
+
+    saveLocal();
+    recalcTotalsDom();
+  }
+
+  function recalcTotalsDom() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+    const monthRows = allRows.filter(r => String(r.rocYear) === String(yr) && Number(r.month) === m);
+    const active = monthRows.filter(isRowActive);
+    const foodSub = sumItems(active.filter(isFoodRow));
+    const feeSub = sumItems(active.filter(r => !isFoodRow(r)));
+    const tot = sumItems(active);
+
+    const setGroup = (prefix, s) => {
+      const tEl = document.getElementById(`${prefix}_tot`);
+      const sEl = document.getElementById(`${prefix}_self`);
+      const gEl = document.getElementById(`${prefix}_grant`);
+      if (tEl) tEl.textContent = fmt(s.total);
+      if (sEl) sEl.textContent = fmt(s.self);
+      if (gEl) gEl.textContent = fmt(s.grant);
+    };
+    setGroup('food', foodSub);
+    setGroup('fee', feeSub);
+    setGroup('month', tot);
+  }
+
+  function renderSheet() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+    const planCode = document.getElementById('planCodeInput').value.trim();
+    const planName = document.getElementById('planNameInput').value.trim();
+
+    document.getElementById('sheetHeading').textContent = `二、${yr} 年 ${m} 月接受衛生福利部補助經費支出憑證明細表`;
+    document.getElementById('vYear').textContent = yr;
+    document.getElementById('vPlanCode').textContent = planCode;
+    document.getElementById('vPlanName').textContent = planName;
+
+    const monthRows = allRows.filter(r => String(r.rocYear) === String(yr) && Number(r.month) === m);
+    const active = monthRows.filter(isRowActive);
+    const blanks = monthRows.filter(r => !isRowActive(r));
+
+    const foodRows = active.filter(isFoodRow).sort((a, b) => (parseNum(a.day) - parseNum(b.day)));
+    const feeRows = active.filter(r => !isFoodRow(r)).sort((a, b) => (parseNum(a.day) - parseNum(b.day)));
+
+    const foodSub = sumItems(foodRows);
+    const feeSub = sumItems(feeRows);
+    const monthTot = sumItems(active);
+
+    const buildRowHtml = (r) => `
+      <tr>
+        <td class="td-center">${yr}</td>
+        <td class="td-center"><input type="number" class="cell-edit cell-ctr" value="${r.month}" min="1" max="12" onchange="onCellEdit('${r.id}','month',this.value)"></td>
+        <td class="td-center"><input type="text" class="cell-edit cell-ctr" value="${escAttr(r.day)}" placeholder="日" onchange="onCellEdit('${r.id}','day',this.value)"></td>
+        <td><input type="text" class="cell-edit" list="summaryPresets" value="${escAttr(r.summary)}" placeholder="食材費 或 健康促進講師費(姓名)" onchange="onCellEdit('${r.id}','summary',this.value)"></td>
+        <td class="td-center"><input type="text" class="cell-edit cell-ctr" value="${escAttr(r.voucherNo)}" placeholder="編號" onchange="onCellEdit('${r.id}','voucherNo',this.value)"></td>
+        <td class="td-right"><input type="number" class="cell-edit cell-num" value="${r.totalAmt || ''}" placeholder="0" onchange="onCellEdit('${r.id}','totalAmt',this.value)"></td>
+        <td class="td-right"><input type="number" class="cell-edit cell-num" value="${r.selfAmt !== 0 || isRowActive(r) ? r.selfAmt : ''}" placeholder="0" onchange="onCellEdit('${r.id}','selfAmt',this.value)"></td>
+        <td class="td-right"><input type="number" id="inp_grant_${r.id}" class="cell-edit cell-num" value="${r.grantAmt || ''}" placeholder="0" onchange="onCellEdit('${r.id}','grantAmt',this.value)"></td>
+        <td class="td-center no-print">
+          <button type="button" class="btn btn-danger" onclick="clearSingleRow('${r.id}')">清除</button>
+        </td>
+      </tr>
+    `;
+
+    let html = '';
+    foodRows.forEach(r => { html += buildRowHtml(r); });
+    if (foodRows.length > 0) {
+      html += `
+        <tr>
+          <td></td><td></td><td></td>
+          <td class="td-sub-label"><span class="highlight-yellow">食材費小計</span></td>
+          <td></td>
+          <td class="td-right" id="food_tot">${fmt(foodSub.total)}</td>
+          <td class="td-right" id="food_self">${fmt(foodSub.self)}</td>
+          <td class="td-right" id="food_grant">${fmt(foodSub.grant)}</td>
+          <td class="no-print"></td>
+        </tr>
+      `;
+    }
+
+    feeRows.forEach(r => { html += buildRowHtml(r); });
+    if (feeRows.length > 0) {
+      html += `
+        <tr>
+          <td></td><td></td><td></td>
+          <td class="td-sub-label"><span class="highlight-yellow">講師費小計</span></td>
+          <td></td>
+          <td class="td-right" id="fee_tot">${fmt(feeSub.total)}</td>
+          <td class="td-right" id="fee_self">${fmt(feeSub.self)}</td>
+          <td class="td-right" id="fee_grant">${fmt(feeSub.grant)}</td>
+          <td class="no-print"></td>
+        </tr>
+      `;
+    }
+
+    blanks.forEach(r => { html += buildRowHtml(r); });
+
+    html += `
+      <tr>
+        <td></td><td></td><td></td>
+        <td class="td-sub-label">${m} 月總計</td>
+        <td></td>
+        <td class="td-right"><strong id="month_tot">${fmt(monthTot.total)}</strong></td>
+        <td class="td-right"><strong id="month_self">${fmt(monthTot.self)}</strong></td>
+        <td class="td-right"><strong id="month_grant">${fmt(monthTot.grant)}</strong></td>
+        <td class="no-print"></td>
+      </tr>
+    `;
+
+    document.getElementById('voucherTbody').innerHTML = html;
+  }
+
+  async function importLtcFoodFromReceipts() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+
+    let foodItems = [];
+    try {
+      const localFood = JSON.parse(localStorage.getItem(STORAGE_KEY_FOOD_RECEIPTS) || '[]');
+      foodItems = localFood.filter(x => String(x.rocYear) === String(yr) && Number(x.month) === m && x.plan === 'ltc');
+    } catch (e) {}
+
+    if (foodItems.length === 0 && supabaseClient) {
+      try {
+        const { data } = await supabaseClient
+          .from('food_receipt_items')
+          .select('*')
+          .eq('roc_year', String(yr))
+          .eq('month', String(m))
+          .eq('plan_type', 'ltc');
+        if (Array.isArray(data) && data.length > 0) {
+          foodItems = data.map(d => ({ receiptDate: d.receipt_date || `${m}/1`, totalPrice: Number(d.total_price) || 0 }));
+        }
+      } catch (e) {}
+    }
+
+    if (foodItems.length === 0) {
+      alert(`在「食材費收據管理」中找不到 ${yr} 年 ${m} 月的「長照核銷食材費」資料！`);
+      return;
+    }
+
+    const byDate = new Map();
+    foodItems.forEach(it => {
+      const key = it.receiptDate || `${m}/1`;
+      byDate.set(key, (byDate.get(key) || 0) + (Number(it.totalPrice) || 0));
+    });
+
+    allRows = allRows.filter(r => !(String(r.rocYear) === String(yr) && Number(r.month) === m && isFoodRow(r)));
+    byDate.forEach((subtotal, rDate) => {
+      const parts = String(rDate).split('/');
+      const dayStr = parts.length > 1 ? String(parseInt(parts[1], 10) || '') : '';
+      allRows.push({
+        id: 'food_imp_' + yr + '_' + m + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        rocYear: String(yr),
+        month: m,
+        day: dayStr,
+        category: '食材費',
+        summary: '食材費',
+        voucherNo: '1',
+        totalAmt: Math.round(subtotal),
+        selfAmt: 0,
+        grantAmt: Math.round(subtotal)
+      });
+    });
+
+    ensureMonthSlots(yr, m, 12);
+    saveLocal();
+    renderSheet();
+  }
+
+  function importInstructorsTemplate() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+    const adYear = Number(yr) + 1911;
+    const lastDay = String(new Date(adYear, m, 0).getDate());
+
+    cachedInstructorNames.forEach((name, idx) => {
+      allRows.push({
+        id: 'fee_imp_' + yr + '_' + m + '_' + Date.now() + '_' + idx,
+        rocYear: String(yr),
+        month: m,
+        day: lastDay,
+        category: '講師費',
+        summary: `健康促進講師費(${name})`,
+        voucherNo: '2',
+        totalAmt: 0,
+        selfAmt: 0,
+        grantAmt: 0
+      });
+    });
+
+    ensureMonthSlots(yr, m, 12);
+    saveLocal();
+    renderSheet();
+  }
+
+  function clearSingleRow(id) {
+    const item = allRows.find(r => String(r.id) === String(id));
+    if (!item) return;
+    item.day = ''; item.summary = ''; item.voucherNo = '';
+    item.totalAmt = 0; item.selfAmt = 0; item.grantAmt = 0;
+    saveLocal();
+    renderSheet();
+  }
+
+  function clearCurrentMonth() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+    if (!confirm(`確定要清除 ${yr} 年 ${m} 月的所有明細資料嗎？`)) return;
+    allRows = allRows.filter(r => !(String(r.rocYear) === String(yr) && Number(r.month) === m));
+    ensureMonthSlots(yr, m, 12);
+    saveLocal();
+    renderSheet();
+  }
+
+  function loadSampleApril() {
+    const yr = document.getElementById('rocYearSelect').value;
+    document.getElementById('monthSelect').value = '4';
+    if (allRows.some(r => String(r.rocYear) === String(yr) && Number(r.month) === 4 && isRowActive(r))) {
+      if (!confirm(`目前 ${yr} 年 4 月已有資料，是否要覆蓋載入 4 月範例資料？`)) return;
+    }
+    allRows = allRows.filter(r => !(String(r.rocYear) === String(yr) && Number(r.month) === 4));
+
+    const sample4 = [
+      { day: '19', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 3680, selfAmt: 0, grantAmt: 3680 },
+      { day: '20', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 4880, selfAmt: 1640, grantAmt: 3240 },
+      { day: '22', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 4150, selfAmt: 0, grantAmt: 4150 },
+      { day: '23', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 4065, selfAmt: 0, grantAmt: 4065 },
+      { day: '28', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 865, selfAmt: 0, grantAmt: 865 },
+      { day: '30', category: '講師費', summary: '健康促進講師費(林熙鈴)', voucherNo: '2', totalAmt: 3000, selfAmt: 0, grantAmt: 3000 },
+      { day: '30', category: '講師費', summary: '健康促進講師費(張國堂)', voucherNo: '2', totalAmt: 8000, selfAmt: 0, grantAmt: 8000 },
+      { day: '30', category: '講師費', summary: '健康促進講師費(鄧美續)', voucherNo: '2', totalAmt: 10000, selfAmt: 0, grantAmt: 10000 },
+      { day: '30', category: '講師費', summary: '健康促進講師費(吳佩珊)', voucherNo: '2', totalAmt: 3000, selfAmt: 0, grantAmt: 3000 }
+    ];
+
+    sample4.forEach((d, idx) => {
+      allRows.push({ id: `sample_apr_${idx + 1}_${Date.now()}`, rocYear: String(yr), month: 4, ...d });
+    });
+
+    ensureMonthSlots(yr, 4, 15);
+    saveLocal();
+    renderSheet();
+  }
+
+  async function saveMonthChanges() {
+    saveLocal();
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+    const activeRows = allRows.filter(r => String(r.rocYear) === String(yr) && Number(r.month) === m && isRowActive(r));
+
+    if (supabaseClient && activeRows.length > 0) {
+      try {
+        await supabaseClient.from('ltc_voucher_details').upsert(activeRows.map(row => ({
+          id: row.id,
+          roc_year: row.rocYear,
+          month: row.month,
+          day: parseNum(row.day),
+          category: row.category,
+          summary: row.summary,
+          voucher_no: row.voucherNo,
+          total_amt: row.totalAmt,
+          self_amt: row.selfAmt,
+          grant_amt: row.grantAmt
+        })));
+      } catch (e) {}
+    }
+    renderSheet();
+    alert(`已儲存 ${yr} 年 ${m} 月明細資料！`);
+  }
+
+  async function copyOfficialTable() {
+    const area = document.getElementById('officialCopyArea');
+    const clone = area.cloneNode(true);
+    clone.querySelectorAll('.no-print').forEach(node => node.remove());
+    clone.querySelectorAll('input.cell-edit').forEach(inp => {
+      const isNum = inp.classList.contains('cell-num');
+      const rawV = inp.value;
+      const txt = isNum ? (rawV === '' ? '' : fmt(rawV)) : rawV;
+      const span = document.createElement('span');
+      span.textContent = txt;
+      inp.parentNode.replaceChild(span, inp);
+    });
+
+    const tempWrap = document.createElement('div');
+    tempWrap.style.position = 'fixed';
+    tempWrap.style.left = '-9999px';
+    tempWrap.appendChild(clone);
+    document.body.appendChild(tempWrap);
+
+    try {
+      const htmlBlob = new Blob([clone.innerHTML], { type: 'text/html' });
+      const textBlob = new Blob([clone.innerText], { type: 'text/plain' });
+      await navigator.clipboard.write([ new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob }) ]);
+      alert('已複製《接受衛生福利部補助經費支出憑證明細表》！可直接到 Word 核銷文件中按 Ctrl+V 貼上。');
+    } catch (e) {
+      const range = document.createRange();
+      range.selectNode(clone);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('copy');
+      sel.removeAllRanges();
+      alert('已複製明細表內容！請至 Word 核銷文件按 Ctrl+V 貼上。');
+    } finally {
+      document.body.removeChild(tempWrap);
+    }
+  }
+
+  (async function init() {
+    loadLocal();
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+    ensureMonthSlots(yr, m, 12);
+    await syncFromCloud();
+    renderSheet();
+  })();
+</script>
+</body>
+</html>
