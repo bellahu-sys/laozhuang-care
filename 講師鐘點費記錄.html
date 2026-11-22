@@ -261,27 +261,40 @@
         <button type="button" class="btn btn-danger btn-sm" onclick="deleteSelectedFeeCourseOption()" title="刪除目前選取的錯誤計畫課程名稱">刪除課程</button>
         <input type="text" id="newFeeCourseInput" placeholder="新增計畫課程名稱" style="width:140px;">
         <button type="button" class="btn btn-outline btn-sm" onclick="addFeeCourseOption()">新增課程</button>
-        <button type="button" class="btn btn-blue btn-sm" onclick="addFeeRowFromToolbar()">＋ 加入一列</button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="saveFeeRecords()">儲存</button>
       </div>
 
-      <!-- 行事曆計算實際鐘點費切換區塊 -->
+      <!-- 計算模式切換與講師計畫鐘點費設定 -->
       <div class="sub-box no-print">
         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
-          <div style="display:inline-flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:bold; cursor:pointer;">
-              <input type="checkbox" id="useCalendarActualChk" checked onchange="onCalendarModeToggle()">
-              改為以行事曆計算
-            </label>
-            <button type="button" class="btn btn-outline btn-sm" onclick="switchToManualInputMode()">＋ 新增手動輸入選項</button>
+          <div style="display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span id="feeModeBadge" style="background:#dcfce7; color:#166534; padding:4px 10px; border-radius:14px; font-size:0.86rem; font-weight:bold;">目前模式：依行事曆代入天數（預設）</span>
+            <button type="button" class="btn btn-outline btn-sm" id="btnSwitchToManual" onclick="setFeeInputMode('manual')">切換為手動輸入</button>
+            <button type="button" class="btn btn-teal btn-sm" id="btnSwitchToCalendar" style="display:none;" onclick="setFeeInputMode('calendar')">切換為依行事曆代入天數</button>
+            <button type="button" class="btn btn-blue btn-sm" onclick="toggleRateConfigPanel()">⚙️ 設定講師不同計畫鐘點費</button>
           </div>
+
           <div id="calendarCalcControls" style="display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <label style="font-size:0.86rem; font-weight:bold;">預設每日時數：</label>
             <input type="text" inputmode="decimal" id="calDefaultHoursInput" value="1" style="width:65px; text-align:right;">
-            <label style="font-size:0.86rem; font-weight:bold;">預設每小時費用（選填）：</label>
-            <input type="text" inputmode="decimal" id="calDefaultRateInput" value="" placeholder="留空則各列自填" style="width:125px; text-align:right;">
             <button type="button" class="btn btn-teal btn-sm" onclick="calculateFromCalendar()">依行事曆帶入天數</button>
           </div>
+
+          <div id="manualModeControls" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-blue btn-sm" onclick="addFeeRowFromToolbar()">＋ 加入一列</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveFeeRecords()">儲存</button>
+          </div>
+        </div>
+
+        <!-- 設定講師不同計畫不同鐘點費面板 -->
+        <div id="rateConfigPanel" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <strong style="color:var(--primary); font-size:0.93rem;">設定各講師在不同計畫課程的每小時鐘點費（設定後帶入行事曆或切換計畫時自動帶出費用/1H）</strong>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="saveInstructorPlanRates()">儲存鐘點費設定並套用</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="toggleRateConfigPanel()">關閉</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;" id="rateConfigTableWrap"></div>
         </div>
       </div>
 
@@ -410,11 +423,10 @@
   (async function init() {
     await loadInstructorsFromHr();
     await onFeeContextChange();
-    if (document.getElementById('useCalendarActualChk')?.checked) {
-      const hasAnyData = Object.values(multiFeeMap).some(arr => Array.isArray(arr) && arr.some(r => Number(r.days) > 0));
-      if (!hasAnyData) {
-        await calculateFromCalendar();
-      }
+    setFeeInputMode('calendar');
+    const hasAnyData = Object.values(multiFeeMap).some(arr => Array.isArray(arr) && arr.some(r => Number(r.days) > 0));
+    if (!hasAnyData) {
+      await calculateFromCalendar();
     }
   })();
 
@@ -560,6 +572,121 @@
     inp.value = '';
   }
 
+  let feeInputMode = 'calendar'; // 'calendar' (預設依行事曆代入天數) | 'manual' (手動輸入)
+  let instructorPlanRates = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('lz_instructor_plan_rates') || 'null');
+      if (saved && typeof saved === 'object') return saved;
+    } catch (e) {}
+    return {};
+  })();
+
+  function getConfiguredRate(instName, planName) {
+    if (!instName || !planName) return '';
+    const map = instructorPlanRates[instName] || {};
+    const val = map[planName];
+    return (val !== undefined && val !== null && String(val).trim() !== '') ? Number(val) : '';
+  }
+
+  function toggleRateConfigPanel() {
+    const panel = document.getElementById('rateConfigPanel');
+    if (!panel) return;
+    const willOpen = panel.style.display === 'none';
+    panel.style.display = willOpen ? 'block' : 'none';
+    if (willOpen) renderRateConfigTable();
+  }
+
+  function renderRateConfigTable() {
+    const wrap = document.getElementById('rateConfigTableWrap');
+    if (!wrap) return;
+    const insts = checkedInstructors.length > 0 ? checkedInstructors : masterInstructors.map(m => m.name);
+    const plans = feeCourseOptions;
+
+    const headCells = plans.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+    const bodyRows = insts.map(inst => {
+      const tds = plans.map(plan => {
+        const curRate = getConfiguredRate(inst, plan);
+        return `<td><input type="text" inputmode="decimal" class="num-input rate-cfg-inp" data-inst="${escapeAttr(inst)}" data-plan="${escapeAttr(plan)}" value="${curRate}" placeholder="如：1000 或 2000"></td>`;
+      }).join('');
+      return `
+        <tr>
+          <td class="center-col" style="font-weight:bold; background:#f8fafc;">${escapeHtml(inst)}</td>
+          ${tds}
+        </tr>
+      `;
+    }).join('');
+
+    wrap.innerHTML = `
+      <table class="excel-table">
+        <thead>
+          <tr>
+            <th style="width:120px;">講師姓名 \ 計畫</th>
+            ${headCells}
+          </tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    `;
+  }
+
+  function saveInstructorPlanRates() {
+    document.querySelectorAll('.rate-cfg-inp').forEach(inp => {
+      const inst = inp.getAttribute('data-inst');
+      const plan = inp.getAttribute('data-plan');
+      const raw = inp.value.trim().replace(/,/g, '');
+      if (!instructorPlanRates[inst]) instructorPlanRates[inst] = {};
+      if (raw !== '' && Number.isFinite(Number(raw))) {
+        instructorPlanRates[inst][plan] = Number(raw);
+      } else {
+        delete instructorPlanRates[inst][plan];
+      }
+    });
+    localStorage.setItem('lz_instructor_plan_rates', JSON.stringify(instructorPlanRates));
+
+    // Apply configured rates to existing rows immediately
+    const applyToList = (instName, list) => {
+      list.forEach(r => {
+        const cfgRate = getConfiguredRate(instName, r.course_name);
+        if (cfgRate !== '') {
+          r.rate = cfgRate;
+          r.amount = calcFeeAmount(r.days, r.hours, r.rate);
+        }
+      });
+      persistFeeLocal(instName);
+    };
+
+    if (showAllCheckedInstructorsInFee) {
+      checkedInstructors.forEach(inst => applyToList(inst, multiFeeMap[inst] || []));
+    } else if (currentFeeInstructor) {
+      applyToList(currentFeeInstructor, feeRows);
+    }
+
+    renderFeeTable();
+    setStatus('已儲存各講師不同計畫鐘點費並套用計算');
+  }
+
+  function setFeeInputMode(mode) {
+    feeInputMode = mode;
+    const isManual = (mode === 'manual');
+    const badge = document.getElementById('feeModeBadge');
+    const btnToManual = document.getElementById('btnSwitchToManual');
+    const btnToCal = document.getElementById('btnSwitchToCalendar');
+    const calCtrl = document.getElementById('calendarCalcControls');
+    const manCtrl = document.getElementById('manualModeControls');
+
+    if (badge) {
+      badge.textContent = isManual ? '目前模式：手動輸入模式' : '目前模式：依行事曆代入天數（預設）';
+      badge.style.background = isManual ? '#fef3c7' : '#dcfce7';
+      badge.style.color = isManual ? '#92400e' : '#166534';
+    }
+    if (btnToManual) btnToManual.style.display = isManual ? 'none' : 'inline-block';
+    if (btnToCal) btnToCal.style.display = isManual ? 'inline-block' : 'none';
+    if (calCtrl) calCtrl.style.display = isManual ? 'none' : 'inline-flex';
+    if (manCtrl) manCtrl.style.display = isManual ? 'inline-flex' : 'none';
+
+    renderFeeTable();
+  }
+
   function deleteSelectedFeeCourseOption() {
     const sel = document.getElementById('feeCourseSelect');
     const targetVal = sel ? sel.value : '';
@@ -570,16 +697,6 @@
     renderFeeCourseSelect();
     renderFeeTable();
     setStatus(`已刪除計畫課程名稱「${targetVal}」`);
-  }
-
-  function switchToManualInputMode() {
-    const chk = document.getElementById('useCalendarActualChk');
-    if (chk) {
-      chk.checked = false;
-      onCalendarModeToggle();
-    }
-    addFeeRowFromToolbar();
-    setStatus('已切換為手動輸入模式並新增一列');
   }
 
   function switchTab(tab) {
@@ -740,8 +857,20 @@
     if (!item) return;
     item[field] = value;
 
+    const ownerName = instOwner || currentFeeInstructor;
     const tr = document.querySelector(`tr[data-fee-row-id="${rowId}"]`);
-    if (['days', 'hours', 'rate'].includes(field)) {
+    if (field === 'course_name') {
+      const cfgRate = getConfiguredRate(ownerName, value);
+      if (cfgRate !== '') {
+        item.rate = cfgRate;
+        if (tr) {
+          const rateInp = tr.querySelector('.row-rate-input');
+          if (rateInp) rateInp.value = cfgRate;
+        }
+      }
+    }
+
+    if (['days', 'hours', 'rate', 'course_name'].includes(field)) {
       const hasNum = String(item.days ?? '').trim() !== '' && String(item.rate ?? '').trim() !== '';
       item.amount = hasNum ? calcFeeAmount(item.days, item.hours, item.rate) : 0;
       if (tr) {
@@ -854,9 +983,6 @@
     const adYear = currentYear + 1911;
     const rawH = document.getElementById('calDefaultHoursInput').value.trim();
     const defHours = rawH !== '' ? Number(rawH) : 1;
-    const rawR = document.getElementById('calDefaultRateInput').value.trim();
-    const hasDefRate = rawR !== '' && Number.isFinite(Number(rawR));
-    const defRate = hasDefRate ? Number(rawR) : '';
 
     setStatus('讀取行事曆排課資料...');
 
@@ -916,14 +1042,15 @@
         map.forEach((dates, cName) => {
           const days = dates.length;
           const period = dates.length > 1 ? `${dates[0]}-${dates[dates.length - 1]}` : (dates[0] || '');
+          const cfgRate = getConfiguredRate(instName, cName);
           builtRows.push({
             id: 'cal_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
             course_name: cName,
             period_text: period,
             days,
             hours: defHours,
-            rate: defRate,
-            amount: hasDefRate ? calcFeeAmount(days, defHours, defRate) : 0,
+            rate: cfgRate,
+            amount: cfgRate !== '' ? calcFeeAmount(days, defHours, cfgRate) : 0,
             remark: ''
           });
         });
@@ -1012,7 +1139,7 @@
         <td><input type="text" value="${escapeAttr(r.period_text)}" oninput="onFeeFieldChange('${r.id}', 'period_text', this.value, ${ownerArg})" placeholder="如：1/5-4/13"></td>
         <td><input type="text" inputmode="decimal" class="num-input" value="${r.days ?? ''}" oninput="onFeeFieldChange('${r.id}', 'days', this.value, ${ownerArg})" placeholder="輸入天數"></td>
         <td><input type="text" inputmode="decimal" class="num-input" value="${r.hours ?? ''}" oninput="onFeeFieldChange('${r.id}', 'hours', this.value, ${ownerArg})" placeholder="時數"></td>
-        <td><input type="text" inputmode="decimal" class="num-input" value="${r.rate ?? ''}" oninput="onFeeFieldChange('${r.id}', 'rate', this.value, ${ownerArg})" placeholder="每小時費用"></td>
+        <td><input type="text" inputmode="decimal" class="num-input row-rate-input" value="${r.rate ?? ''}" oninput="onFeeFieldChange('${r.id}', 'rate', this.value, ${ownerArg})" placeholder="每小時費用"></td>
         <td class="num-col row-amount-cell" style="font-weight:bold;">${fmtNum(r.amount)}</td>
         <td><input type="text" value="${escapeAttr(r.remark)}" oninput="onFeeFieldChange('${r.id}', 'remark', this.value, ${ownerArg})"></td>
         <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteFeeRow('${r.id}', ${ownerArg})">刪除</button></td>
@@ -1076,8 +1203,10 @@
           <div style="margin-bottom:22px;">
             <div class="sheet-title-banner" style="display:flex; justify-content:center; align-items:center; gap:10px; position:relative;">
               <span>${currentYear}年度 ${escapeHtml(instName)} 講師鐘點費用</span>
-              <button type="button" class="btn btn-blue btn-sm no-print" onclick="addFeeRowForInstructor('${escapeAttr(instName)}')" style="font-size:0.78rem;">＋ 加入一列</button>
-              <button type="button" class="btn btn-primary btn-sm no-print" onclick="saveFeeRecordsForInstructor('${escapeAttr(instName)}')" style="font-size:0.78rem;">儲存</button>
+              ${feeInputMode === 'manual' ? `
+                <button type="button" class="btn btn-blue btn-sm no-print" onclick="addFeeRowForInstructor('${escapeAttr(instName)}')" style="font-size:0.78rem;">＋ 加入一列</button>
+                <button type="button" class="btn btn-primary btn-sm no-print" onclick="saveFeeRecordsForInstructor('${escapeAttr(instName)}')" style="font-size:0.78rem;">儲存</button>
+              ` : ''}
             </div>
             <div style="overflow-x:auto;">
               <table class="excel-table">
@@ -1126,7 +1255,13 @@
     const totalAmt = feeRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
     container.innerHTML = `
-      <div class="sheet-title-banner">${currentYear}年度 ${escapeHtml(currentFeeInstructor || '')} 講師鐘點費用</div>
+      <div class="sheet-title-banner" style="display:flex; justify-content:center; align-items:center; gap:10px;">
+        <span>${currentYear}年度 ${escapeHtml(currentFeeInstructor || '')} 講師鐘點費用</span>
+        ${feeInputMode === 'manual' ? `
+          <button type="button" class="btn btn-blue btn-sm no-print" onclick="addFeeRowFromToolbar()" style="font-size:0.78rem;">＋ 加入一列</button>
+          <button type="button" class="btn btn-primary btn-sm no-print" onclick="saveFeeRecordsForInstructor('${escapeAttr(currentFeeInstructor || '')}')" style="font-size:0.78rem;">儲存</button>
+        ` : ''}
+      </div>
       <div style="overflow-x:auto;">
         <table class="excel-table">
           ${buildFeeTableHeaderHtml()}
