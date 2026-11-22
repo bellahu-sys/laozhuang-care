@@ -255,95 +255,72 @@
     </div>
   </div>
 
-  <!-- 長照與延緩核銷金額統計（移至長照補助經費表格上方） -->
+  <!-- 1. 長照與延緩核銷金額統計（依圖 1 紅叉精簡） -->
   <div class="card">
     <h2>
       <span>長照與延緩核銷金額統計</span>
-      <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-blue" onclick="copySheetBlock('statsSheetWrap', '長照與延緩核銷金額統計')">一鍵複製統計表</button>
-      </div>
     </h2>
 
     <div class="official-sheet-wrap" id="statsSheetWrap">
-      <table class="official-table" style="min-width:680px;">
+      <table class="official-table" style="min-width:560px;">
         <tbody>
           <tr>
-            <td rowspan="14" class="td-center" style="width:14%; font-weight:bold; background:#f8fafc;">核銷<br>相關<br>金額</td>
-            <td style="width:28%; font-weight:bold;">補助計畫編號</td>
-            <td colspan="2"><input type="text" class="sheet-cell-input" style="text-align:left;" id="stPlanCode" value="11500K0201" onchange="saveStatsState()"></td>
+            <td colspan="2" style="font-weight:bold; background:#f1f5f9;">長照 + 延緩目前累計金額</td>
           </tr>
           <tr>
-            <td colspan="3" style="font-weight:bold; background:#f1f5f9;">長照 + 延緩目前累計金額</td>
-          </tr>
-          <tr>
-            <td>1-3月長照</td>
-            <td class="td-right" style="width:29%;"><input type="text" class="sheet-cell-input" id="stLtcQ1" value="120,000" onchange="onStatsAmountChange()"></td>
-            <td style="width:29%;"></td>
+            <td style="width:36%;">1-3月長照</td>
+            <td class="td-right" style="width:64%;"><input type="text" class="sheet-cell-input" id="stLtcQ1" value="120,000" onchange="onStatsAmountChange()"></td>
           </tr>
           <tr>
             <td>4-6月長照</td>
             <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ2" value="120,000" onchange="onStatsAmountChange()"></td>
-            <td></td>
           </tr>
           <tr>
             <td>7-9月長照</td>
             <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ3" value="120,000" onchange="onStatsAmountChange()"></td>
-            <td></td>
           </tr>
           <tr>
             <td>10-12月長照</td>
             <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ4" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            <td></td>
           </tr>
           <tr style="background:#f8fafc; font-weight:bold;">
             <td>長照累計金額</td>
             <td class="td-right" id="stLtcTotal">360,000</td>
-            <td></td>
           </tr>
           <tr>
             <td>延緩1期</td>
             <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP1" value="28,800" onchange="onStatsAmountChange()"></td>
-            <td></td>
           </tr>
           <tr>
             <td>延緩2期</td>
             <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP2" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            <td></td>
           </tr>
           <tr>
             <td>延緩3期</td>
             <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP3" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            <td></td>
           </tr>
           <tr style="background:#f8fafc; font-weight:bold;">
             <td>累計金額</td>
             <td class="td-right" id="stDelayTotal">28,800</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td style="font-weight:bold;">1. 核定金額(補助經費):</td>
-            <td colspan="2"><input type="text" class="sheet-cell-input" style="text-align:left;" id="stApprovedNote" value="補助經費新臺幣（大寫）：伍拾捌萬捌仟元整" onchange="saveStatsState()"></td>
-          </tr>
-          <tr>
-            <td style="color:#dc2626; font-weight:bold;">2. 食材費:</td>
-            <td colspan="2"><input type="text" class="sheet-cell-input" style="text-align:left; color:#dc2626; font-weight:bold;" id="stFoodNote" value="食材費應補齊金額" onchange="saveStatsState()"></td>
-          </tr>
-          <tr>
-            <td colspan="3" style="font-weight:bold; line-height:1.5;">
-              <input type="text" class="sheet-cell-input" style="text-align:left; font-weight:bold;" id="stWarnNote" value="注意每個月食材費+講師費收據最多不可以超過48000，否則要重做~~~!!" onchange="saveStatsState()">
-            </td>
           </tr>
         </tbody>
       </table>
     </div>
   </div>
 
-
-  <!-- 長照補助經費 -->
+  <!-- 2. 長照補助經費（依圖 2：手動紀錄表，經費來源下拉清單 1年4季如 第1季 1-3月） -->
   <div class="card">
     <h2>
       <span>長照補助經費</span>
-      <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <label style="font-size:0.9rem; font-weight:bold; color:#334155;">季別下拉選單：</label>
+        <select id="ltcQuarterFilterSelect" onchange="onLtcQuarterSelectChange(this.value)" style="padding:6px 10px; font-weight:bold;">
+          <option value="all">全部 4 季</option>
+          <option value="1">第1季 1-3月</option>
+          <option value="2">第2季 4-6月</option>
+          <option value="3">第3季 7-9月</option>
+          <option value="4">第4季 10-12月</option>
+        </select>
         <button type="button" class="btn btn-blue" onclick="copySheetBlock('ltcSheetWrap', '長照補助經費')">一鍵複製表格</button>
       </div>
     </h2>
@@ -352,12 +329,12 @@
       <table class="official-table">
         <thead>
           <tr>
-            <th class="th-yellow" style="width:15%;">經費來源</th>
+            <th class="th-yellow" style="width:17%;">經費來源</th>
             <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
             <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
-            <th class="th-peach" style="width:17%;">補助項目</th>
+            <th class="th-peach" style="width:16%;">補助項目</th>
             <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
-            <th class="th-plain-red" style="width:13%;">核銷累計金額</th>
+            <th class="th-plain-red" style="width:12%;">核銷累計金額</th>
             <th class="th-plain" style="width:13%;">餘額</th>
           </tr>
         </thead>
@@ -366,11 +343,17 @@
     </div>
   </div>
 
-  <!-- 延緩補助經費 -->
+  <!-- 3. 延緩補助經費（依圖 3：1年最多3期 延緩1期/延緩2期/延緩3期，下拉清單一次記錄和顯示1期） -->
   <div class="card">
     <h2>
       <span>延緩補助經費</span>
-      <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <label style="font-size:0.9rem; font-weight:bold; color:#334155;">期別下拉選單：</label>
+        <select id="delayPeriodSelect" onchange="onDelayPeriodSelectChange(this.value)" style="padding:6px 10px; font-weight:bold;">
+          <option value="1">延緩1期</option>
+          <option value="2">延緩2期</option>
+          <option value="3">延緩3期</option>
+        </select>
         <button type="button" class="btn btn-blue" onclick="copySheetBlock('delaySheetWrap', '延緩補助經費')">一鍵複製表格</button>
       </div>
     </h2>
@@ -379,12 +362,12 @@
       <table class="official-table">
         <thead>
           <tr>
-            <th class="th-yellow" style="width:15%;">經費來源</th>
+            <th class="th-yellow" style="width:17%;">經費來源</th>
             <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
             <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
-            <th class="th-peach" style="width:17%;">補助項目</th>
+            <th class="th-peach" style="width:16%;">補助項目</th>
             <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
-            <th class="th-plain-red" style="width:13%;">核銷累計金額</th>
+            <th class="th-plain-red" style="width:12%;">核銷累計金額</th>
             <th class="th-plain" style="width:13%;">餘額</th>
           </tr>
         </thead>
@@ -392,25 +375,31 @@
       </table>
     </div>
   </div>
-
 </div>
 
 <script>
-  const STORAGE_KEY_LTC_Q = 'laozhuang_ltc_quarterly_v1';
-  const STORAGE_KEY_DELAY_Q = 'laozhuang_delay_quarterly_v1';
-  const STORAGE_KEY_STATS = 'laozhuang_ltc_delay_stats_v1';
-  const DEFAULT_ORG = '苗栗縣卓蘭鎮老庄社區發展協會';
+  const STORAGE_KEY_LTC_Q = 'laozhuang_ltc_quarterly_v2';
+  const STORAGE_KEY_DELAY_P = 'laozhuang_delay_periods_v2';
+  const STORAGE_KEY_STATS = 'laozhuang_ltc_delay_stats_v2';
 
-  let supabaseClient = null;
-  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
-    try {
-      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    } catch (e) {}
-  }
+  const LTC_QUARTER_LABELS = {
+    1: '第1季 1-3月',
+    2: '第2季 4-6月',
+    3: '第3季 7-9月',
+    4: '第4季 10-12月'
+  };
+
+  const DELAY_PERIOD_LABELS = {
+    1: '延緩1期',
+    2: '延緩2期',
+    3: '延緩3期'
+  };
 
   let ltcQuarters = [];
-  let delayQuarters = [];
+  let delayPeriods = [];
   let statsByYear = {};
+  let ltcFilterMode = 'all';
+  let activeDelayPeriod = 1;
 
   function fmt(num) {
     const n = Math.round(Number(num) || 0);
@@ -420,71 +409,123 @@
     const n = parseFloat(String(val ?? '').replace(/[,，\s$元]/g, ''));
     return Number.isFinite(n) ? Math.round(n) : 0;
   }
-  function escAttr(v) {
-    return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
   function getYear() {
     return (document.getElementById('cfgYear').value || '115').trim();
   }
 
-  function createDefaultQuarters(yr, mode) {
-    const isLtc = (mode === 'ltc');
+  function createDefaultLtcQuarters(yr) {
     return [1, 2, 3, 4].map(q => ({
-      id: `${mode}_${yr}_q${q}`,
+      id: `ltc_${yr}_q${q}`,
       year: yr,
       quarter: q,
-      budgetBiz: isLtc ? 480000 : 108000,
+      sourceLabel: LTC_QUARTER_LABELS[q],
+      budgetBiz: 480000,
       budgetDelay: 0,
-      curBiz: (isLtc && q === 1) ? 120000 : (!isLtc && q === 1) ? 28800 : 0,
+      curBiz: q === 1 ? 120000 : 0,
       curDelay: 0
     }));
   }
 
-  function ensureYearQuarters(yr, mode) {
-    const arr = mode === 'ltc' ? ltcQuarters : delayQuarters;
-    const yearRows = arr.filter(r => String(r.year) === yr);
-    if (yearRows.length === 0) {
-      const defs = createDefaultQuarters(yr, mode);
-      if (mode === 'ltc') ltcQuarters.push(...defs);
-      else delayQuarters.push(...defs);
+  function createDefaultDelayPeriods(yr) {
+    return [1, 2, 3].map(p => ({
+      id: `delay_${yr}_p${p}`,
+      year: yr,
+      period: p,
+      sourceLabel: DELAY_PERIOD_LABELS[p],
+      budgetBiz: 108000,
+      budgetDelay: 0,
+      curBiz: p === 1 ? 28800 : 0,
+      curDelay: 0
+    }));
+  }
+
+  function ensureYearData(yr) {
+    if (!ltcQuarters.some(r => String(r.year) === yr)) {
+      ltcQuarters.push(...createDefaultLtcQuarters(yr));
+    }
+    if (!delayPeriods.some(r => String(r.year) === yr)) {
+      delayPeriods.push(...createDefaultDelayPeriods(yr));
     }
   }
 
   function loadAllLocal() {
     try { ltcQuarters = JSON.parse(localStorage.getItem(STORAGE_KEY_LTC_Q) || '[]'); } catch (e) { ltcQuarters = []; }
-    try { delayQuarters = JSON.parse(localStorage.getItem(STORAGE_KEY_DELAY_Q) || '[]'); } catch (e) { delayQuarters = []; }
+    try { delayPeriods = JSON.parse(localStorage.getItem(STORAGE_KEY_DELAY_P) || '[]'); } catch (e) { delayPeriods = []; }
     try { statsByYear = JSON.parse(localStorage.getItem(STORAGE_KEY_STATS) || '{}'); } catch (e) { statsByYear = {}; }
   }
 
   function saveAllLocal() {
     localStorage.setItem(STORAGE_KEY_LTC_Q, JSON.stringify(ltcQuarters));
-    localStorage.setItem(STORAGE_KEY_DELAY_Q, JSON.stringify(delayQuarters));
+    localStorage.setItem(STORAGE_KEY_DELAY_P, JSON.stringify(delayPeriods));
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(statsByYear));
   }
 
   function onYearChange() {
     const yr = getYear();
-    ensureYearQuarters(yr, 'ltc');
-    ensureYearQuarters(yr, 'delay');
+    ensureYearData(yr);
     loadStatsInputsForYear(yr);
     renderQuarterTables();
     recalcStatsAmounts();
   }
 
-  function onQuarterFieldChange(mode, rowId, field, rawVal) {
-    const arr = mode === 'ltc' ? ltcQuarters : delayQuarters;
-    const item = arr.find(r => String(r.id) === String(rowId));
+  function onLtcQuarterSelectChange(val) {
+    ltcFilterMode = val || 'all';
+    renderLtcTable();
+  }
+
+  function onDelayPeriodSelectChange(val) {
+    activeDelayPeriod = Math.min(3, Math.max(1, parseInt(val, 10) || 1));
+    renderDelayTable();
+  }
+
+  function onLtcRowSourceChange(rowId, newLabel) {
+    const item = ltcQuarters.find(r => String(r.id) === String(rowId));
+    if (!item) return;
+    item.sourceLabel = newLabel;
+    const matchQ = Object.entries(LTC_QUARTER_LABELS).find(([, lbl]) => lbl === newLabel);
+    if (matchQ) item.quarter = Number(matchQ[0]);
+    saveAllLocal();
+  }
+
+  function onDelayRowSourceChange(rowId, newLabel) {
+    const item = delayPeriods.find(r => String(r.id) === String(rowId));
+    if (!item) return;
+    item.sourceLabel = newLabel;
+    const matchP = Object.entries(DELAY_PERIOD_LABELS).find(([, lbl]) => lbl === newLabel);
+    if (matchP) {
+      item.period = Number(matchP[0]);
+      activeDelayPeriod = item.period;
+      document.getElementById('delayPeriodSelect').value = String(activeDelayPeriod);
+    }
+    saveAllLocal();
+    renderDelayTable();
+  }
+
+  function onLtcFieldChange(rowId, field, rawVal) {
+    const item = ltcQuarters.find(r => String(r.id) === String(rowId));
     if (!item) return;
     item[field] = parseNumVal(rawVal);
     saveAllLocal();
-    renderQuarterTables();
+    renderLtcTable();
   }
 
-  function renderSingleQuarterBody(tbodyId, mode) {
+  function onDelayFieldChange(rowId, field, rawVal) {
+    const item = delayPeriods.find(r => String(r.id) === String(rowId));
+    if (!item) return;
+    item[field] = parseNumVal(rawVal);
+    saveAllLocal();
+    renderDelayTable();
+  }
+
+  function renderLtcTable() {
     const yr = getYear();
-    const arr = (mode === 'ltc' ? ltcQuarters : delayQuarters)
+    const allYearRows = ltcQuarters
       .filter(r => String(r.year) === yr)
       .sort((a, b) => Number(a.quarter) - Number(b.quarter));
+
+    const visibleRows = (ltcFilterMode === 'all')
+      ? allYearRows
+      : allYearRows.filter(r => Number(r.quarter) === Number(ltcFilterMode));
 
     let cumBiz = 0;
     let cumDelay = 0;
@@ -493,37 +534,67 @@
     let sumCurBiz = 0;
     let sumCurDelay = 0;
 
-    const rowsHtml = arr.map(r => {
+    // Cumulative calculation across quarters up to the selected/displayed quarters
+    allYearRows.forEach(r => {
       const bBiz = Number(r.budgetBiz) || 0;
       const bDel = Number(r.budgetDelay) || 0;
       const cBiz = Number(r.curBiz) || 0;
       const cDel = Number(r.curDelay) || 0;
 
-      cumBiz += cBiz;
-      cumDelay += cDel;
-      sumBudgetBiz += bBiz;
-      sumBudgetDelay += bDel;
-      sumCurBiz += cBiz;
-      sumCurDelay += cDel;
+      const isIncludedInVisible = visibleRows.some(v => String(v.id) === String(r.id));
+      if (isIncludedInVisible) {
+        sumBudgetBiz += bBiz;
+        sumBudgetDelay += bDel;
+        sumCurBiz += cBiz;
+        sumCurDelay += cDel;
+      }
+    });
+
+    let runningCumBiz = 0;
+    let runningCumDelay = 0;
+
+    const rowsHtml = allYearRows.map(r => {
+      const bBiz = Number(r.budgetBiz) || 0;
+      const bDel = Number(r.budgetDelay) || 0;
+      const cBiz = Number(r.curBiz) || 0;
+      const cDel = Number(r.curDelay) || 0;
+
+      runningCumBiz += cBiz;
+      runningCumDelay += cDel;
+
+      const isIncluded = visibleRows.some(v => String(v.id) === String(r.id));
+      if (!isIncluded) return '';
+
+      cumBiz = runningCumBiz;
+      cumDelay = runningCumDelay;
 
       const remBiz = bBiz - cumBiz;
       const remDel = bDel - cumDelay;
+      const curSrc = r.sourceLabel || LTC_QUARTER_LABELS[r.quarter] || `第${r.quarter}季`;
+
+      const selectOptionsHtml = Object.values(LTC_QUARTER_LABELS).map(lbl =>
+        `<option value="${lbl}" ${curSrc === lbl ? 'selected' : ''}>${lbl}</option>`
+      ).join('');
 
       return `
         <tr>
-          <td rowspan="2" class="td-center">第 ${r.quarter} 季</td>
+          <td rowspan="2" class="td-center">
+            <select onchange="onLtcRowSourceChange('${r.id}', this.value)" style="width:100%; font-weight:bold;">
+              ${selectOptionsHtml}
+            </select>
+          </td>
           <td class="td-center">業務費</td>
-          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bBiz)}" onchange="onQuarterFieldChange('${mode}','${r.id}','budgetBiz',this.value)"></td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bBiz)}" onchange="onLtcFieldChange('${r.id}','budgetBiz',this.value)"></td>
           <td class="td-center">業務費</td>
-          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cBiz)}" onchange="onQuarterFieldChange('${mode}','${r.id}','curBiz',this.value)"></td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cBiz)}" onchange="onLtcFieldChange('${r.id}','curBiz',this.value)"></td>
           <td class="td-right"><strong>${fmt(cumBiz)}</strong></td>
           <td class="td-right">${fmt(remBiz)}</td>
         </tr>
         <tr>
           <td class="td-center">預防及延緩失能服務</td>
-          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bDel)}" onchange="onQuarterFieldChange('${mode}','${r.id}','budgetDelay',this.value)"></td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bDel)}" onchange="onLtcFieldChange('${r.id}','budgetDelay',this.value)"></td>
           <td class="td-center">預防及延緩失能服務</td>
-          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cDel)}" onchange="onQuarterFieldChange('${mode}','${r.id}','curDelay',this.value)"></td>
+          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cDel)}" onchange="onLtcFieldChange('${r.id}','curDelay',this.value)"></td>
           <td class="td-right"><strong>${fmt(cumDelay)}</strong></td>
           <td class="td-right">${fmt(remDel)}</td>
         </tr>
@@ -546,17 +617,84 @@
       </tr>
     `;
 
-    document.getElementById(tbodyId).innerHTML = rowsHtml + totalHtml;
+    document.getElementById('ltcTableBody').innerHTML = rowsHtml + totalHtml;
+  }
+
+  function renderDelayTable() {
+    const yr = getYear();
+    const allPeriods = delayPeriods
+      .filter(r => String(r.year) === yr && Number(r.period) >= 1 && Number(r.period) <= 3)
+      .sort((a, b) => Number(a.period) - Number(b.period));
+
+    let cumBiz = 0;
+    let cumDelay = 0;
+    allPeriods.forEach(p => {
+      if (Number(p.period) <= Number(activeDelayPeriod)) {
+        cumBiz += Number(p.curBiz) || 0;
+        cumDelay += Number(p.curDelay) || 0;
+      }
+    });
+
+    const curRow = allPeriods.find(p => Number(p.period) === Number(activeDelayPeriod)) || allPeriods[0];
+    if (!curRow) return;
+
+    const bBiz = Number(curRow.budgetBiz) || 0;
+    const bDel = Number(curRow.budgetDelay) || 0;
+    const cBiz = Number(curRow.curBiz) || 0;
+    const cDel = Number(curRow.curDelay) || 0;
+
+    const remBiz = bBiz - cumBiz;
+    const remDel = bDel - cumDelay;
+
+    const totalBudget = bBiz + bDel;
+    const totalCur = cBiz + cDel;
+    const totalCum = cumBiz + cumDelay;
+    const totalRem = totalBudget - totalCum;
+
+    const periodSelectOptions = [1, 2, 3].map(num =>
+      `<option value="${DELAY_PERIOD_LABELS[num]}" ${Number(activeDelayPeriod) === num ? 'selected' : ''}>${DELAY_PERIOD_LABELS[num]}</option>`
+    ).join('');
+
+    document.getElementById('delayTableBody').innerHTML = `
+      <tr>
+        <td rowspan="2" class="td-center">
+          <select onchange="onDelayRowSourceChange('${curRow.id}', this.value)" style="width:100%; font-weight:bold;">
+            ${periodSelectOptions}
+          </select>
+        </td>
+        <td class="td-center">業務費</td>
+        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bBiz)}" onchange="onDelayFieldChange('${curRow.id}','budgetBiz',this.value)"></td>
+        <td class="td-center">業務費</td>
+        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cBiz)}" onchange="onDelayFieldChange('${curRow.id}','curBiz',this.value)"></td>
+        <td class="td-right"><strong>${fmt(cumBiz)}</strong></td>
+        <td class="td-right">${fmt(remBiz)}</td>
+      </tr>
+      <tr>
+        <td class="td-center">預防及延緩失能服務</td>
+        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bDel)}" onchange="onDelayFieldChange('${curRow.id}','budgetDelay',this.value)"></td>
+        <td class="td-center">預防及延緩失能服務</td>
+        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cDel)}" onchange="onDelayFieldChange('${curRow.id}','curDelay',this.value)"></td>
+        <td class="td-right"><strong>${fmt(cumDelay)}</strong></td>
+        <td class="td-right">${fmt(remDel)}</td>
+      </tr>
+      <tr>
+        <td colspan="2" class="td-total-yellow">年度總計</td>
+        <td class="td-total-yellow">${fmt(totalBudget)}</td>
+        <td class="td-total-peach">年度合計</td>
+        <td class="td-total-peach">${fmt(totalCur)}</td>
+        <td class="td-total-bold">${fmt(totalCum)}</td>
+        <td class="td-total-bold">${fmt(totalRem)}</td>
+      </tr>
+    `;
   }
 
   function renderQuarterTables() {
-    renderSingleQuarterBody('ltcTableBody', 'ltc');
-    renderSingleQuarterBody('delayTableBody', 'delay');
+    renderLtcTable();
+    renderDelayTable();
   }
 
   function loadStatsInputsForYear(yr) {
     const st = statsByYear[yr] || {};
-    document.getElementById('stPlanCode').value = st.planCode ?? `${yr}00K0201`;
     document.getElementById('stLtcQ1').value = st.ltcQ1 !== undefined ? fmt(st.ltcQ1) : '120,000';
     document.getElementById('stLtcQ2').value = st.ltcQ2 !== undefined ? fmt(st.ltcQ2) : '120,000';
     document.getElementById('stLtcQ3').value = st.ltcQ3 !== undefined ? fmt(st.ltcQ3) : '120,000';
@@ -564,9 +702,6 @@
     document.getElementById('stDelayP1').value = st.delayP1 !== undefined ? fmt(st.delayP1) : '28,800';
     document.getElementById('stDelayP2').value = st.delayP2 ? fmt(st.delayP2) : '';
     document.getElementById('stDelayP3').value = st.delayP3 ? fmt(st.delayP3) : '';
-    document.getElementById('stApprovedNote').value = st.approvedNote ?? '補助經費新臺幣（大寫）：伍拾捌萬捌仟元整';
-    document.getElementById('stFoodNote').value = st.foodNote ?? '食材費應補齊金額';
-    document.getElementById('stWarnNote').value = st.warnNote ?? '注意每個月食材費+講師費收據最多不可以超過48000，否則要重做~~~!!';
   }
 
   function recalcStatsAmounts() {
@@ -574,30 +709,24 @@
     const q2 = parseNumVal(document.getElementById('stLtcQ2').value);
     const q3 = parseNumVal(document.getElementById('stLtcQ3').value);
     const q4 = parseNumVal(document.getElementById('stLtcQ4').value);
-    const ltcSum = q1 + q2 + q3 + q4;
-    document.getElementById('stLtcTotal').textContent = fmt(ltcSum);
+    document.getElementById('stLtcTotal').textContent = fmt(q1 + q2 + q3 + q4);
 
     const p1 = parseNumVal(document.getElementById('stDelayP1').value);
     const p2 = parseNumVal(document.getElementById('stDelayP2').value);
     const p3 = parseNumVal(document.getElementById('stDelayP3').value);
-    const delaySum = p1 + p2 + p3;
-    document.getElementById('stDelayTotal').textContent = fmt(delaySum);
+    document.getElementById('stDelayTotal').textContent = fmt(p1 + p2 + p3);
   }
 
   function saveStatsState() {
     const yr = getYear();
     statsByYear[yr] = {
-      planCode: document.getElementById('stPlanCode').value,
       ltcQ1: parseNumVal(document.getElementById('stLtcQ1').value),
       ltcQ2: parseNumVal(document.getElementById('stLtcQ2').value),
       ltcQ3: parseNumVal(document.getElementById('stLtcQ3').value),
       ltcQ4: parseNumVal(document.getElementById('stLtcQ4').value),
       delayP1: parseNumVal(document.getElementById('stDelayP1').value),
       delayP2: parseNumVal(document.getElementById('stDelayP2').value),
-      delayP3: parseNumVal(document.getElementById('stDelayP3').value),
-      approvedNote: document.getElementById('stApprovedNote').value,
-      foodNote: document.getElementById('stFoodNote').value,
-      warnNote: document.getElementById('stWarnNote').value
+      delayP3: parseNumVal(document.getElementById('stDelayP3').value)
     };
     saveAllLocal();
   }
@@ -616,9 +745,9 @@
   function loadSample115() {
     const yr = getYear();
     ltcQuarters = ltcQuarters.filter(r => String(r.year) !== yr);
-    delayQuarters = delayQuarters.filter(r => String(r.year) !== yr);
-    ltcQuarters.push(...createDefaultQuarters(yr, 'ltc'));
-    delayQuarters.push(...createDefaultQuarters(yr, 'delay'));
+    delayPeriods = delayPeriods.filter(r => String(r.year) !== yr);
+    ltcQuarters.push(...createDefaultLtcQuarters(yr));
+    delayPeriods.push(...createDefaultDelayPeriods(yr));
     delete statsByYear[yr];
     saveAllLocal();
     loadStatsInputsForYear(yr);
@@ -629,11 +758,11 @@
   async function copySheetBlock(containerId, label) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    const inputs = container.querySelectorAll('input.sheet-cell-input');
+    const inputs = container.querySelectorAll('input.sheet-cell-input, select');
     const prevStates = [];
     inputs.forEach(inp => {
       const span = document.createElement('span');
-      span.textContent = inp.value;
+      span.textContent = inp.tagName === 'SELECT' ? (inp.options[inp.selectedIndex]?.text || inp.value) : inp.value;
       prevStates.push({ inp, span });
       inp.parentNode.replaceChild(span, inp);
     });
@@ -664,13 +793,14 @@
   (function init() {
     loadAllLocal();
     const yr = getYear();
-    ensureYearQuarters(yr, 'ltc');
-    ensureYearQuarters(yr, 'delay');
+    ensureYearData(yr);
     loadStatsInputsForYear(yr);
     renderQuarterTables();
     recalcStatsAmounts();
   })();
 </script>
+</body>
+</html>
 </body>
 </html>
 </body>
