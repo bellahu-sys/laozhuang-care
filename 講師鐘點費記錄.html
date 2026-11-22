@@ -1564,7 +1564,6 @@
       groups.push({ grpNum: 1, cols: [...checkedInstructors] });
     }
 
-    // Ensure Table 1 always has full courses (長照1-3月 ~ 伯公, 上課次數)
     const fullTable1Rows = ensureFullDefaultTaxRows(currentYear, taxMatrixRows);
     taxMatrixRows = fullTable1Rows;
 
@@ -1572,24 +1571,30 @@
       const cols = grp.cols;
       const isSecondOrLaterTable = grp.grpNum >= 2;
 
-      let rowsForThisTable;
+      let beforeLessonRows;
+      let lessonRows;
+
       if (!isSecondOrLaterTable) {
-        rowsForThisTable = fullTable1Rows;
+        beforeLessonRows = fullTable1Rows.filter(r => String(r.course_name || '').trim() !== '上課次數');
+        lessonRows = fullTable1Rows.filter(r => String(r.course_name || '').trim() === '上課次數');
       } else {
         const bogongOnly = fullTable1Rows.filter(r => {
           if (hiddenInTable2RowIds.includes(String(r.id))) return false;
           const cname = String(r.course_name || '').trim();
           return cname.includes('伯公');
         });
-        rowsForThisTable = bogongOnly.length > 0 ? bogongOnly : [{
+        beforeLessonRows = bogongOnly.length > 0 ? bogongOnly : [{
           id: 'tx_bg_only_' + currentYear,
           course_name: '伯公',
           values: {}
         }];
+        const existingLessons = fullTable1Rows.filter(r => String(r.course_name || '').trim() === '上課次數');
+        lessonRows = existingLessons.length > 0 ? existingLessons : [{
+          id: 'tx_bg_lesson_' + currentYear,
+          course_name: '上課次數',
+          values: {}
+        }];
       }
-
-      const beforeLessonRows = rowsForThisTable.filter(r => String(r.course_name || '').trim() !== '上課次數');
-      const lessonRows = rowsForThisTable.filter(r => String(r.course_name || '').trim() === '上課次數');
 
       const colSums = {};
       cols.forEach(n => { colSums[n] = 0; });
