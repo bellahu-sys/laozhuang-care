@@ -316,29 +316,7 @@
 
       <div class="chip-list no-print" id="taxCourseChipList" style="display:none;"></div>
 
-      <div class="sheet-title-banner" id="taxInstTitle">115年度講師核銷所得稅統計</div>
-      <div style="overflow-x:auto;">
-        <table class="excel-table">
-          <thead id="taxInstHead"></thead>
-          <tbody id="taxInstBody"></tbody>
-        </table>
-      </div>
-
-      <!-- 伯公課程講師（吳貴英、詹細珍、詹益誠）獨立所得稅統計表 -->
-      <div style="margin-top:26px; padding-top:16px; border-top:2px solid var(--border);">
-        <div class="controls-row no-print" style="margin-bottom:8px;">
-          <strong style="color:var(--primary);">伯公課程講師所得稅統計（吳貴英、詹細珍、詹益誠）</strong>
-          <button type="button" class="btn btn-blue btn-sm" onclick="addBogongTaxRow()">＋ 新增一列</button>
-          <button type="button" class="btn btn-primary btn-sm" onclick="saveTaxInstructorData()">儲存</button>
-        </div>
-        <div class="sheet-title-banner" id="bogongTaxTitle">115年度伯公課程講師所得稅統計</div>
-        <div style="overflow-x:auto;">
-          <table class="excel-table">
-            <thead id="bogongTaxHead"></thead>
-            <tbody id="bogongTaxBody"></tbody>
-          </table>
-        </div>
-      </div>
+      <div id="taxTablesMultiContainer"></div>
     </div>
 
     <!-- 3. 個人所得稅計算_臨時人員 -->
@@ -574,6 +552,42 @@
     }
   }
 
+  function getTaxSplitCountKey() { return `lz_tax_split_count_${currentYear}`; }
+  function getTaxGroupAssignKey() { return `lz_tax_group_assign_${currentYear}`; }
+
+  let taxTableCount = 1;
+  let taxInstructorGroupMap = {}; // { [instName]: 1 | 2 | 3 | 4 }
+
+  function loadTaxSplitConfig() {
+    const sc = localStorage.getItem(getTaxSplitCountKey());
+    taxTableCount = sc ? Math.min(4, Math.max(1, parseInt(sc, 10) || 1)) : 1;
+    const sa = localStorage.getItem(getTaxGroupAssignKey());
+    if (sa) {
+      try { taxInstructorGroupMap = JSON.parse(sa) || {}; } catch (e) { taxInstructorGroupMap = {}; }
+    } else {
+      taxInstructorGroupMap = {};
+    }
+    // Default 吳貴英、詹細珍、詹益誠 to group 2 when taxTableCount >= 2
+    BOGONG_INSTRUCTORS.forEach(n => {
+      if (taxInstructorGroupMap[n] === undefined) {
+        taxInstructorGroupMap[n] = 2;
+      }
+    });
+  }
+
+  function onTaxTableCountChange(val) {
+    taxTableCount = Math.min(4, Math.max(1, parseInt(val, 10) || 1));
+    localStorage.setItem(getTaxSplitCountKey(), String(taxTableCount));
+    renderPickerPanels();
+    renderTaxInstructorTable();
+  }
+
+  function onInstructorTableGroupChange(instName, grpNum) {
+    taxInstructorGroupMap[instName] = Math.min(4, Math.max(1, parseInt(grpNum, 10) || 1));
+    localStorage.setItem(getTaxGroupAssignKey(), JSON.stringify(taxInstructorGroupMap));
+    renderTaxInstructorTable();
+  }
+
   function renderPickerPanels() {
     const itemsHtml = masterInstructors.map(m => {
       const isChk = checkedInstructors.includes(m.name);
@@ -588,7 +602,44 @@
     const p1 = document.getElementById('feeInstPickerPanel');
     const p2 = document.getElementById('taxInstPickerPanel');
     if (p1) p1.innerHTML = itemsHtml;
-    if (p2) p2.innerHTML = itemsHtml;
+
+    if (p2) {
+      const groupOpts = Array.from({ length: taxTableCount }, (_, idx) => idx + 1)
+        .map(g => `<option value="${g}">第${g}張表</option>`).join('');
+      const taxItemsHtml = masterInstructors.map(m => {
+        const isChk = checkedInstructors.includes(m.name);
+        const assignedGrp = Math.min(taxTableCount, Math.max(1, Number(taxInstructorGroupMap[m.name] || 1)));
+        const selHtml = taxTableCount > 1 ? `
+          <select style="margin-left:auto; padding:2px 4px; font-size:0.76rem;" onclick="event.stopPropagation();" onchange="onInstructorTableGroupChange('${escapeAttr(m.name)}', this.value)">
+            ${Array.from({ length: taxTableCount }, (_, idx) => idx + 1)
+              .map(g => `<option value="${g}" ${assignedGrp === g ? 'selected' : ''}>第${g}張表</option>`).join('')}
+          </select>
+        ` : '';
+        return `
+          <div class="picker-item" style="justify-content:space-between;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; flex:1;">
+              <input type="checkbox" ${isChk ? 'checked' : ''} onchange="onInstructorCheckChange('${escapeAttr(m.name)}', this.checked)">
+              <span>${escapeHtml(m.name)}</span>
+              <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(${escapeHtml(m.status)})</span>
+            </label>
+            ${selHtml}
+          </div>
+        `;
+      }).join('');
+
+      p2.innerHTML = `
+        <div style="padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+          <span style="font-size:0.82rem; font-weight:bold; color:var(--primary);">分幾張表呈現：</span>
+          <select onclick="event.stopPropagation();" onchange="onTaxTableCountChange(this.value)" style="padding:3px 6px; font-size:0.82rem; font-weight:bold;">
+            <option value="1" ${taxTableCount === 1 ? 'selected' : ''}>1 張統計表</option>
+            <option value="2" ${taxTableCount === 2 ? 'selected' : ''}>2 張統計表</option>
+            <option value="3" ${taxTableCount === 3 ? 'selected' : ''}>3 張統計表</option>
+          </select>
+        </div>
+        ${taxItemsHtml}
+      `;
+    }
+
     const btn2 = document.getElementById('taxInstDropdownBtn');
     if (btn2) btn2.textContent = `勾選列出講師 (${checkedInstructors.length}) ▾`;
   }
@@ -1303,6 +1354,7 @@
   async function onTaxContextChange() {
     currentYear = parseInt(document.getElementById('taxYearSelect').value, 10) || 115;
     loadCheckedInstructorsForYear();
+    loadTaxSplitConfig();
     renderPickerPanels();
     const savedC = localStorage.getItem(getTaxCoursesKey());
     if (savedC) { try { taxCourseOptions = JSON.parse(savedC); } catch (e) {} }
@@ -1439,54 +1491,8 @@
   }
 
   function renderTaxInstructorTable() {
-    document.getElementById('taxInstTitle').textContent = `${currentYear}年度講師核銷所得稅統計`;
-    const cols = checkedInstructors;
-    const headEl = document.getElementById('taxInstHead');
-    const bodyEl = document.getElementById('taxInstBody');
-
-    if (cols.length === 0) {
-      headEl.innerHTML = '';
-      bodyEl.innerHTML = '<tr><td class="center-col" style="padding:16px; color:#64748b;">請先勾選要列出的講師</td></tr>';
-      return;
-    }
-
-    headEl.innerHTML = `
-      <tr>
-        <th style="width:150px;"></th>
-        ${cols.map(n => `<th>${escapeHtml(n)}</th>`).join('')}
-        <th class="no-print" style="width:70px;">操作</th>
-      </tr>
-    `;
-
-    const colSums = {};
-    cols.forEach(n => { colSums[n] = 0; });
-
-    const beforeLessonRows = taxMatrixRows.filter(r => String(r.course_name || '').trim() !== '上課次數');
-    const lessonRows = taxMatrixRows.filter(r => String(r.course_name || '').trim() === '上課次數');
-
-    const buildManualRowHtml = (row) => {
-      const lbl = String(row.course_name || '').trim();
-      const isLessonRow = (lbl === '上課次數');
-      const tds = cols.map(n => {
-        const raw = row.values ? (row.values[n] ?? '') : '';
-        const cleanedStr = String(raw).replace(/,/g, '').trim();
-        const isPureNum = cleanedStr !== '' && /^-?\d+(\.\d+)?$/.test(cleanedStr);
-        const numVal = isPureNum ? Number(cleanedStr) : NaN;
-        if (!isLessonRow && isPureNum && Number.isFinite(numVal)) {
-          colSums[n] += numVal;
-        }
-        const disp = isPureNum ? fmtNum(numVal) : raw;
-        return `<td><input type="text" class="${isPureNum ? 'num-input' : 'center-col'}" value="${escapeAttr(disp)}" onchange="onTaxCellChange('${row.id}', '${escapeAttr(n)}', this.value)"></td>`;
-      }).join('');
-
-      return `
-        <tr>
-          <td><input type="text" list="taxCourseDatalist" value="${escapeAttr(row.course_name)}" placeholder="輸入或選取項目" onchange="onTaxRowCourseChange('${row.id}', this.value)"></td>
-          ${tds}
-          <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteTaxMatrixRow('${row.id}')">刪除</button></td>
-        </tr>
-      `;
-    };
+    const wrap = document.getElementById('taxTablesMultiContainer');
+    if (!wrap) return;
 
     const datalistHtml = `
       <datalist id="taxCourseDatalist">
@@ -1494,18 +1500,91 @@
       </datalist>
     `;
 
-    const beforeHtml = beforeLessonRows.map(buildManualRowHtml).join('');
-    const totalTds = cols.map(n => `<td class="num-col">${fmtNum(colSums[n])}</td>`).join('');
-    const totalRowHtml = `
-      <tr class="total-row">
-        <td class="center-col">核銷金額</td>
-        ${totalTds}
-        <td class="no-print"></td>
-      </tr>
-    `;
-    const lessonHtml = lessonRows.map(buildManualRowHtml).join('');
+    if (checkedInstructors.length === 0) {
+      wrap.innerHTML = datalistHtml + '<div class="sheet-title-banner">' + currentYear + '年度講師核銷所得稅統計</div><div style="text-align:center; padding:16px; color:#64748b;">請先勾選要列出的講師</div>';
+      return;
+    }
 
-    bodyEl.innerHTML = datalistHtml + beforeHtml + totalRowHtml + lessonHtml;
+    const groups = [];
+    for (let g = 1; g <= taxTableCount; g++) {
+      const grpCols = checkedInstructors.filter(n => {
+        const assigned = Math.min(taxTableCount, Math.max(1, Number(taxInstructorGroupMap[n] || 1)));
+        return assigned === g;
+      });
+      if (grpCols.length > 0) groups.push({ grpNum: g, cols: grpCols });
+    }
+    if (groups.length === 0) {
+      groups.push({ grpNum: 1, cols: [...checkedInstructors] });
+    }
+
+    const beforeLessonRows = taxMatrixRows.filter(r => String(r.course_name || '').trim() !== '上課次數');
+    const lessonRows = taxMatrixRows.filter(r => String(r.course_name || '').trim() === '上課次數');
+
+    const tablesHtml = groups.map((grp, idx) => {
+      const cols = grp.cols;
+      const colSums = {};
+      cols.forEach(n => { colSums[n] = 0; });
+
+      const buildManualRowHtml = (row) => {
+        const lbl = String(row.course_name || '').trim();
+        const isLessonRow = (lbl === '上課次數');
+        const tds = cols.map(n => {
+          const raw = row.values ? (row.values[n] ?? '') : '';
+          const cleanedStr = String(raw).replace(/,/g, '').trim();
+          const isPureNum = cleanedStr !== '' && /^-?\d+(\.\d+)?$/.test(cleanedStr);
+          const numVal = isPureNum ? Number(cleanedStr) : NaN;
+          if (!isLessonRow && isPureNum && Number.isFinite(numVal)) {
+            colSums[n] += numVal;
+          }
+          const disp = isPureNum ? fmtNum(numVal) : raw;
+          return `<td><input type="text" class="${isPureNum ? 'num-input' : 'center-col'}" value="${escapeAttr(disp)}" onchange="onTaxCellChange('${row.id}', '${escapeAttr(n)}', this.value)"></td>`;
+        }).join('');
+
+        return `
+          <tr>
+            <td><input type="text" list="taxCourseDatalist" value="${escapeAttr(row.course_name)}" placeholder="輸入或選取項目" onchange="onTaxRowCourseChange('${row.id}', this.value)"></td>
+            ${tds}
+            <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteTaxMatrixRow('${row.id}')">刪除</button></td>
+          </tr>
+        `;
+      };
+
+      const beforeHtml = beforeLessonRows.map(buildManualRowHtml).join('');
+      const totalTds = cols.map(n => `<td class="num-col">${fmtNum(colSums[n])}</td>`).join('');
+      const totalRowHtml = `
+        <tr class="total-row">
+          <td class="center-col">核銷金額</td>
+          ${totalTds}
+          <td class="no-print"></td>
+        </tr>
+      `;
+      const lessonHtml = lessonRows.map(buildManualRowHtml).join('');
+      const titleSuffix = taxTableCount > 1 ? `（第 ${grp.grpNum} 張表）` : '';
+
+      return `
+        <div style="${idx > 0 ? 'margin-top:26px; padding-top:16px; border-top:2px solid var(--border);' : ''}">
+          <div class="sheet-title-banner">${currentYear}年度講師核銷所得稅統計${titleSuffix}</div>
+          <div style="overflow-x:auto;">
+            <table class="excel-table">
+              <thead>
+                <tr>
+                  <th style="width:150px;"></th>
+                  ${cols.map(n => `<th>${escapeHtml(n)}</th>`).join('')}
+                  <th class="no-print" style="width:70px;">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${beforeHtml}
+                ${totalRowHtml}
+                ${lessonHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    wrap.innerHTML = datalistHtml + tablesHtml;
   }
 
   function getBogongTaxKey() { return `lz_bogong_tax_matrix_${currentYear}`; }
