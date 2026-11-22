@@ -258,7 +258,8 @@
 
         <label style="font-weight:bold;">計畫課程名稱：</label>
         <select id="feeCourseSelect"></select>
-        <input type="text" id="newFeeCourseInput" placeholder="新增課程名稱" style="width:130px;">
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteSelectedFeeCourseOption()" title="刪除目前選取的錯誤計畫課程名稱">刪除課程</button>
+        <input type="text" id="newFeeCourseInput" placeholder="新增計畫課程名稱" style="width:140px;">
         <button type="button" class="btn btn-outline btn-sm" onclick="addFeeCourseOption()">新增課程</button>
         <button type="button" class="btn btn-blue btn-sm" onclick="addFeeRowFromToolbar()">＋ 加入一列</button>
         <button type="button" class="btn btn-primary btn-sm" onclick="saveFeeRecords()">儲存</button>
@@ -267,10 +268,13 @@
       <!-- 行事曆計算實際鐘點費切換區塊 -->
       <div class="sub-box no-print">
         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
-          <label style="display:inline-flex; align-items:center; gap:6px; font-weight:bold; cursor:pointer;">
-            <input type="checkbox" id="useCalendarActualChk" checked onchange="onCalendarModeToggle()">
-            改用行事曆計算實際鐘點費
-          </label>
+          <div style="display:inline-flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <label style="display:inline-flex; align-items:center; gap:6px; font-weight:bold; cursor:pointer;">
+              <input type="checkbox" id="useCalendarActualChk" checked onchange="onCalendarModeToggle()">
+              改為以行事曆計算
+            </label>
+            <button type="button" class="btn btn-outline btn-sm" onclick="switchToManualInputMode()">＋ 新增手動輸入選項</button>
+          </div>
           <div id="calendarCalcControls" style="display:inline-flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <label style="font-size:0.86rem; font-weight:bold;">預設每日時數：</label>
             <input type="text" inputmode="decimal" id="calDefaultHoursInput" value="1" style="width:65px; text-align:right;">
@@ -351,7 +355,17 @@
 
   // 1. 鐘點費明細：[{ id, course_name, period_text, days, hours, rate, amount, remark }]
   let feeRows = [];
-  let feeCourseOptions = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
+  const DEFAULT_FEE_PLAN_OPTIONS = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
+  let feeCourseOptions = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('lz_fee_plan_options') || 'null');
+      if (Array.isArray(saved) && saved.length > 0) return saved;
+    } catch (e) {}
+    return [...DEFAULT_FEE_PLAN_OPTIONS];
+  })();
+  function saveFeeCourseOptions() {
+    localStorage.setItem('lz_fee_plan_options', JSON.stringify(feeCourseOptions));
+  }
 
   // 2. 個人所得稅-講師：課程清單與矩陣 rows: [{ id, course_name, values: { [name]: numberOrText } }]
   let taxCourseOptions = ['關懷1-3月', '關懷4-6月', '關懷7-9月', '關懷10-12月', '延緩1期', '延緩2期', '多元', '伯公'];
@@ -538,10 +552,34 @@
     if (!val) return;
     if (!feeCourseOptions.includes(val)) {
       feeCourseOptions.push(val);
+      saveFeeCourseOptions();
       renderFeeCourseSelect();
+      renderFeeTable();
     }
     document.getElementById('feeCourseSelect').value = val;
     inp.value = '';
+  }
+
+  function deleteSelectedFeeCourseOption() {
+    const sel = document.getElementById('feeCourseSelect');
+    const targetVal = sel ? sel.value : '';
+    if (!targetVal) { alert('請先選擇要刪除的課程名稱'); return; }
+    if (!confirm(`確定要從下拉選單中刪除「${targetVal}」嗎？`)) return;
+    feeCourseOptions = feeCourseOptions.filter(c => c !== targetVal);
+    saveFeeCourseOptions();
+    renderFeeCourseSelect();
+    renderFeeTable();
+    setStatus(`已刪除計畫課程名稱「${targetVal}」`);
+  }
+
+  function switchToManualInputMode() {
+    const chk = document.getElementById('useCalendarActualChk');
+    if (chk) {
+      chk.checked = false;
+      onCalendarModeToggle();
+    }
+    addFeeRowFromToolbar();
+    setStatus('已切換為手動輸入模式並新增一列');
   }
 
   function switchTab(tab) {
@@ -843,17 +881,35 @@
         const instSchedules = data.filter(c => (c.instructor_name || '').trim() === instName);
         if (instSchedules.length === 0) return;
 
+        const normalizePlanLabel = (c) => {
+          const rawPlan = String(c.plan_name || c.project_name || '').trim();
+          const rawCourse = String(c.course_name || '').trim();
+          const source = rawPlan || (rawCourse.includes('｜') ? rawCourse.split('｜')[0].trim() : '');
+          if (!source) return '關懷課程';
+          if (source.includes('關懷')) return '關懷課程';
+          if (source.includes('多元')) return '多元課程';
+          if (source.includes('伯公')) return '伯公課程';
+          if (source.includes('延緩')) {
+            const m = source.match(/延緩\s*([1-3一二三])\s*期?/);
+            if (m) {
+              const numMap = { '一': '1', '二': '2', '三': '3' };
+              return `延緩${numMap[m[1]] || m[1]}期`;
+            }
+            return '延緩1期';
+          }
+          if (source.includes('樂齡')) return source;
+          return source.replace(/計畫$/, '課程');
+        };
+
         const map = new Map();
         instSchedules.forEach(c => {
-          const rawName = String(c.course_name || '課程').replace('｜', ' - ').trim();
-          // Strip trailing lesson index like -1, -2, ... -12 so series lessons merge into 1 row with total days
-          const mergedName = rawName.replace(/-\d+$/, '').trim() || rawName;
-          if (!feeCourseOptions.includes(mergedName)) {
-            feeCourseOptions.push(mergedName);
+          const planLabel = normalizePlanLabel(c);
+          if (!feeCourseOptions.includes(planLabel)) {
+            feeCourseOptions.push(planLabel);
           }
-          if (!map.has(mergedName)) map.set(mergedName, []);
+          if (!map.has(planLabel)) map.set(planLabel, []);
           const p = String(c.course_date || '').split('-');
-          if (p.length === 3) map.get(mergedName).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
+          if (p.length === 3) map.get(planLabel).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
         });
 
         const builtRows = [];
@@ -881,6 +937,7 @@
         }
       });
 
+      saveFeeCourseOptions();
       renderFeeCourseSelect();
       setStatus(`已依行事曆帶入 ${totalImported} 筆課程天數，請依各課程主題填入「費用 / 1H」`);
       renderFeeTable();
