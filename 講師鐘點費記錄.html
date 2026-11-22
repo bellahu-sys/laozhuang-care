@@ -731,8 +731,7 @@
     if (btnToCal) btnToCal.style.display = isManual ? 'inline-block' : 'none';
     if (manCtrl) manCtrl.style.display = isManual ? 'inline-flex' : 'none';
 
-    if (!isManual) calculateFromCalendar();
-    else renderFeeTable();
+    renderFeeTable();
   }
 
   function getFeeStorageKeyFor(instName) { return `lz_fee_detail_${currentYear}_${instName}`; }
@@ -975,6 +974,40 @@
     renderFeeTable();
   }
 
+  function buildPlanGroupedRowsFromSchedules(instName, instSchedules) {
+    const map = new Map();
+    instSchedules.forEach(c => {
+      const planLabel = normalizePlanLabel(c);
+      if (!feeCourseOptions.includes(planLabel)) feeCourseOptions.push(planLabel);
+      if (!map.has(planLabel)) map.set(planLabel, []);
+      const p = String(c.course_date || '').split('-');
+      if (p.length === 3) map.get(planLabel).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
+    });
+
+    const builtRows = [];
+    map.forEach((dates, cName) => {
+      const days = dates.length;
+      const period = dates.length > 1 ? `${dates[0]}-${dates[dates.length - 1]}` : (dates[0] || '');
+      const rule = getConfiguredPlanRule(instName, cName);
+      const hrsVal = rule ? (rule.mode === 'per_session' ? '' : rule.hours) : 1;
+      const rateVal = rule ? rule.rate : '';
+      const rowObj = {
+        id: 'cal_' + instName + '_' + cName + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+        course_name: cName,
+        period_text: period,
+        days,
+        hours: hrsVal,
+        rate: rateVal,
+        pay_mode: rule ? rule.mode : 'per_hour',
+        amount: 0,
+        remark: ''
+      };
+      rowObj.amount = calcRowTotalByRule(rowObj, instName);
+      builtRows.push(rowObj);
+    });
+    return builtRows;
+  }
+
   async function calculateFromCalendar() {
     const targets = (showAllCheckedInstructorsInFee && checkedInstructors.length > 0)
       ? checkedInstructors
@@ -1001,37 +1034,7 @@
         const instSchedules = data.filter(c => (c.instructor_name || '').trim() === instName);
         if (instSchedules.length === 0) return;
 
-        const map = new Map();
-        instSchedules.forEach(c => {
-          const planLabel = normalizePlanLabel(c);
-          if (!feeCourseOptions.includes(planLabel)) feeCourseOptions.push(planLabel);
-          if (!map.has(planLabel)) map.set(planLabel, []);
-          const p = String(c.course_date || '').split('-');
-          if (p.length === 3) map.get(planLabel).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
-        });
-
-        const builtRows = [];
-        map.forEach((dates, cName) => {
-          const days = dates.length;
-          const period = dates.length > 1 ? `${dates[0]}-${dates[dates.length - 1]}` : (dates[0] || '');
-          const rule = getConfiguredPlanRule(instName, cName);
-          const hrsVal = rule ? (rule.mode === 'per_session' ? '' : rule.hours) : 1;
-          const rateVal = rule ? rule.rate : '';
-          const rowObj = {
-            id: 'cal_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-            course_name: cName,
-            period_text: period,
-            days,
-            hours: hrsVal,
-            rate: rateVal,
-            pay_mode: rule ? rule.mode : 'per_hour',
-            amount: 0,
-            remark: ''
-          };
-          rowObj.amount = calcRowTotalByRule(rowObj, instName);
-          builtRows.push(rowObj);
-        });
-
+        const builtRows = buildPlanGroupedRowsFromSchedules(instName, instSchedules);
         totalImported += builtRows.length;
         if (showAllCheckedInstructorsInFee) multiFeeMap[instName] = builtRows;
         if (instName === currentFeeInstructor || targets.length === 1) feeRows = builtRows;
@@ -1446,10 +1449,7 @@
     await loadInstructorsFromHr();
     await onFeeContextChange();
     renderFeeTable();
-    const hasAnyData = Object.values(multiFeeMap).some(arr => Array.isArray(arr) && arr.some(r => Number(r.days) > 0));
-    if (!hasAnyData) {
-      await calculateFromCalendar();
-    }
+    await calculateFromCalendar();
   })();
 </script>
 
