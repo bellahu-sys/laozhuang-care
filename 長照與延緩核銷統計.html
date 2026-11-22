@@ -255,61 +255,7 @@
     </div>
   </div>
 
-  <!-- 1. 長照補助經費（每季記錄 1 次） -->
-  <div class="card">
-    <h2>
-      <span>長照補助經費</span>
-      <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-blue" onclick="copySheetBlock('ltcSheetWrap', '長照補助經費')">一鍵複製表格</button>
-      </div>
-    </h2>
-
-    <div class="official-sheet-wrap" id="ltcSheetWrap">
-      <table class="official-table">
-        <thead>
-          <tr>
-            <th class="th-yellow" style="width:15%;">經費來源</th>
-            <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
-            <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
-            <th class="th-peach" style="width:17%;">補助項目</th>
-            <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
-            <th class="th-plain-red" style="width:13%;">核銷累計金額</th>
-            <th class="th-plain" style="width:13%;">餘額</th>
-          </tr>
-        </thead>
-        <tbody id="ltcTableBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- 2. 延緩補助經費（內容格式與長照補助經費相同） -->
-  <div class="card">
-    <h2>
-      <span>延緩補助經費</span>
-      <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-blue" onclick="copySheetBlock('delaySheetWrap', '延緩補助經費')">一鍵複製表格</button>
-      </div>
-    </h2>
-
-    <div class="official-sheet-wrap" id="delaySheetWrap">
-      <table class="official-table">
-        <thead>
-          <tr>
-            <th class="th-yellow" style="width:15%;">經費來源</th>
-            <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
-            <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
-            <th class="th-peach" style="width:17%;">補助項目</th>
-            <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
-            <th class="th-plain-red" style="width:13%;">核銷累計金額</th>
-            <th class="th-plain" style="width:13%;">餘額</th>
-          </tr>
-        </thead>
-        <tbody id="delayTableBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- 3. 新增：長照與延緩核銷金額統計（格式參考圖3） -->
+  <!-- 長照與延緩核銷金額統計（移至長照補助經費表格上方） -->
   <div class="card">
     <h2>
       <span>長照與延緩核銷金額統計</span>
@@ -391,6 +337,62 @@
       </table>
     </div>
   </div>
+
+
+  <!-- 長照補助經費 -->
+  <div class="card">
+    <h2>
+      <span>長照補助經費</span>
+      <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-blue" onclick="copySheetBlock('ltcSheetWrap', '長照補助經費')">一鍵複製表格</button>
+      </div>
+    </h2>
+
+    <div class="official-sheet-wrap" id="ltcSheetWrap">
+      <table class="official-table">
+        <thead>
+          <tr>
+            <th class="th-yellow" style="width:15%;">經費來源</th>
+            <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
+            <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
+            <th class="th-peach" style="width:17%;">補助項目</th>
+            <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
+            <th class="th-plain-red" style="width:13%;">核銷累計金額</th>
+            <th class="th-plain" style="width:13%;">餘額</th>
+          </tr>
+        </thead>
+        <tbody id="ltcTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 延緩補助經費 -->
+  <div class="card">
+    <h2>
+      <span>延緩補助經費</span>
+      <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-blue" onclick="copySheetBlock('delaySheetWrap', '延緩補助經費')">一鍵複製表格</button>
+      </div>
+    </h2>
+
+    <div class="official-sheet-wrap" id="delaySheetWrap">
+      <table class="official-table">
+        <thead>
+          <tr>
+            <th class="th-yellow" style="width:15%;">經費來源</th>
+            <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
+            <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
+            <th class="th-peach" style="width:17%;">補助項目</th>
+            <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
+            <th class="th-plain-red" style="width:13%;">核銷累計金額</th>
+            <th class="th-plain" style="width:13%;">餘額</th>
+          </tr>
+        </thead>
+        <tbody id="delayTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
 
 <script>
