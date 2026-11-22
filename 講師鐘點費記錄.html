@@ -1293,19 +1293,58 @@
 
   function onTaxRowCourseChange(rowId, val) {
     const row = taxMatrixRows.find(r => String(r.id) === String(rowId));
-    if (row) row.course_name = val;
+    if (row) { row.course_name = val; localStorage.setItem(getTaxMatrixKey(), JSON.stringify(taxMatrixRows)); }
   }
 
   function onTaxCellChange(rowId, instName, val) {
     const row = taxMatrixRows.find(r => String(r.id) === String(rowId));
     if (!row) return;
     row.values[instName] = String(val).replace(/,/g, '').trim();
+    localStorage.setItem(getTaxMatrixKey(), JSON.stringify(taxMatrixRows));
     renderTaxInstructorTable();
   }
 
-  function saveTaxInstructorData() {
+  async function saveTaxInstructorData() {
     localStorage.setItem(getTaxCoursesKey(), JSON.stringify(taxCourseOptions));
     localStorage.setItem(getTaxMatrixKey(), JSON.stringify(taxMatrixRows));
+
+    if (supabaseClient) {
+      try {
+        await supabaseClient
+          .from('instructor_fee_records')
+          .delete()
+          .eq('roc_year', currentYear)
+          .eq('entry_type', 'claim');
+
+        const payload = [];
+        const cols = checkedInstructors.length > 0 ? checkedInstructors : masterInstructors.map(m => m.name);
+        taxMatrixRows.forEach((row, rIdx) => {
+          const courseLbl = String(row.course_name || '').trim();
+          cols.forEach((instName, cIdx) => {
+            const rawVal = row.values ? (row.values[instName] ?? '') : '';
+            const strVal = String(rawVal).replace(/,/g, '').trim();
+            if (strVal !== '') {
+              const isNum = /^-?\d+(\.\d+)?$/.test(strVal);
+              payload.push({
+                roc_year: currentYear,
+                instructor_name: instName,
+                entry_type: 'claim',
+                plan_name: courseLbl || null,
+                course_name: courseLbl,
+                amount: isNum ? Number(strVal) : 0,
+                remark: isNum ? '' : strVal,
+                sort_order: rIdx * 100 + cIdx + 1
+              });
+            }
+          });
+        });
+
+        if (payload.length > 0) {
+          await supabaseClient.from('instructor_fee_records').insert(payload);
+        }
+      } catch (e) {}
+    }
+
     setStatus(`已儲存 ${currentYear} 年度個人所得稅計算-講師資料`);
     alert(`已儲存 ${currentYear} 年度個人所得稅計算-講師資料！`);
   }
