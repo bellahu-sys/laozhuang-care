@@ -888,7 +888,7 @@
   function renderRateConfigTable() {
     const wrap = document.getElementById('rateConfigTableWrap');
     if (!wrap) return;
-    const insts = checkedInstructors.length > 0 ? checkedInstructors : masterInstructors.map(m => m.name);
+    const insts = feeCheckedInstructors.length > 0 ? feeCheckedInstructors : masterInstructors.map(m => m.name);
     const plans = feeCourseOptions;
     const headCells = plans.map(p => `<th>${escapeHtml(p)}</th>`).join('');
     const bodyRows = insts.map(inst => {
@@ -979,7 +979,7 @@
     };
 
     if (showAllCheckedInstructorsInFee) {
-      checkedInstructors.forEach(inst => applyToCalList(inst, calendarFeeMap[inst] || []));
+      feeCheckedInstructors.forEach(inst => applyToCalList(inst, calendarFeeMap[inst] || []));
     } else if (currentFeeInstructor) {
       applyToCalList(currentFeeInstructor, singleCalendarRows);
     }
@@ -1227,7 +1227,7 @@
 
   async function loadFeeDataForCurrentMode() {
     const targets = showAllCheckedInstructorsInFee
-      ? checkedInstructors
+      ? feeCheckedInstructors
       : (currentFeeInstructor ? [currentFeeInstructor] : []);
 
     if (feeInputMode === 'manual') {
@@ -1266,7 +1266,7 @@
       const selVal = document.getElementById('feeInstructorSelect').value;
       if (selVal) currentFeeInstructor = selVal;
       showAllCheckedInstructorsInFee = false;
-    } else if (checkedInstructors.length > 0) {
+    } else if (feeCheckedInstructors.length > 0) {
       showAllCheckedInstructorsInFee = true;
     }
 
@@ -1274,7 +1274,7 @@
   }
 
   function addFeeRowFromToolbar() {
-    const targetInst = currentFeeInstructor || checkedInstructors[0] || '';
+    const targetInst = currentFeeInstructor || feeCheckedInstructors[0] || '';
     if (!targetInst) { alert('請先勾選講師'); return; }
     currentFeeInstructor = targetInst;
     const newRow = createBlankManualRow(targetInst);
@@ -1302,7 +1302,7 @@
 
   function clearManualModeRows() {
     const targets = showAllCheckedInstructorsInFee
-      ? checkedInstructors
+      ? feeCheckedInstructors
       : (currentFeeInstructor ? [currentFeeInstructor] : []);
     if (targets.length === 0) return;
     if (!confirm('確定要將目前手動輸入模式的欄位全部清空嗎？（不會影響依行事曆代入天數模式資料）')) return;
@@ -1433,7 +1433,7 @@
 
   async function saveCurrentModeRecords() {
     const targets = showAllCheckedInstructorsInFee
-      ? checkedInstructors
+      ? feeCheckedInstructors
       : (currentFeeInstructor ? [currentFeeInstructor] : []);
     if (targets.length === 0) { alert('請先勾選或選擇講師'); return; }
     for (const name of targets) {
@@ -1507,8 +1507,8 @@
 
   async function calculateFromCalendar(showToast = false) {
     if (feeInputMode === 'manual') return;
-    const targets = (showAllCheckedInstructorsInFee && checkedInstructors.length > 0)
-      ? checkedInstructors
+    const targets = (showAllCheckedInstructorsInFee && feeCheckedInstructors.length > 0)
+      ? feeCheckedInstructors
       : (currentFeeInstructor ? [currentFeeInstructor] : []);
     if (targets.length === 0) {
       updateCalPeriodSummaryText(0);
