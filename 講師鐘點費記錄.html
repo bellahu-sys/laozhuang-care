@@ -1193,9 +1193,20 @@
           .order('id', { ascending: true });
 
         if (!error && Array.isArray(data) && data.length > 0) {
-          return data.map(r => {
+          const localRaw = localStorage.getItem(getModeStorageKey(mode, instName));
+          let localArr = [];
+          if (localRaw) {
+            try { localArr = JSON.parse(localRaw) || []; } catch (e) { localArr = []; }
+          }
+          return data.map((r, idx) => {
             let cname = r.course_name || '';
             if (cname.includes('老幼同樂') || cname.includes('伯公')) cname = '伯公課程';
+            const matchLocal = localArr.find(x => String(x.id) === String(r.id)) || localArr[idx];
+            const isRem = Boolean(
+              (matchLocal && matchLocal.remitted === true) ||
+              String(r.remark || '').includes('已匯款') ||
+              (matchLocal && String(matchLocal.remark || '').includes('已匯款'))
+            );
             return {
               id: r.id,
               course_name: cname,
@@ -1204,7 +1215,8 @@
               hours: r.hours ?? '',
               rate: r.rate ?? '',
               amount: Number(r.amount || 0),
-              remark: r.remark || ''
+              remark: r.remark || '',
+              remitted: isRem
             };
           });
         }
@@ -1215,7 +1227,12 @@
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map(x => ({
+            ...x,
+            remitted: Boolean(x.remitted === true || x.remitted === 'true' || String(x.remark || '').includes('已匯款'))
+          }));
+        }
       } catch (e) {}
     }
 
@@ -1343,6 +1360,11 @@
 
     if (field === 'remitted') {
       item.remitted = Boolean(value);
+      if (item.remitted && !String(item.remark || '').includes('已匯款')) {
+        item.remark = item.remark ? `${item.remark}（已匯款）` : '已匯款';
+      } else if (!item.remitted && String(item.remark || '').trim() === '已匯款') {
+        item.remark = '';
+      }
       persistModeLocal(feeInputMode, ownerName);
       renderFeeTable();
       return;
