@@ -9,10 +9,44 @@
     :root {
       --primary: #2c5e4f;
       --primary-dark: #1e4237;
-      --bg: #f1f5f9;
+      --bg: #eef2f6;
       --border: #cbd5e1;
       --text: #1e293b;
+
+      /* 四大區塊專屬色系 */
+      --sec1-main: #0f766e;   /* 人事資料：翡翠綠 */
+      --sec1-dark: #115e59;
+      --sec1-bg: #f0fdfa;
+      --sec1-border: #99f6e4;
+      --sec1-card-bg: #ffffff;
+      --sec1-badge-bg: #ccfbf1;
+      --sec1-badge-text: #0f766e;
+
+      --sec2-main: #b45309;   /* 行政類與每日記錄：琥珀橘 */
+      --sec2-dark: #92400e;
+      --sec2-bg: #fffbeb;
+      --sec2-border: #fde68a;
+      --sec2-card-bg: #ffffff;
+      --sec2-badge-bg: #fef3c7;
+      --sec2-badge-text: #92400e;
+
+      --sec3-main: #4338ca;   /* 課程安排與報表套印：靛紫藍 */
+      --sec3-dark: #3730a3;
+      --sec3-bg: #eef2ff;
+      --sec3-border: #c7d2fe;
+      --sec3-card-bg: #ffffff;
+      --sec3-badge-bg: #e0e7ff;
+      --sec3-badge-text: #3730a3;
+
+      --sec4-main: #be123c;   /* 核銷管理：玫瑰酒紅 */
+      --sec4-dark: #9f1239;
+      --sec4-bg: #fff1f2;
+      --sec4-border: #fecdd3;
+      --sec4-card-bg: #ffffff;
+      --sec4-badge-bg: #ffe4e6;
+      --sec4-badge-text: #9f1239;
     }
+
     * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
     body { margin: 0; background: var(--bg); color: var(--text); }
 
@@ -48,66 +82,194 @@
     .container { max-width: 1220px; margin: 24px auto 50px auto; padding: 0 16px; }
     .hero-card {
       background: #fff; border-radius: 12px; padding: 20px 24px;
-      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 12px;
+      border: 1px solid var(--border); border-left: 6px solid var(--primary);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 14px;
     }
     .hero-title { margin: 0; font-size: 1.35rem; color: var(--primary); }
     .hero-sub { margin: 4px 0 0 0; font-size: 0.92rem; color: #475569; }
 
+    /* 快速跳轉列，讓四大區塊一鍵直達 */
+    .quick-jump {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .jump-pill {
+      text-decoration: none; font-size: 0.88rem; font-weight: bold;
+      padding: 6px 12px; border-radius: 999px; border: 1px solid transparent;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .jump-pill:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.08); }
+    .jump-1 { background: var(--sec1-badge-bg); color: var(--sec1-dark); border-color: var(--sec1-border); }
+    .jump-2 { background: var(--sec2-badge-bg); color: var(--sec2-dark); border-color: var(--sec2-border); }
+    .jump-3 { background: var(--sec3-badge-bg); color: var(--sec3-dark); border-color: var(--sec3-border); }
+    .jump-4 { background: var(--sec4-badge-bg); color: var(--sec4-dark); border-color: var(--sec4-border); }
+
+    /* 區塊外框與標題樣式 */
     .section-block {
-      background: #fff; border-radius: 12px; padding: 18px 20px;
-      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      margin-bottom: 20px;
+      border-radius: 12px; padding: 18px 20px 20px 20px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+      margin-bottom: 24px; border: 1px solid var(--border);
+      background: #ffffff;
     }
     .section-title {
-      margin: 0 0 14px 0; font-size: 1.1rem; color: var(--primary);
-      border-bottom: 2px solid var(--primary); padding-bottom: 7px;
+      margin: -18px -20px 16px -20px;
+      padding: 13px 20px;
+      font-size: 1.12rem;
+      border-radius: 11px 11px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: bold;
     }
+    .section-tag {
+      font-size: 0.78rem; padding: 2px 10px; border-radius: 999px;
+      background: rgba(255,255,255,0.75); font-weight: bold;
+    }
+
+    /* 區塊一：人事資料（翡翠綠） */
+    .section-1 {
+      border-color: var(--sec1-border);
+      border-left: 6px solid var(--sec1-main);
+      background: #fafffe;
+    }
+    .section-1 .section-title {
+      background: var(--sec1-bg);
+      color: var(--sec1-dark);
+      border-bottom: 1px solid var(--sec1-border);
+    }
+    .section-1 .section-tag { color: var(--sec1-main); }
+    .section-1 .module-card {
+      border-color: #cbd5e1;
+      background: var(--sec1-card-bg);
+    }
+    .section-1 .module-card:hover {
+      border-color: var(--sec1-main);
+      background: var(--sec1-bg);
+    }
+    .section-1 .module-name { color: var(--sec1-dark); }
+    .section-1 .module-badge {
+      color: var(--sec1-badge-text);
+      background: var(--sec1-badge-bg);
+    }
+
+    /* 區塊二：行政類與每日記錄（琥珀橘） */
+    .section-2 {
+      border-color: var(--sec2-border);
+      border-left: 6px solid var(--sec2-main);
+      background: #fffefa;
+    }
+    .section-2 .section-title {
+      background: var(--sec2-bg);
+      color: var(--sec2-dark);
+      border-bottom: 1px solid var(--sec2-border);
+    }
+    .section-2 .section-tag { color: var(--sec2-main); }
+    .section-2 .module-card {
+      border-color: #cbd5e1;
+      background: var(--sec2-card-bg);
+    }
+    .section-2 .module-card:hover {
+      border-color: var(--sec2-main);
+      background: var(--sec2-bg);
+    }
+    .section-2 .module-name { color: var(--sec2-dark); }
+    .section-2 .module-badge {
+      color: var(--sec2-badge-text);
+      background: var(--sec2-badge-bg);
+    }
+
+    /* 區塊三：課程安排與報表套印（靛紫藍） */
+    .section-3 {
+      border-color: var(--sec3-border);
+      border-left: 6px solid var(--sec3-main);
+      background: #fcfdff;
+    }
+    .section-3 .section-title {
+      background: var(--sec3-bg);
+      color: var(--sec3-dark);
+      border-bottom: 1px solid var(--sec3-border);
+    }
+    .section-3 .section-tag { color: var(--sec3-main); }
+    .section-3 .module-card {
+      border-color: #cbd5e1;
+      background: var(--sec3-card-bg);
+    }
+    .section-3 .module-card:hover {
+      border-color: var(--sec3-main);
+      background: var(--sec3-bg);
+    }
+    .section-3 .module-name { color: var(--sec3-dark); }
+    .section-3 .module-badge {
+      color: var(--sec3-badge-text);
+      background: var(--sec3-badge-bg);
+    }
+
+    /* 區塊四：核銷管理（玫瑰酒紅） */
+    .section-4 {
+      border-color: var(--sec4-border);
+      border-left: 6px solid var(--sec4-main);
+      background: #fffcfd;
+    }
+    .section-4 .section-title {
+      background: var(--sec4-bg);
+      color: var(--sec4-dark);
+      border-bottom: 1px solid var(--sec4-border);
+    }
+    .section-4 .section-tag { color: var(--sec4-main); }
+    .section-4 .module-card {
+      border-color: #cbd5e1;
+      background: var(--sec4-card-bg);
+    }
+    .section-4 .module-card:hover {
+      border-color: var(--sec4-main);
+      background: var(--sec4-bg);
+    }
+    .section-4 .module-name { color: var(--sec4-dark); }
+    .section-4 .module-badge {
+      color: var(--sec4-badge-text);
+      background: var(--sec4-badge-bg);
+    }
+
     .card-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;
     }
     .module-card {
       display: flex; flex-direction: column; justify-content: space-between;
       border: 1px solid #cbd5e1; border-radius: 9px; padding: 14px 16px;
-      background: #f8fafc; text-decoration: none; color: var(--text);
-      transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+      background: #fff; text-decoration: none; color: var(--text);
+      transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s, background-color 0.12s;
     }
     .module-card:hover {
       transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-      border-color: var(--primary); background: #fff;
     }
-    .module-card.highlight-fee {
-      border-color: #0284c7; background: #f0f9ff;
-    }
-    .module-card.highlight-fee:hover {
-      border-color: #0369a1; background: #e0f2fe;
-    }
-    .module-name { font-weight: bold; font-size: 1rem; color: var(--primary-dark); margin-bottom: 5px; }
+    /* 重點功能卡片微調底色，保留區塊主色邊框辨識度 */
+    .section-1 .module-card.highlight-fee { background: #f0fdfa; border-color: #5eead4; }
+    .section-2 .module-card.highlight-fee { background: #fffbeb; border-color: #fcd34d; }
+    .section-4 .module-card.highlight-fee { background: #fff1f2; border-color: #fda4af; }
+
+    .module-name { font-weight: bold; font-size: 1rem; margin-bottom: 5px; }
     .module-desc { font-size: 0.85rem; color: #475569; line-height: 1.45; }
     .module-badge {
       display: inline-block; margin-top: 10px; font-size: 0.76rem; font-weight: bold;
-      color: #0f766e; background: #ccfbf1; padding: 2px 8px; border-radius: 10px; align-self: flex-start;
-    }
-    .module-badge.fee-badge {
-      color: #075985; background: #bae6fd;
+      padding: 2px 9px; border-radius: 10px; align-self: flex-start;
     }
 
     .reimburse-tabs {
       display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
-      padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 12px; border-bottom: 1px solid var(--sec4-border);
     }
     .reimburse-tab-btn {
       padding: 8px 16px; border-radius: 7px; font-size: 0.94rem; font-weight: bold;
-      border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer;
+      border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer;
       transition: all 0.15s;
     }
     .reimburse-tab-btn:hover {
-      background: #e2e8f0; border-color: var(--primary); color: var(--primary-dark);
+      background: var(--sec4-bg); border-color: var(--sec4-main); color: var(--sec4-dark);
     }
     .reimburse-tab-btn.active {
-      background: var(--primary); color: #ffffff; border-color: var(--primary);
-      box-shadow: 0 2px 6px rgba(44, 94, 79, 0.22);
+      background: var(--sec4-main); color: #ffffff; border-color: var(--sec4-main);
+      box-shadow: 0 2px 6px rgba(190, 18, 60, 0.22);
     }
     .reimburse-panel { display: none; }
     .reimburse-panel.active { display: block; }
@@ -196,10 +358,19 @@
       <h1 class="hero-title">老庄社區照顧關懷據點雲端管理系統</h1>
       <p class="hero-sub">整合個案名冊、師資與人員資料、每日行政記錄、年度排課行事曆、報表套印與計畫核銷作業。</p>
     </div>
+    <div class="quick-jump">
+      <a href="#sec-personnel" class="jump-pill jump-1">一、人事資料</a>
+      <a href="#sec-admin" class="jump-pill jump-2">二、行政與每日記錄</a>
+      <a href="#sec-course-print" class="jump-pill jump-3">三、課程與報表套印</a>
+      <a href="#sec-reimburse" class="jump-pill jump-4">四、核銷管理</a>
+    </div>
   </div>
 
-  <div class="section-block">
-    <h2 class="section-title">一、人事資料</h2>
+  <div id="sec-personnel" class="section-block section-1">
+    <h2 class="section-title">
+      <span>一、人事資料</span>
+      <span class="section-tag">翡翠綠專區</span>
+    </h2>
     <div class="card-grid">
       <a href="個案資料管理.html" class="module-card">
         <div>
@@ -260,8 +431,11 @@
     </div>
   </div>
 
-  <div class="section-block">
-    <h2 class="section-title">二、行政類與每日記錄</h2>
+  <div id="sec-admin" class="section-block section-2">
+    <h2 class="section-title">
+      <span>二、行政類與每日記錄</span>
+      <span class="section-tag">琥珀橘專區</span>
+    </h2>
     <div class="card-grid">
       <a href="零用金管理中心.html" class="module-card">
         <div>
@@ -294,8 +468,11 @@
     </div>
   </div>
 
-  <div class="section-block">
-    <h2 class="section-title">三、課程安排與報表套印</h2>
+  <div id="sec-course-print" class="section-block section-3">
+    <h2 class="section-title">
+      <span>三、課程安排與報表套印</span>
+      <span class="section-tag">靛紫藍專區</span>
+    </h2>
     <div class="card-grid">
       <a href="年度課程安排行事曆.html" class="module-card">
         <div>
@@ -328,8 +505,11 @@
     </div>
   </div>
 
-  <div class="section-block">
-    <h2 class="section-title">四、核銷管理</h2>
+  <div id="sec-reimburse" class="section-block section-4">
+    <h2 class="section-title">
+      <span>四、核銷管理</span>
+      <span class="section-tag">玫瑰酒紅專區</span>
+    </h2>
     <div class="reimburse-tabs" role="tablist">
       <button type="button" class="reimburse-tab-btn active" onclick="switchReimburseTab('care', this)">關懷核銷</button>
       <button type="button" class="reimburse-tab-btn" onclick="switchReimburseTab('ltc_delay', this)">長照與延緩核銷</button>
