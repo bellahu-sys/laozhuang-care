@@ -651,41 +651,88 @@
     } catch (e) {}
   }
 
-  function getCheckedInstKey() { return `lz_fee_checked_inst_${currentYear}`; }
+  let feeCheckedInstructors = [];
+  let taxCheckedInstructors = [];
 
-  function loadCheckedInstructorsForYear() {
-    const saved = localStorage.getItem(getCheckedInstKey());
-    if (saved) {
-      try {
-        const arr = JSON.parse(saved);
-        if (Array.isArray(arr)) { checkedInstructors = arr; return; }
-      } catch (e) {}
-    }
-    checkedInstructors = masterInstructors.filter(i => i.status === '服務中').map(i => i.name);
-    localStorage.setItem(getCheckedInstKey(), JSON.stringify(checkedInstructors));
+  function getFeeCheckedInstKey() { return `lz_fee_only_checked_inst_${currentYear}`; }
+  function getTaxCheckedInstKey() { return `lz_tax_only_checked_inst_${currentYear}`; }
+
+  function sortByMasterOrder(arr) {
+    const orderMap = new Map(masterInstructors.map((m, idx) => [m.name, idx]));
+    return [...new Set(arr)].sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
   }
 
-  function onInstructorCheckChange(name, isChecked) {
-    if (isChecked) {
-      if (!checkedInstructors.includes(name)) checkedInstructors.push(name);
-      if (!currentFeeInstructor) currentFeeInstructor = name;
+  function loadCheckedInstructorsForYear() {
+    const defaultActive = masterInstructors.filter(i => i.status === '服務中').map(i => i.name);
+
+    const savedFee = localStorage.getItem(getFeeCheckedInstKey());
+    if (savedFee) {
+      try {
+        const arr = JSON.parse(savedFee);
+        if (Array.isArray(arr)) feeCheckedInstructors = sortByMasterOrder(arr);
+      } catch (e) {}
     } else {
-      checkedInstructors = checkedInstructors.filter(n => n !== name);
-      if (currentFeeInstructor === name) currentFeeInstructor = checkedInstructors[0] || '';
+      const legacy = localStorage.getItem(`lz_fee_checked_inst_${currentYear}`);
+      if (legacy) {
+        try {
+          const arr = JSON.parse(legacy);
+          if (Array.isArray(arr)) feeCheckedInstructors = sortByMasterOrder(arr);
+        } catch (e) {}
+      }
+      if (!feeCheckedInstructors.length && !savedFee) feeCheckedInstructors = sortByMasterOrder(defaultActive);
+      localStorage.setItem(getFeeCheckedInstKey(), JSON.stringify(feeCheckedInstructors));
     }
-    const orderMap = new Map(masterInstructors.map((m, idx) => [m.name, idx]));
-    checkedInstructors.sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
-    localStorage.setItem(getCheckedInstKey(), JSON.stringify(checkedInstructors));
-    showAllCheckedInstructorsInFee = checkedInstructors.length > 0;
-    if (isChecked) currentFeeInstructor = name;
+
+    const savedTax = localStorage.getItem(getTaxCheckedInstKey());
+    if (savedTax) {
+      try {
+        const arr = JSON.parse(savedTax);
+        if (Array.isArray(arr)) taxCheckedInstructors = sortByMasterOrder(arr);
+      } catch (e) {}
+    } else {
+      const legacy = localStorage.getItem(`lz_fee_checked_inst_${currentYear}`);
+      if (legacy) {
+        try {
+          const arr = JSON.parse(legacy);
+          if (Array.isArray(arr)) taxCheckedInstructors = sortByMasterOrder(arr);
+        } catch (e) {}
+      }
+      if (!taxCheckedInstructors.length && !savedTax) taxCheckedInstructors = sortByMasterOrder(defaultActive);
+      localStorage.setItem(getTaxCheckedInstKey(), JSON.stringify(taxCheckedInstructors));
+    }
+
+    checkedInstructors = feeCheckedInstructors;
+  }
+
+  async function onFeeInstructorCheckChange(name, isChecked) {
+    if (isChecked) {
+      if (!feeCheckedInstructors.includes(name)) feeCheckedInstructors.push(name);
+      currentFeeInstructor = name;
+    } else {
+      feeCheckedInstructors = feeCheckedInstructors.filter(n => n !== name);
+      if (currentFeeInstructor === name) currentFeeInstructor = feeCheckedInstructors[0] || '';
+    }
+    feeCheckedInstructors = sortByMasterOrder(feeCheckedInstructors);
+    checkedInstructors = feeCheckedInstructors;
+    localStorage.setItem(getFeeCheckedInstKey(), JSON.stringify(feeCheckedInstructors));
+    showAllCheckedInstructorsInFee = feeCheckedInstructors.length > 0;
 
     renderPickerPanels();
     renderFeeInstructorSelect();
-    if (activeTab === 'fee') {
-      loadFeeDataForCurrentMode();
-    } else if (activeTab === 'taxInstructor') {
-      renderTaxInstructorTable();
+    await loadFeeDataForCurrentMode();
+  }
+
+  function onTaxInstructorCheckChange(name, isChecked) {
+    if (isChecked) {
+      if (!taxCheckedInstructors.includes(name)) taxCheckedInstructors.push(name);
+    } else {
+      taxCheckedInstructors = taxCheckedInstructors.filter(n => n !== name);
     }
+    taxCheckedInstructors = sortByMasterOrder(taxCheckedInstructors);
+    localStorage.setItem(getTaxCheckedInstKey(), JSON.stringify(taxCheckedInstructors));
+
+    renderPickerPanels();
+    renderTaxInstructorTable();
   }
 
   function getTaxSplitCountKey() { return `lz_tax_split_count_${currentYear}`; }
@@ -724,23 +771,25 @@
   }
 
   function renderPickerPanels() {
-    const itemsHtml = masterInstructors.map(m => {
-      const isChk = checkedInstructors.includes(m.name);
-      return `
-        <label class="picker-item">
-          <input type="checkbox" ${isChk ? 'checked' : ''} onchange="onInstructorCheckChange('${escapeAttr(m.name)}', this.checked)">
-          <span>${escapeHtml(m.name)}</span>
-          <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(${escapeHtml(m.status)})</span>
-        </label>
-      `;
-    }).join('');
     const p1 = document.getElementById('feeInstPickerPanel');
     const p2 = document.getElementById('taxInstPickerPanel');
-    if (p1) p1.innerHTML = itemsHtml;
+
+    if (p1) {
+      p1.innerHTML = masterInstructors.map(m => {
+        const isChk = feeCheckedInstructors.includes(m.name);
+        return `
+          <label class="picker-item">
+            <input type="checkbox" ${isChk ? 'checked' : ''} onchange="onFeeInstructorCheckChange('${escapeAttr(m.name)}', this.checked)">
+            <span>${escapeHtml(m.name)}</span>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(${escapeHtml(m.status)})</span>
+          </label>
+        `;
+      }).join('');
+    }
 
     if (p2) {
       const taxItemsHtml = masterInstructors.map(m => {
-        const isChk = checkedInstructors.includes(m.name);
+        const isChk = taxCheckedInstructors.includes(m.name);
         const assignedGrp = Math.min(taxTableCount, Math.max(1, Number(taxInstructorGroupMap[m.name] || 1)));
         const selHtml = taxTableCount > 1 ? `
           <select style="margin-left:auto; padding:2px 4px; font-size:0.76rem;" onclick="event.stopPropagation();" onchange="onInstructorTableGroupChange('${escapeAttr(m.name)}', this.value)">
@@ -751,7 +800,7 @@
         return `
           <div class="picker-item" style="justify-content:space-between;">
             <label style="display:flex; align-items:center; gap:6px; cursor:pointer; flex:1;">
-              <input type="checkbox" ${isChk ? 'checked' : ''} onchange="onInstructorCheckChange('${escapeAttr(m.name)}', this.checked)">
+              <input type="checkbox" ${isChk ? 'checked' : ''} onchange="onTaxInstructorCheckChange('${escapeAttr(m.name)}', this.checked)">
               <span>${escapeHtml(m.name)}</span>
               <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(${escapeHtml(m.status)})</span>
             </label>
@@ -774,24 +823,24 @@
     }
 
     const btn2 = document.getElementById('taxInstDropdownBtn');
-    if (btn2) btn2.textContent = `勾選列出講師 (${checkedInstructors.length}) ▾`;
+    if (btn2) btn2.textContent = `勾選列出講師 (${taxCheckedInstructors.length}) ▾`;
   }
 
   function renderFeeInstructorSelect() {
     const sel = document.getElementById('feeInstructorSelect');
     if (!sel) return;
-    if (checkedInstructors.length === 0) {
+    if (feeCheckedInstructors.length === 0) {
       sel.innerHTML = `<option value="">請勾選講師</option>`;
       currentFeeInstructor = '';
       return;
     }
     const prev = sel.value || currentFeeInstructor;
-    sel.innerHTML = checkedInstructors.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
+    sel.innerHTML = feeCheckedInstructors.map(n => `<option value="${escapeAttr(n)}">${escapeHtml(n)}</option>`).join('');
     if ([...sel.options].some(o => o.value === prev)) {
       sel.value = prev;
       currentFeeInstructor = prev;
     } else {
-      currentFeeInstructor = checkedInstructors[0];
+      currentFeeInstructor = feeCheckedInstructors[0];
       sel.value = currentFeeInstructor;
     }
   }
@@ -1307,7 +1356,7 @@
     if (showAllCheckedInstructorsInFee) {
       let grandDays = 0;
       let grandAmt = 0;
-      checkedInstructors.forEach(name => {
+      feeCheckedInstructors.forEach(name => {
         const rows = getActiveRowsForInstructor(name);
         const dSum = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
         const aSum = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
@@ -1583,11 +1632,11 @@
     if (!container) return;
     const isManual = (feeInputMode === 'manual');
 
-    if (showAllCheckedInstructorsInFee && checkedInstructors.length > 0) {
+    if (showAllCheckedInstructorsInFee && feeCheckedInstructors.length > 0) {
       let grandDays = 0;
       let grandAmt = 0;
 
-      const blocksHtml = checkedInstructors.map(instName => {
+      const blocksHtml = feeCheckedInstructors.map(instName => {
         const rows = getActiveRowsForInstructor(instName);
         const subDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
         const subAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
@@ -1624,12 +1673,12 @@
         `;
       }).join('');
 
-      const grandSummaryHtml = checkedInstructors.length > 1 ? `
+      const grandSummaryHtml = feeCheckedInstructors.length > 1 ? `
         <div style="overflow-x:auto; margin-top:8px;">
           <table class="excel-table">
             <tbody>
               <tr class="total-row" id="fee_grand_total_row" style="background:#cbd5e1;">
-                <td class="center-col" style="width:37%;">全部勾選講師合計（${checkedInstructors.length} 位）</td>
+                <td class="center-col" style="width:37%;">全部勾選講師合計（${feeCheckedInstructors.length} 位）</td>
                 <td class="num-col grand-days-val" style="width:9%;">${grandDays > 0 ? fmtNum(grandDays) : ''}</td>
                 <td style="width:21%;"></td>
                 <td class="num-col grand-amt-val" style="width:13%;">${fmtNum(grandAmt)}</td>
@@ -1827,7 +1876,7 @@
           .eq('entry_type', 'claim');
 
         const payload = [];
-        const cols = checkedInstructors.length > 0 ? checkedInstructors : masterInstructors.map(m => m.name);
+        const cols = taxCheckedInstructors.length > 0 ? taxCheckedInstructors : masterInstructors.map(m => m.name);
         taxMatrixRows.forEach((row, rIdx) => {
           const courseLbl = String(row.course_name || '').trim();
           cols.forEach((instName, cIdx) => {
@@ -1881,21 +1930,21 @@
       </datalist>
     `;
 
-    if (checkedInstructors.length === 0) {
+    if (taxCheckedInstructors.length === 0) {
       wrap.innerHTML = datalistHtml + '<div class="sheet-title-banner">' + currentYear + '年度講師核銷所得稅統計</div><div style="text-align:center; padding:16px; color:#64748b;">請先勾選要列出的講師</div>';
       return;
     }
 
     const groups = [];
     for (let g = 1; g <= taxTableCount; g++) {
-      const grpCols = checkedInstructors.filter(n => {
+      const grpCols = taxCheckedInstructors.filter(n => {
         const assigned = Math.min(taxTableCount, Math.max(1, Number(taxInstructorGroupMap[n] || 1)));
         return assigned === g;
       });
       if (grpCols.length > 0) groups.push({ grpNum: g, cols: grpCols });
     }
     if (groups.length === 0) {
-      groups.push({ grpNum: 1, cols: [...checkedInstructors] });
+      groups.push({ grpNum: 1, cols: [...taxCheckedInstructors] });
     }
 
     const fullTable1Rows = ensureFullDefaultTaxRows(currentYear, taxMatrixRows);
