@@ -1341,6 +1341,13 @@
       }
     }
 
+    if (field === 'remitted') {
+      item.remitted = Boolean(value);
+      persistModeLocal(feeInputMode, ownerName);
+      renderFeeTable();
+      return;
+    }
+
     if (['days', 'hours', 'rate', 'course_name'].includes(field)) {
       item.amount = calcRowTotalByRule(item, ownerName);
       if (tr) {
@@ -1352,6 +1359,17 @@
     persistModeLocal(feeInputMode, ownerName);
   }
 
+  function isRowRemittedInManual(r) {
+    return feeInputMode === 'manual' && (r.remitted === true || r.remitted === 'true' || String(r.remark || '').includes('已匯款'));
+  }
+
+  function sumUnremittedAmount(rows) {
+    return (rows || []).reduce((s, r) => {
+      if (isRowRemittedInManual(r)) return s;
+      return s + (Number(r.amount) || 0);
+    }, 0);
+  }
+
   function refreshFeeTotalsDom() {
     if (showAllCheckedInstructorsInFee) {
       let grandDays = 0;
@@ -1359,7 +1377,7 @@
       feeCheckedInstructors.forEach(name => {
         const rows = getActiveRowsForInstructor(name);
         const dSum = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
-        const aSum = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+        const aSum = sumUnremittedAmount(rows);
         grandDays += dSum;
         grandAmt += aSum;
         const secTotal = document.getElementById(`inst_subtotal_${name}`);
@@ -1376,7 +1394,7 @@
     } else {
       const rows = getActiveRowsForInstructor(currentFeeInstructor);
       const totalDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
-      const totalAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+      const totalAmt = sumUnremittedAmount(rows);
       const tRow = document.getElementById('fee_single_total_row');
       if (tRow) {
         tRow.querySelector('.single-days-val').textContent = totalDays > 0 ? fmtNum(totalDays) : '';
@@ -1596,6 +1614,18 @@
       ? buildManualCourseCell(r.id, r.course_name, instOwner)
       : buildCalendarCourseCell(r.id, r.course_name, instOwner);
 
+    const remittedChk = isManual ? (r.remitted === true || r.remitted === 'true' || String(r.remark || '').includes('已匯款')) : false;
+    const remittedCellHtml = isManual ? `
+      <td class="center-col" style="${remittedChk ? 'background:#dcfce7;' : ''}">
+        <label style="display:inline-flex; align-items:center; justify-content:center; gap:4px; cursor:pointer; font-size:0.84rem; font-weight:bold; color:${remittedChk ? '#166534' : '#475569'};">
+          <input type="checkbox" ${remittedChk ? 'checked' : ''} onchange="onFeeFieldChange('${r.id}', 'remitted', this.checked, ${ownerArg})" style="width:auto; margin:0; cursor:pointer;">
+          <span>已匯款</span>
+        </label>
+      </td>
+    ` : '';
+
+    const strikeStyle = (isManual && remittedChk) ? 'text-decoration:line-through; color:#64748b;' : 'font-weight:bold;';
+
     return `
       <tr data-fee-row-id="${r.id}">
         <td>${planCellHtml}</td>
@@ -1603,7 +1633,8 @@
         <td><input type="text" inputmode="decimal" class="num-input" value="${r.days ?? ''}" oninput="onFeeFieldChange('${r.id}', 'days', this.value, ${ownerArg})" placeholder="輸入天數"></td>
         <td><input type="text" inputmode="decimal" class="num-input row-hours-input" value="${r.hours ?? ''}" oninput="onFeeFieldChange('${r.id}', 'hours', this.value, ${ownerArg})" placeholder="時數"></td>
         <td><input type="text" inputmode="decimal" class="num-input row-rate-input" value="${r.rate ?? ''}" oninput="onFeeFieldChange('${r.id}', 'rate', this.value, ${ownerArg})" placeholder="費用"></td>
-        <td class="num-col row-amount-cell" style="font-weight:bold;">${fmtNum(r.amount)}</td>
+        <td class="num-col row-amount-cell" style="${strikeStyle}">${fmtNum(r.amount)}</td>
+        ${remittedCellHtml}
         <td><input type="text" value="${escapeAttr(r.remark || '')}" oninput="onFeeFieldChange('${r.id}', 'remark', this.value, ${ownerArg})"></td>
         <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteFeeRow('${r.id}', ${ownerArg})">刪除</button></td>
       </tr>
@@ -1611,6 +1642,24 @@
   }
 
   function buildFeeTableHeaderHtml() {
+    const isManual = (feeInputMode === 'manual');
+    if (isManual) {
+      return `
+        <thead>
+          <tr>
+            <th style="width:16%;">計畫名稱</th>
+            <th style="width:18%;">課程期間</th>
+            <th style="width:8%;">天數</th>
+            <th style="width:8%;">時數</th>
+            <th style="width:11%;">費用 / 1H</th>
+            <th style="width:12%;">合計</th>
+            <th style="width:9%;">已匯款</th>
+            <th style="width:11%;">備註</th>
+            <th class="no-print" style="width:7%;">操作</th>
+          </tr>
+        </thead>
+      `;
+    }
     return `
       <thead>
         <tr>
@@ -1639,7 +1688,7 @@
       const blocksHtml = feeCheckedInstructors.map(instName => {
         const rows = getActiveRowsForInstructor(instName);
         const subDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
-        const subAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+        const subAmt = sumUnremittedAmount(rows);
         grandDays += subDays;
         grandAmt += subAmt;
 
@@ -1663,6 +1712,7 @@
                     <td></td>
                     <td></td>
                     <td class="num-col sub-amt-val">${fmtNum(subAmt)}</td>
+                    ${isManual ? '<td></td>' : ''}
                     <td></td>
                     <td class="no-print"></td>
                   </tr>
@@ -1718,6 +1768,7 @@
               <td></td>
               <td></td>
               <td class="num-col single-amt-val">${fmtNum(totalAmt)}</td>
+              ${isManual ? '<td></td>' : ''}
               <td></td>
               <td class="no-print"></td>
             </tr>
