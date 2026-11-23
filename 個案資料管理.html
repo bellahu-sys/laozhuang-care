@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>個案資料管理（翻閱・新增・編輯・服務狀況） - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --primary: #2c5e4f; --border: #cbd5e1; --text: #1e293b; --bg: #e2e8f0; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; }
+    body { background-color: var(--bg); color: var(--text); margin: 0; line-height: 1.5; }
+
+    /* 統一頂部導覽列 */
+        nav.topbar {
+      background-color: var(--primary); color: white; padding: 10px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500; margin-bottom: 20px;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: white; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: white; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 215px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    /* 仿 Access 表單翻頁控制列 */
+    .pager-bar {
+      position: sticky; top: 0; z-index: 100;
+      background: #f8fafc; border-bottom: 2px solid #94a3b8;
+      padding: 10px 15px; display: flex; justify-content: center; align-items: center;
+      flex-wrap: wrap; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .pager-btn {
+      background: white; border: 1px solid #94a3b8; color: #1e293b;
+      padding: 6px 12px; border-radius: 5px; font-weight: bold; cursor: pointer;
+      font-size: 0.95rem; min-width: auto;
+    }
+    .pager-btn:hover:not(:disabled) { background: #e2e8f0; border-color: var(--primary); }
+    .pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pager-select {
+      padding: 6px 10px; border: 1px solid var(--primary); border-radius: 5px;
+      font-size: 0.95rem; font-weight: bold; color: var(--primary); background: white;
+      min-height: 36px; width: auto;
+    }
+    .pager-info { font-weight: bold; font-size: 0.95rem; color: #334155; padding: 0 6px; }
+    .btn-new-page { background: #0284c7; color: white; border: none; }
+    .btn-new-page:hover { background: #0369a1 !important; }
+
+    /* 表單本體外框 */
+    .container {
+      max-width: 920px; margin: 20px auto 40px auto; background: #ffffff;
+      padding: 25px; border-radius: 10px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+      border-top: 6px solid var(--primary);
+    }
+    header { text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 15px; margin-bottom: 20px; }
+    header h1 { font-size: 1.45rem; color: var(--primary); margin: 0 0 10px 0; }
+    .top-meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 0.95rem; }
+    .mode-tag { background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; }
+    .mode-tag.new-mode { background: #dbeafe; color: #1e40af; }
+    .top-meta input { width: 90px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; }
+
+    .form-section { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 18px; overflow: hidden; }
+    .section-title { background-color: var(--primary); color: white; padding: 8px 12px; font-weight: bold; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; }
+    .form-row { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+    .form-row:last-child { border-bottom: none; }
+    .form-group { flex: 1 1 250px; padding: 12px; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .form-group:last-child { border-right: none; }
+    .form-group.full-width { flex: 1 1 100%; }
+    label.field-label { font-weight: bold; margin-bottom: 6px; color: #334155; font-size: 0.95rem; }
+    input[type="text"], input[type="tel"], input[type="date"], input[type="number"], select, textarea {
+      width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 1rem; min-height: 38px;
+    }
+    .options-group { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 4px; }
+    .option-item { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.95rem; min-height: 34px; }
+    .option-item input[type="radio"], .option-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+    .inline-input { width: 120px !important; min-height: 32px !important; padding: 4px 8px !important; font-size: 0.9rem !important; }
+    .inline-num { width: 65px !important; min-height: 32px !important; padding: 4px 6px !important; text-align: center; }
+
+    .btn-area { display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+    .btn-save { background-color: var(--primary); color: white; padding: 12px 32px; font-size: 1.05rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+    .btn-save:hover { background-color: #1e4237; }
+    .btn-save:disabled { background-color: #94a3b8; cursor: not-allowed; }
+
+    /* =====================================================================
+       仿 Access 子表單區塊樣式 (case_service_status)
+       ===================================================================== */
+    .subform-section {
+      margin-top: 30px; border: 2px solid #0f766e; border-radius: 8px;
+      background: #f0fdfa; overflow: hidden;
+    }
+    .subform-header {
+      background: #0f766e; color: white; padding: 10px 15px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+    .subform-header h2 { margin: 0; font-size: 1.08rem; }
+    .status-pill {
+      padding: 3px 12px; border-radius: 20px; font-size: 0.88rem; font-weight: bold; background: white; color: #0f766e;
+    }
+    .status-pill.active { background: #dcfce7; color: #166534; }
+    .status-pill.paused { background: #fef3c7; color: #92400e; }
+    .status-pill.closed { background: #fee2e2; color: #991b1b; }
+
+    .subform-body { padding: 15px; }
+    .subform-add-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+      background: white; padding: 12px; border-radius: 6px; border: 1px solid #99f6e4; margin-bottom: 15px;
+    }
+    .sub-field { display: flex; flex-direction: column; gap: 4px; }
+    .sub-field label { font-size: 0.85rem; font-weight: bold; color: #334155; }
+    .sub-field select, .sub-field input { min-height: 36px; padding: 5px 8px; font-size: 0.95rem; }
+    .btn-add-sub {
+      background: #0f766e; color: white; border: none; border-radius: 6px;
+      padding: 8px 16px; font-weight: bold; cursor: pointer; min-height: 36px;
+    }
+    .btn-add-sub:hover { background: #115e59; }
+    .sub-table { width: 100%; border-collapse: collapse; background: white; }
+    .sub-table th, .sub-table td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 0.92rem; text-align: left; }
+    .sub-table th { background: #ccfbf1; color: #134e4a; }
+    .btn-del-sub { background: #ef4444; color: white; border: none; border-radius: 4px; padding: 3px 8px; font-size: 0.8rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">🏠 老庄社區照顧關懷據點｜雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item">
+      <a href="index.html" class="nav-btn">🏠 系統首頁</a>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">👥 人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案資料管理.html">📖 個案資料管理</a>
+        <a href="個案清單.html">🔍 個案名冊查詢與服務狀況</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">🎓 講師資料管理</a>
+        <a href="臨時人員資料.html">🧑‍💼 臨時人員資料管理</a>
+        <a href="#" onclick="alert('志工資料表預留擴充中，歡迎隨時提供 Excel 欄位建立！'); return false;">🤝 志工資料管理（預留）</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">🗂️ 行政類 ▾</button>
+      <div class="dropdown-content">
+        <a href="聯絡電話.html">☎️ 聯絡電話總表（全站通訊錄）</a>
+      </div>
+    </div>
+
+    <div class="nav-item">
+      <button type="button" class="nav-btn">🖨️ 報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="個案基本資料表套印.html">📄 個案基本資料表套印</a>
+        <a href="健康管理表套印.html">🩺 長輩健康管理表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- 仿 Access 單一表單翻頁導覽列 -->
+<div class="pager-bar">
+  <button type="button" class="pager-btn" id="btnFirst" onclick="goToPage(0)" title="第一筆">|◀ 第一筆</button>
+  <button type="button" class="pager-btn" id="btnPrev" onclick="goToPage(currentIndex - 1)" title="上一筆 (鍵盤 ←)">◀ 上一頁</button>
+  
+  <select id="jumpSelect" class="pager-select" onchange="goToPage(parseInt(this.value, 10))">
+    <option value="">載入名單中...</option>
+  </select>
+  <span class="pager-info" id="pageIndicator">第 0 / 0 頁</span>
+
+  <button type="button" class="pager-btn" id="btnNext" onclick="goToPage(currentIndex + 1)" title="下一筆 (鍵盤 →)">下一頁 ▶</button>
+  <button type="button" class="pager-btn" id="btnLast" onclick="goToPage(allCases.length - 1)" title="最後一筆">最後一筆 ▶|</button>
+  <button type="button" class="pager-btn btn-new-page" onclick="switchToNewMode()">➕ 新增空白頁</button>
+</div>
+
+<div class="container">
+  <form id="bookForm">
+    <input type="hidden" id="record_id" name="id">
+    <header>
+      <h1>苗栗縣卓蘭鎮老庄社區照顧關懷據點個案基本資料表</h1>
+      <div class="top-meta">
+        <span id="modeBadge" class="mode-tag">📖 檢視／編輯模式</span>
+        <div>
+          <span>據點編號 *：<input type="text" name="case_number" placeholder="如: 001" required></span>
+          <span><input type="text" name="neighborhood" style="width: 50px;"> 鄰</span>
+          <span><input type="text" name="house_number" style="width: 60px;"> 號</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="form-section">
+      <div class="section-title">一、基本資料與政府系統編號</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">姓名 *</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="form-group">
+          <label class="field-label">身分證字號</label>
+          <input type="text" name="id_number" placeholder="如：K123456789" style="text-transform: uppercase;">
+        </div>
+        <div class="form-group">
+          <label class="field-label">系統 ID（政府給個案的編號）</label>
+          <input type="text" name="gov_system_id" placeholder="請輸入政府系統編號">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">性別</label>
+          <div class="options-group">
+            <label class="option-item"><input type="radio" name="gender" value="男"> 男</label>
+            <label class="option-item"><input type="radio" name="gender" value="女"> 女</label>
+          </div>
+        </div>
+        <div class="form-group" style="flex: 2 1 400px;">
+          <label class="field-label">使用語言</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="languages" value="國語"> 國語</label>
+            <label class="option-item"><input type="checkbox" name="languages" value="台語"> 台語</label>
+            <label class="option-item"><input type="checkbox" name="languages" value="客語"> 客語</label>
+            <label class="option-item"><input type="checkbox" name="languages" value="其它"> 其它 <input type="text" name="language_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">電話</label>
+          <input type="tel" name="phone" placeholder="室內電話">
+        </div>
+        <div class="form-group">
+          <label class="field-label">手機</label>
+          <input type="tel" name="mobile" placeholder="如：0912-345678">
+        </div>
+        <div class="form-group">
+          <label class="field-label">生日</label>
+          <input type="date" name="birth_date">
+        </div>
+        <div class="form-group">
+          <label class="field-label">信仰</label>
+          <input type="text" name="religion">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">興趣專長</label>
+          <input type="text" name="interests">
+        </div>
+        <div class="form-group">
+          <label class="field-label">過去從事何職</label>
+          <input type="text" name="past_occupation">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">地址</label>
+          <input type="text" name="address" value="苗栗縣卓蘭鎮老庄里">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">二、生活與福利狀況</div>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">住屋狀況</label>
+          <div class="options-group">
+            <label class="option-item"><input type="radio" name="housing" value="自有住宅"> 自有住宅</label>
+            <label class="option-item"><input type="radio" name="housing" value="租賃"> 租賃</label>
+            <label class="option-item"><input type="radio" name="housing" value="借住"> 借住</label>
+            <label class="option-item"><input type="radio" name="housing" value="臨時住屋"> 臨時住屋 <input type="text" name="housing_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">身分別</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="identity" value="低收入戶"> 低收入戶</label>
+            <label class="option-item"><input type="checkbox" name="identity" value="中低收入戶"> 中低收入戶</label>
+            <label class="option-item"><input type="checkbox" name="identity" value="一般戶老人"> 一般戶老人</label>
+            <label class="option-item"><input type="checkbox" name="identity" value="獨居老人"> 獨居老人</label>
+            <label class="option-item">
+              <input type="checkbox" name="identity" value="身心障礙者"> 身心障礙者
+              <select name="disability_level" style="width:105px; min-height:32px; padding:2px 6px;">
+                <option value="">選擇等級</option>
+                <option value="輕度">輕度</option>
+                <option value="中度">中度</option>
+                <option value="重度">重度</option>
+                <option value="極重度">極重度</option>
+              </select>
+            </label>
+            <label class="option-item"><input type="checkbox" name="identity" value="其他"> 其他 <input type="text" name="identity_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">經濟來源</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="income_source" value="無"> 無</label>
+            <label class="option-item"><input type="checkbox" name="income_source" value="子女奉養"> 子女奉養</label>
+            <label class="option-item"><input type="checkbox" name="income_source" value="政府補助"> 政府補助</label>
+            <label class="option-item"><input type="checkbox" name="income_source" value="其他"> 其他 <input type="text" name="income_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">婚姻狀況</label>
+          <div class="options-group">
+            <label class="option-item"><input type="radio" name="marital_status" value="未婚"> 未婚</label>
+            <label class="option-item"><input type="radio" name="marital_status" value="已婚"> 已婚</label>
+            <label class="option-item"><input type="radio" name="marital_status" value="離婚"> 離婚</label>
+            <label class="option-item"><input type="radio" name="marital_status" value="喪偶"> 喪偶</label>
+            <label class="option-item"><input type="radio" name="marital_status" value="分居"> 分居</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">三、健康與行動能力</div>
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">身體狀況</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="health" value="健康"> 健康</label>
+            <label class="option-item"><input type="checkbox" name="health" value="眼部疾病"> 眼部疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="腎臟疾病"> 腎臟疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="心臟病"> 心臟病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="糖尿病"> 糖尿病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="骨與關節疾病"> 骨與關節疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="老化"> 老化</label>
+            <label class="option-item"><input type="checkbox" name="health" value="肝臟疾病"> 肝臟疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="肺部疾病"> 肺部疾病</label>
+            <label class="option-item"><input type="checkbox" name="health" value="高血壓"> 高血壓</label>
+            <label class="option-item"><input type="checkbox" name="health" value="腸胃部"> 腸胃部</label>
+            <label class="option-item"><input type="checkbox" name="health" value="其他"> 其他 <input type="text" name="health_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">活動型態</label>
+          <div class="options-group">
+            <label class="option-item"><input type="radio" name="mobility" value="完全自理"> 完全自理</label>
+            <label class="option-item"><input type="radio" name="mobility" value="部分自理"> 部分自理</label>
+            <label class="option-item"><input type="radio" name="mobility" value="完全無法自理"> 完全無法自理</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">輔助器材</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="無"> 無</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="助聽器"> 助聽器</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="輪椅"> 輪椅</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="助行器"> 助行器</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="柺杖"> 柺杖</label>
+            <label class="option-item"><input type="checkbox" name="assistive_devices" value="其他"> 其他 <input type="text" name="assistive_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">四、緊急聯絡與家庭狀況</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">聯絡人</label>
+          <input type="text" name="contact_person">
+        </div>
+        <div class="form-group">
+          <label class="field-label">關係</label>
+          <input type="text" name="contact_relation">
+        </div>
+        <div class="form-group">
+          <label class="field-label">聯絡電話</label>
+          <input type="tel" name="contact_phone">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">家庭狀況</label>
+          <div class="options-group">
+            <label class="option-item"><input type="checkbox" name="family_status" value="夫妻同住"> 夫妻同住</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="女兒"> 女兒 <input type="number" name="daughters_count" class="inline-num" min="0"> 人</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="兒子"> 兒子 <input type="number" name="sons_count" class="inline-num" min="0"> 人</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="子女居住外地"> 子女居住外地</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="獨居"> 獨居</label>
+            <label class="option-item"><input type="checkbox" name="family_status" value="其他共同居住"> 其他同住 <input type="number" name="other_cohabitants_count" class="inline-num" min="0"> 人，關係：<input type="text" name="other_cohabitants_relation" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-title">五、需求評估與訪視紀錄</div>
+      <div class="form-row">
+        <div class="form-group" style="flex: 1 1 55%;">
+          <label class="field-label">個案主觀問題陳述</label>
+          <textarea name="subjective_statement" rows="3"></textarea>
+        </div>
+        <div class="form-group" style="flex: 1 1 45%;">
+          <label class="field-label">希望提供的服務</label>
+          <div class="options-group" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+            <label class="option-item"><input type="checkbox" name="desired_services" value="關懷問安"> 關懷問安</label>
+            <label class="option-item"><input type="checkbox" name="desired_services" value="電話問安"> 電話問安</label>
+            <label class="option-item"><input type="checkbox" name="desired_services" value="餐飲服務"> 餐飲服務</label>
+            <label class="option-item"><input type="checkbox" name="desired_services" value="健康促進活動"> 健康促進活動</label>
+            <label class="option-item"><input type="checkbox" name="desired_services" value="其他"> 其他 <input type="text" name="desired_services_other" class="inline-input"></label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full-width">
+          <label class="field-label">補充陳述（訪視員）</label>
+          <textarea name="visitor_notes" rows="2"></textarea>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="field-label">填表人</label>
+          <input type="text" name="filler">
+        </div>
+        <div class="form-group">
+          <label class="field-label">單位主管</label>
+          <input type="text" name="supervisor">
+        </div>
+        <div class="form-group">
+          <label class="field-label">填表日期</label>
+          <input type="date" name="record_date">
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-area">
+      <button type="submit" id="saveBtn" class="btn-save">💾 儲存本頁基本資料至雲端</button>
+    </div>
+  </form>
+
+  <!-- =====================================================================
+       仿 Access 子表單：個案服務狀況異動紀錄 (case_service_status)
+       ===================================================================== -->
+  <div class="subform-section" id="subformContainer">
+    <div class="subform-header">
+      <h2>📌 子表單｜個案目前服務狀況與異動紀錄</h2>
+      <span class="status-pill" id="latestStatusPill">目前狀態：讀取中...</span>
+    </div>
+
+    <div class="subform-body">
+      <div id="subformNewHint" style="display:none; color:#0f766e; font-weight:bold; padding:10px;">
+        ℹ️ 請先儲存上方「新增個案基本資料」後，即可在此登錄該個案的服務狀況紀錄。
+      </div>
+
+      <div id="subformInteractiveArea">
+        <!-- 新增一筆服務狀態變更列 -->
+        <div class="subform-add-bar">
+          <div class="sub-field" style="flex: 1 1 160px;">
+            <label>服務狀態 *</label>
+            <select id="sub_status">
+              <option value="服務中">🟢 服務中</option>
+              <option value="暫停服務">🟡 暫停服務（住院/外出）</option>
+              <option value="已結案-死亡">⚫ 已結案－死亡</option>
+              <option value="已結案-遷出">🔴 已結案－遷出</option>
+              <option value="已結案-轉機構">🔴 已結案－轉入長照機構</option>
+              <option value="已結案-其他">🔴 已結案－其他原因</option>
+            </select>
+          </div>
+          <div class="sub-field" style="flex: 1 1 140px;">
+            <label>異動／生效日期 *</label>
+            <input type="date" id="sub_date">
+          </div>
+          <div class="sub-field" style="flex: 2 1 220px;">
+            <label>異動原因／備註說明</label>
+            <input type="text" id="sub_reason" placeholder="例如：住院暫停、往生結案日期等">
+          </div>
+          <div class="sub-field" style="flex: 1 1 110px;">
+            <label>登記人員</label>
+            <input type="text" id="sub_recorder" placeholder="姓名">
+          </div>
+          <button type="button" class="btn-add-sub" onclick="addServiceStatusRecord()">➕ 新增狀態紀錄</button>
+        </div>
+
+        <!-- 該個案的歷次服務狀況明細表 -->
+        <table class="sub-table">
+          <thead>
+            <tr>
+              <th style="width: 130px;">異動／生效日期</th>
+              <th style="width: 170px;">服務狀況</th>
+              <th>原因／備註說明</th>
+              <th style="width: 100px;">登記人員</th>
+              <th style="width: 70px; text-align:center;">刪除</th>
+            </tr>
+          </thead>
+          <tbody id="subformTableBody">
+            <tr><td colspan="5" style="text-align:center;">載入服務狀況中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  if (sessionStorage.getItem('care_auth') !== 'true') {
+    const input = prompt('🔒 請輸入老庄據點系統通行密碼：');
+    if (input === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<div style="text-align:center;margin-top:80px;font-family:sans-serif;"><h2>⛔ 密碼錯誤，無法存取系統</h2><button onclick="location.reload()" style="padding:10px 20px;font-size:1rem;">重新輸入</button></div>';
+    }
+  }
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let allCases = [];
+  let currentIndex = 0;
+  let isNewMode = false;
+
+  document.getElementById('sub_date').valueAsDate = new Date();
+
+  async function initBook(targetId = null) {
+    const { data, error } = await supabaseClient
+      .from('cases')
+      .select('*')
+      .order('case_number', { ascending: true });
+
+    if (error) {
+      alert('❌ 讀取資料庫失敗：' + error.message);
+      return;
+    }
+
+    allCases = data || [];
+    updateJumpDropdown();
+
+    if (allCases.length === 0) {
+      switchToNewMode();
+    } else {
+      let idx = 0;
+      if (targetId) {
+        const found = allCases.findIndex(c => c.id === targetId);
+        if (found !== -1) idx = found;
+      }
+      goToPage(idx);
+    }
+  }
+
+  function updateJumpDropdown() {
+    const sel = document.getElementById('jumpSelect');
+    if (allCases.length === 0) {
+      sel.innerHTML = '<option value="">尚無已建檔資料</option>';
+      return;
+    }
+    sel.innerHTML = allCases.map((c, idx) =>
+      `<option value="${idx}">${c.case_number || '無編號'} - ${c.name || '未命名'}</option>`
+    ).join('');
+  }
+
+  async function goToPage(index) {
+    if (allCases.length === 0) return;
+    if (index < 0) index = 0;
+    if (index >= allCases.length) index = allCases.length - 1;
+
+    isNewMode = false;
+    currentIndex = index;
+    const c = allCases[currentIndex];
+
+    const badge = document.getElementById('modeBadge');
+    badge.textContent = `📖 檢視／編輯模式（編號：${c.case_number || '無'}）`;
+    badge.className = 'mode-tag';
+
+    document.getElementById('jumpSelect').value = currentIndex;
+    document.getElementById('pageIndicator').textContent = `第 ${currentIndex + 1} / ${allCases.length} 頁`;
+    document.getElementById('btnFirst').disabled = (currentIndex === 0);
+    document.getElementById('btnPrev').disabled = (currentIndex === 0);
+    document.getElementById('btnNext').disabled = (currentIndex === allCases.length - 1);
+    document.getElementById('btnLast').disabled = (currentIndex === allCases.length - 1);
+    document.getElementById('saveBtn').textContent = '💾 儲存本頁基本資料修改';
+
+    document.getElementById('subformNewHint').style.display = 'none';
+    document.getElementById('subformInteractiveArea').style.display = 'block';
+
+    fillFormWithData(c);
+    await loadSubformStatus(c.id);
+  }
+
+  function switchToNewMode() {
+    isNewMode = true;
+    const form = document.getElementById('bookForm');
+    form.reset();
+    document.getElementById('record_id').value = '';
+    form.elements['address'].value = '苗栗縣卓蘭鎮老庄里';
+    form.elements['record_date'].valueAsDate = new Date();
+
+    const badge = document.getElementById('modeBadge');
+    badge.textContent = '➕ 新增個案模式（空白新頁）';
+    badge.className = 'mode-tag new-mode';
+
+    document.getElementById('pageIndicator').textContent = `新增頁（共 ${allCases.length} 筆）`;
+    document.getElementById('btnFirst').disabled = (allCases.length === 0);
+    document.getElementById('btnPrev').disabled = (allCases.length === 0);
+    document.getElementById('btnNext').disabled = true;
+    document.getElementById('btnLast').disabled = true;
+    document.getElementById('saveBtn').textContent = '💾 儲存並加入名冊本';
+
+    document.getElementById('latestStatusPill').textContent = '目前狀態：新個案（預設服務中）';
+    document.getElementById('latestStatusPill').className = 'status-pill active';
+    document.getElementById('subformNewHint').style.display = 'block';
+    document.getElementById('subformInteractiveArea').style.display = 'none';
+  }
+
+  function fillFormWithData(c) {
+    const form = document.getElementById('bookForm');
+    form.reset();
+    document.getElementById('record_id').value = c.id;
+
+    const textFields = [
+      'case_number', 'neighborhood', 'house_number', 'name', 'id_number', 'gov_system_id',
+      'language_other', 'phone', 'mobile', 'birth_date', 'religion', 'interests', 'past_occupation',
+      'address', 'housing_other', 'disability_level', 'identity_other', 'income_other',
+      'health_other', 'assistive_other', 'contact_person', 'contact_relation',
+      'contact_phone', 'daughters_count', 'sons_count', 'other_cohabitants_count',
+      'other_cohabitants_relation', 'subjective_statement', 'desired_services_other',
+      'visitor_notes', 'filler', 'supervisor', 'record_date'
+    ];
+    textFields.forEach(field => {
+      if (form.elements[field]) {
+        form.elements[field].value = c[field] !== null && c[field] !== undefined ? c[field] : '';
+      }
+    });
+
+    const radioFields = ['gender', 'housing', 'marital_status', 'mobility'];
+    radioFields.forEach(field => {
+      if (c[field]) {
+        const radio = form.querySelector(`input[name="${field}"][value="${c[field]}"]`);
+        if (radio) radio.checked = true;
+      }
+    });
+
+    const checkboxFields = ['languages', 'identity', 'income_source', 'health', 'assistive_devices', 'family_status', 'desired_services'];
+    checkboxFields.forEach(field => {
+      if (Array.isArray(c[field])) {
+        c[field].forEach(val => {
+          const cb = form.querySelector(`input[name="${field}"][value="${val}"]`);
+          if (cb) cb.checked = true;
+        });
+      }
+    });
+  }
+
+  // 讀取該個案的子表單服務狀況歷程
+  async function loadSubformStatus(caseId) {
+    const tbody = document.getElementById('subformTableBody');
+    const pill = document.getElementById('latestStatusPill');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">讀取中...</td></tr>';
+
+    const { data, error } = await supabaseClient
+      .from('case_service_status')
+      .select('*')
+      .eq('case_id', caseId)
+      .order('effective_date', { ascending: false })
+      .order('id', { ascending: false });
+
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">讀取子表單失敗：${error.message}（請確認已在 Supabase 建立 case_service_status 資料表）</td></tr>`;
+      return;
+    }
+
+    const list = data || [];
+    if (list.length === 0) {
+      pill.textContent = '目前狀態：尚未登錄';
+      pill.className = 'status-pill';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#64748b;">尚無服務狀況紀錄，請從上方新增</td></tr>';
+      return;
+    }
+
+    // 最新一筆狀態顯示在子表單右上角
+    const latest = list[0].status;
+    pill.textContent = `目前狀態：${latest}`;
+    if (latest === '服務中') pill.className = 'status-pill active';
+    else if (latest.includes('暫停')) pill.className = 'status-pill paused';
+    else pill.className = 'status-pill closed';
+
+    tbody.innerHTML = list.map(row => `
+      <tr>
+        <td>${row.effective_date || ''}</td>
+        <td><strong>${row.status || ''}</strong></td>
+        <td>${row.reason || ''}</td>
+        <td>${row.recorded_by || ''}</td>
+        <td style="text-align:center;">
+          <button type="button" class="btn-del-sub" onclick="deleteSubRecord(${row.id}, ${caseId})">刪除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // 新增一筆子表單服務狀況紀錄
+  async function addServiceStatusRecord() {
+    const caseId = document.getElementById('record_id').value;
+    if (!caseId) return;
+
+    const status = document.getElementById('sub_status').value;
+    const effectiveDate = document.getElementById('sub_date').value;
+    const reason = document.getElementById('sub_reason').value.trim();
+    const recordedBy = document.getElementById('sub_recorder').value.trim();
+
+    if (!effectiveDate) {
+      alert('請選擇異動／生效日期！');
+      return;
+    }
+
+    const { error } = await supabaseClient.from('case_service_status').insert([{
+      case_id: parseInt(caseId, 10),
+      status: status,
+      effective_date: effectiveDate,
+      reason: reason || null,
+      recorded_by: recordedBy || null
+    }]);
+
+    if (error) {
+      alert('❌ 新增服務狀況失敗：' + error.message);
+    } else {
+      document.getElementById('sub_reason').value = '';
+      await loadSubformStatus(parseInt(caseId, 10));
+    }
+  }
+
+  // 刪除一筆子表單紀錄
+  async function deleteSubRecord(subId, caseId) {
+    if (!confirm('確定要刪除這筆服務狀況異動紀錄嗎？')) return;
+    const { error } = await supabaseClient.from('case_service_status').delete().eq('id', subId);
+    if (error) {
+      alert('❌ 刪除失敗：' + error.message);
+    } else {
+      await loadSubformStatus(caseId);
+    }
+  }
+
+  // 儲存主表單基本資料
+  document.getElementById('bookForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '雲端同步中...';
+
+    const formData = new FormData(this);
+    const checkboxFields = ['languages', 'identity', 'income_source', 'health', 'assistive_devices', 'family_status', 'desired_services'];
+    const payload = {};
+
+    checkboxFields.forEach(field => { payload[field] = formData.getAll(field); });
+
+    for (let [key, value] of formData.entries()) {
+      if (key === 'id') continue;
+      if (!checkboxFields.includes(key)) {
+        if (value === '') {
+          payload[key] = null;
+        } else if (['daughters_count', 'sons_count', 'other_cohabitants_count'].includes(key)) {
+          payload[key] = parseInt(value, 10);
+        } else if (key === 'id_number') {
+          payload[key] = value.trim().toUpperCase();
+        } else {
+          payload[key] = value.trim();
+        }
+      }
+    }
+
+    if (isNewMode) {
+      const { data, error } = await supabaseClient.from('cases').insert([payload]).select();
+      if (error) {
+        alert('❌ 新增失敗：' + error.message);
+      } else {
+        const newId = data && data[0] ? data[0].id : null;
+        // 自動為新個案建立一筆「服務中」初始子表單紀錄
+        if (newId) {
+          await supabaseClient.from('case_service_status').insert([{
+            case_id: newId,
+            status: '服務中',
+            effective_date: new Date().toISOString().slice(0, 10),
+            reason: '新收案建檔',
+            recorded_by: payload.filler || null
+          }]);
+        }
+        alert('✅ 已成功新增並建立「服務中」初始狀態！');
+        await initBook(newId);
+      }
+    } else {
+      const id = document.getElementById('record_id').value;
+      const { error } = await supabaseClient.from('cases').update(payload).eq('id', id);
+      if (error) {
+        alert('❌ 儲存修改失敗：' + error.message);
+      } else {
+        alert('✅ 本頁基本資料已成功更新！');
+        await initBook(parseInt(id, 10));
+      }
+    }
+
+    saveBtn.disabled = false;
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+    if (e.key === 'ArrowLeft' && !isNewMode && currentIndex > 0) {
+      goToPage(currentIndex - 1);
+    } else if (e.key === 'ArrowRight' && !isNewMode && currentIndex < allCases.length - 1) {
+      goToPage(currentIndex + 1);
+    }
+  });
+
+  initBook();
+</script>
+</body>
+</html>
