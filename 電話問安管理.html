@@ -246,7 +246,7 @@
   <div class="kpi-bar">
     <div class="kpi-item">本月已記錄電話問安：<span class="kpi-val" id="kpiTotalCount">0</span> 筆（涵蓋 <span class="kpi-val" id="kpiUniqueCases">0</span> 位長輩）</div>
     <div id="kpiGoalBadge" class="kpi-badge-warn">距離每月 20 位目標還差 20 位</div>
-    <div style="margin-left:auto; font-size:0.86rem; color:#0f766e;" id="syncStatus">載入中...</div>
+    <div style="margin-left:auto; font-size:0.86rem; color:#0f766e;" id="syncStatus">正在連線資料庫...</div>
   </div>
 
   <!-- 一、左側搜尋選取個案 ＋ 右側一筆一筆新增問安記錄 -->
@@ -265,6 +265,7 @@
               <input type="checkbox" id="hideDoneChk" onchange="renderCasePicker()"> 隱藏本月已電訪
             </label>
           </div>
+          <div id="regularHintMsg" style="font-size:0.78rem; color:#64748b;"></div>
         </div>
         <div class="case-scroll" id="casePickerList">
           <div style="padding:20px; text-align:center; color:#64748b;">載入名單中...</div>
@@ -414,11 +415,18 @@
 </div>
 
 <script>
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  function getSupabase() {
+    if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined' || !window.supabase) {
+      return null;
+    }
+    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+
   let allCases = [];
   let latestStatusMap = {};
   let monthCheckins = [];
   let selectedCase = null;
+  let hasAnyRegularInDb = false;
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -441,25 +449,52 @@
 
   async function initData() {
     const statusEl = document.getElementById('syncStatus');
-    const [casesRes, stRes] = await Promise.all([
-      supabaseClient.from('cases').select('*').order('case_number', { ascending: true }),
-      supabaseClient.from('case_service_status').select('*').order('effective_date', { ascending: false }).order('id', { ascending: false })
-    ]);
-
-    if (casesRes.error) {
-      statusEl.textContent = '讀取個案失敗：' + casesRes.error.message;
+    const sb = getSupabase();
+    if (!sb) {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '尚未載入 config.js 連線設定';
+      document.getElementById('casePickerList').innerHTML = '<div style="padding:18px; text-align:center; color:#dc2626;">找不到 config.js，請確認同資料夾有 config.js</div>';
       return;
     }
 
-    allCases = casesRes.data || [];
-    latestStatusMap = {};
-    if (!stRes.error && Array.isArray(stRes.data)) {
-      stRes.data.forEach(r => {
-        if (!latestStatusMap[r.case_id]) latestStatusMap[r.case_id] = r.status;
-      });
-    }
+    try {
+      const { data: casesData, error: casesErr } = await sb
+        .from('cases')
+        .select('*')
+        .order('case_number', { ascending: true });
 
-    await loadMonthCheckins();
+      if (casesErr) {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = '讀取 cases 失敗：' + casesErr.message;
+        document.getElementById('casePickerList').innerHTML = `<div style="padding:18px; text-align:center; color:#dc2626;">讀取失敗：${casesErr.message}</div>`;
+        return;
+      }
+
+      allCases = casesData || [];
+      hasAnyRegularInDb = allCases.some(c => c.is_regular === true || (Array.isArray(c.regular_tags) && c.regular_tags.length > 0));
+
+      try {
+        const { data: stData } = await sb
+          .from('case_service_status')
+          .select('case_id, status, effective_date, id')
+          .order('effective_date', { ascending: false })
+          .order('id', { ascending: false });
+        latestStatusMap = {};
+        (stData || []).forEach(r => {
+          if (!latestStatusMap[r.case_id]) latestStatusMap[r.case_id] = r.status;
+        });
+      } catch (e) {
+        latestStatusMap = {};
+      }
+
+      statusEl.style.color = '#0f766e';
+      statusEl.textContent = `已載入 ${allCases.length} 筆個案資料`;
+      await loadMonthCheckins();
+    } catch (err) {
+      statusEl.style.color = '#dc2626';
+      statusEl.textContent = '連線例外：' + err.message;
+      document.getElementById('casePickerList').innerHTML = `<div style="padding:18px; text-align:center; color:#dc2626;">載入例外：${err.message}</div>`;
+    }
   }
 
   async function loadMonthCheckins() {
@@ -468,19 +503,28 @@
     const statusEl = document.getElementById('syncStatus');
     document.getElementById('listTitle').textContent = `二、${rocYear} 年 ${month} 月已登錄電話問安記錄明細`;
 
-    const { data, error } = await supabaseClient
-      .from('phone_checkins')
-      .select('*')
-      .eq('roc_year', rocYear)
-      .eq('month', month)
-      .order('id', { ascending: true });
+    const sb = getSupabase();
+    if (!sb) return;
 
-    if (error) {
-      statusEl.textContent = '尚未建立 phone_checkins 資料表（請先在 Supabase 執行建表 SQL）';
+    try {
+      const { data, error } = await sb
+        .from('phone_checkins')
+        .select('*')
+        .eq('roc_year', rocYear)
+        .eq('month', month)
+        .order('id', { ascending: true });
+
+      if (error) {
+        monthCheckins = [];
+        statusEl.style.color = '#b45309';
+        statusEl.textContent = '提示：尚未建立 phone_checkins 資料表（仍可先搜尋長輩）';
+      } else {
+        monthCheckins = data || [];
+        statusEl.style.color = '#0f766e';
+        statusEl.textContent = `已同步 ${rocYear} 年 ${month} 月電訪資料（${monthCheckins.length} 筆）`;
+      }
+    } catch (e) {
       monthCheckins = [];
-    } else {
-      monthCheckins = data || [];
-      statusEl.textContent = `已同步 ${rocYear} 年 ${month} 月雲端電訪資料`;
     }
 
     updateKpis();
@@ -504,28 +548,44 @@
     }
   }
 
+  function isRegularCase(c) {
+    return c.is_regular === true || (Array.isArray(c.regular_tags) && c.regular_tags.length > 0);
+  }
+
   function renderCasePicker() {
     const kw = document.getElementById('caseSearchInput').value.trim().toLowerCase();
     const onlyRegular = document.getElementById('onlyRegularChk').checked;
     const hideDone = document.getElementById('hideDoneChk').checked;
     const doneNames = new Set(monthCheckins.map(r => r.case_name));
+    const hintEl = document.getElementById('regularHintMsg');
+
+    if (onlyRegular && !hasAnyRegularInDb) {
+      hintEl.style.color = '#b45309';
+      hintEl.textContent = '資料庫尚未勾選「常來」標記，目前先顯示全部服務中長輩；可至「常來個案名冊與報表」第4分頁勾選。';
+    } else if (onlyRegular) {
+      hintEl.style.color = '#0f766e';
+      hintEl.textContent = '目前僅顯示已勾選「常來據點」的長輩';
+    } else {
+      hintEl.style.color = '#475569';
+      hintEl.textContent = '目前顯示全部服務中長輩';
+    }
 
     const filtered = allCases.filter(c => {
       const st = latestStatusMap[c.id] || '服務中';
       if (st.startsWith('已結案')) return false;
-      if (onlyRegular && !c.is_regular) return false;
+      if (onlyRegular && hasAnyRegularInDb && !isRegularCase(c)) return false;
       if (hideDone && doneNames.has(c.name)) return false;
       if (!kw) return true;
       return (c.name && c.name.toLowerCase().includes(kw)) ||
-        (c.case_number && c.case_number.toLowerCase().includes(kw)) ||
-        (c.gov_system_id && c.gov_system_id.toLowerCase().includes(kw)) ||
-        (c.phone && c.phone.includes(kw)) ||
-        (c.mobile && c.mobile.includes(kw));
+        (c.case_number && String(c.case_number).toLowerCase().includes(kw)) ||
+        (c.gov_system_id && String(c.gov_system_id).toLowerCase().includes(kw)) ||
+        (c.phone && String(c.phone).includes(kw)) ||
+        (c.mobile && String(c.mobile).includes(kw));
     });
 
     const box = document.getElementById('casePickerList');
     if (filtered.length === 0) {
-      box.innerHTML = '<div style="padding:18px; text-align:center; color:#64748b; font-size:0.9rem;">查無符合條件的個案（可取消勾選「僅顯示常來據點個案」擴大搜尋）</div>';
+      box.innerHTML = '<div style="padding:18px; text-align:center; color:#64748b; font-size:0.9rem;">查無符合條件的個案，請調整搜尋字或取消勾選「僅顯示常來據點個案」</div>';
       return;
     }
 
@@ -536,7 +596,7 @@
       return `
         <div class="case-pick-row ${isSel ? 'selected' : ''}" onclick="selectCase(${c.id})">
           <div>
-            <div><strong>${c.case_number || ''}</strong> ${c.name || ''} ${c.is_regular ? '<span class="reg-dot">常來</span>' : ''}</div>
+            <div><strong>${c.case_number || ''}</strong> ${c.name || ''} ${isRegularCase(c) ? '<span class="reg-dot">常來</span>' : ''}</div>
             <div style="font-size:0.8rem; color:#475569;">${phoneTxt || '無電話'}</div>
           </div>
           ${isDone ? '<span class="done-dot">本月已訪</span>' : ''}
@@ -589,6 +649,9 @@
       return;
     }
 
+    const sb = getSupabase();
+    if (!sb) { alert('尚未載入資料庫設定'); return; }
+
     const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
     const month = parseInt(document.getElementById('monthSelect').value, 10);
 
@@ -615,7 +678,7 @@
       remark: document.getElementById('remarkInput').value.trim() || null
     };
 
-    const { error } = await supabaseClient.from('phone_checkins').insert([payload]);
+    const { error } = await sb.from('phone_checkins').insert([payload]);
     if (error) {
       alert('儲存失敗：' + error.message);
       return;
@@ -656,7 +719,9 @@
 
   async function deleteCheckin(id) {
     if (!confirm('確定要刪除這筆電話問安記錄嗎？')) return;
-    const { error } = await supabaseClient.from('phone_checkins').delete().eq('id', id);
+    const sb = getSupabase();
+    if (!sb) return;
+    const { error } = await sb.from('phone_checkins').delete().eq('id', id);
     if (error) {
       alert('刪除失敗：' + error.message);
     } else {
@@ -674,50 +739,12 @@
 
     const noteRow = [
       '注意事項：', '', '', '',
-      '接聽情形：請填寫1,2,3,4
-親自接聽為1
-親友接聽為2
-無人接聽為3
-電話故障為4
-其他請填5，並且在後一欄位填寫原因
-只可包含一個數字', '',
-      '口頭表達：請填寫1,2,3,4
-表達清晰為1
-表達尚可為2
-口語不清為3
-無法表達為4
-其他請填5，並且在後一欄位填寫原因
-只可包含一個數字', '',
-      '健康情況：請填寫1,2,3,4
-健康良好為1
-稍有病痛為2
-按時用藥為3
-定期門診為4
-其他請填5，並且在後一欄位填寫原因
-可包含多個數字
-請用逗號分隔', '',
-      '生活狀況：請填寫1,2,3,4
-三餐定時為1
-餐不定時為2
-參與活動為3
-極少互動為4
-其他請填5，並且在後一欄位填寫原因
-可包含多個數字
-請用逗號分隔', '',
-      '親友互動：請填寫1,2,3,4
-常有互動為1
-偶有互動為2
-很少互動為3
-極少互動為4
-其他請填5，並且在後一欄位填寫原因
-只可包含一個數字', '',
-      '精神狀況：請填寫1,2,3,4
-精神愉快為1
-尚可為2
-精神不佳為3
-輕生念頭為4
-其他請填5，並且在後一欄位填寫原因
-只可包含一個數字', '',
+      '接聽情形：請填寫1,2,3,4\n親自接聽為1\n親友接聽為2\n無人接聽為3\n電話故障為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '口頭表達：請填寫1,2,3,4\n表達清晰為1\n表達尚可為2\n口語不清為3\n無法表達為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '健康情況：請填寫1,2,3,4\n健康良好為1\n稍有病痛為2\n按時用藥為3\n定期門診為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
+      '生活狀況：請填寫1,2,3,4\n三餐定時為1\n餐不定時為2\n參與活動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
+      '親友互動：請填寫1,2,3,4\n常有互動為1\n偶有互動為2\n很少互動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '精神狀況：請填寫1,2,3,4\n精神愉快為1\n尚可為2\n精神不佳為3\n輕生念頭為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
       '填寫欲補充之資料'
     ];
     const headerRow = [
