@@ -148,10 +148,30 @@
       .container { max-width: 100%; margin: 0; padding: 0; }
       .card { border: none; box-shadow: none; padding: 0; }
     }
+  
+    .period-filter-box {
+      display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px;
+      background: #ffffff; border: 1px solid #cbd5e1; border-radius: 7px; padding: 5px 9px;
+    }
+    .month-multi-wrap {
+      display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center;
+      padding: 4px 6px; background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1;
+    }
+    .month-chk-pill {
+      display: inline-flex; align-items: center; gap: 3px; font-size: 0.8rem; font-weight: bold;
+      background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; cursor: pointer;
+    }
+    .month-chk-pill input { margin: 0; cursor: pointer; }
+    .mode-pill-cal { background:#dcfce7; color:#166534; padding:4px 10px; border-radius:14px; font-size:0.86rem; font-weight:bold; }
+    .mode-pill-man { background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:14px; font-size:0.86rem; font-weight:bold; }
+    .sync-hint-banner {
+      font-size: 0.82rem; color: #334155; background: #f1f5f9; border-left: 4px solid var(--primary);
+      padding: 7px 12px; border-radius: 4px; margin-bottom: 10px;
+    }
+
   </style>
 </head>
 <body>
-
 <script>
   if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
     const pwd = prompt('請輸入老庄據點系統通行密碼：');
@@ -163,7 +183,6 @@
     }
   }
 </script>
-
 <nav class="topbar no-print">
   <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
   <div class="nav-menu">
@@ -262,23 +281,61 @@
       <div class="sub-box no-print">
         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
           <div style="display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span id="feeModeBadge" style="background:#dcfce7; color:#166534; padding:4px 10px; border-radius:14px; font-size:0.86rem; font-weight:bold;">預設：依行事曆代入天數</span>
+            <span id="feeModeBadge" class="mode-pill-cal">預設：依行事曆代入天數</span>
             <button type="button" class="btn btn-outline btn-sm" id="btnSwitchToManual" onclick="setFeeInputMode('manual')">手動輸入</button>
             <button type="button" class="btn btn-teal btn-sm" id="btnSwitchToCalendar" style="display:none;" onclick="setFeeInputMode('calendar')">依行事曆代入天數</button>
             <button type="button" class="btn btn-blue btn-sm" onclick="toggleRateConfigPanel()">設定講師不同計畫鐘點費</button>
           </div>
 
+          <!-- 依行事曆代入天數：薪資計算期間 / 算到哪一天 選項 -->
+          <div id="calendarPeriodControls" style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+            <div class="period-filter-box">
+              <label style="font-weight:bold; font-size:0.86rem; color:#0f172a;">計算期間／算到哪一天：</label>
+              <select id="calPeriodPreset" onchange="onCalPeriodPresetChange()" style="padding:4px 8px; font-size:0.85rem; font-weight:bold;">
+                <option value="all_year">全年（1/1～12/31）</option>
+                <option value="up_to_today">目前為止（從1月到當天）</option>
+                <option value="custom_end">自訂算到哪一天</option>
+                <option value="single_month">指定單一月份</option>
+                <option value="multi_months">自選計算哪幾個月份</option>
+              </select>
+
+              <span id="calSingleMonthWrap" style="display:none;">
+                <select id="calSingleMonthSelect" onchange="applyCalendarPeriodFilter()" style="padding:4px 6px; font-size:0.84rem;">
+                  <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+                  <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+                  <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+                  <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+                </select>
+              </span>
+
+              <span id="calCustomEndWrap" style="display:none; align-items:center; gap:4px; font-size:0.83rem;">
+                <span>從 1/1 算到：</span>
+                <input type="date" id="calCustomEndDate" onchange="applyCalendarPeriodFilter()" style="padding:3px 6px; font-size:0.83rem;">
+              </span>
+
+              <span id="calMultiMonthWrap" class="month-multi-wrap" style="display:none;"></span>
+
+              <button type="button" class="btn btn-teal btn-sm" onclick="calculateFromCalendar(true)">重新依行事曆帶入</button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="saveCurrentModeRecords()">儲存</button>
+            </div>
+          </div>
+
+          <!-- 手動輸入模式工具列 -->
           <div id="manualModeControls" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
             <button type="button" class="btn btn-blue btn-sm" onclick="addFeeRowFromToolbar()">＋ 加入一列</button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="saveFeeRecords()">儲存</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="clearManualModeRows()">全部清空</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveCurrentModeRecords()">儲存手動輸入</button>
           </div>
         </div>
 
+        <div id="calPeriodSummaryBar" style="margin-top:8px; font-size:0.83rem; color:#0f766e; font-weight:bold;"></div>
+
+        <!-- 設定講師不同計畫不同鐘點費面板 -->
         <div id="rateConfigPanel" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
             <div>
               <strong style="color:var(--primary); font-size:0.93rem;">設定各講師在不同計畫的鐘點費計算方式</strong>
-              <span style="font-size:0.82rem; color:#475569; margin-left:6px;">（可選「1小時/多少錢＋時數」或「1堂/多少錢（不計時數）」）</span>
+              <span style="font-size:0.82rem; color:#475569; margin-left:6px;">（可選「費用/1H」或「費用/1堂（不計時數）」或「無」；儲存後會同步至雲端，家裡與單位電腦皆可讀取）</span>
             </div>
             <div style="display:flex; gap:6px;">
               <button type="button" class="btn btn-primary btn-sm" onclick="saveInstructorPlanRates()">儲存設定並套用</button>
@@ -287,6 +344,10 @@
           </div>
           <div style="overflow-x:auto;" id="rateConfigTableWrap"></div>
         </div>
+      </div>
+
+      <div class="sync-hint-banner no-print" id="cloudSyncNotice">
+        資料儲存說明：「依行事曆代入天數」與「手動輸入」採分開存檔、互不干擾；按「儲存」會同時寫入本機與雲端資料庫（若雲端資料表尚未建立，請先執行下方 SQL 即可跨電腦同步）。
       </div>
 
       <div id="feeTablesContainer"></div>
@@ -315,7 +376,6 @@
       </div>
 
       <div class="chip-list no-print" id="taxCourseChipList" style="display:none;"></div>
-
       <div id="taxTablesMultiContainer"></div>
     </div>
 
@@ -355,10 +415,21 @@
   let masterInstructors = [];
   let checkedInstructors = [];
   let currentFeeInstructor = '';
-  let feeRows = [];
-  let multiFeeMap = {};
+
+  // Separate data stores for 'calendar' mode and 'manual' mode so switching never overwrites or wipes out!
+  let calendarFeeMap = {};
+  let manualFeeMap = {};
+  let singleCalendarRows = [];
+  let singleManualRows = [];
+
   let showAllCheckedInstructorsInFee = true;
-  let feeInputMode = 'calendar';
+  let feeInputMode = 'calendar'; // 'calendar' | 'manual'
+
+  let calPeriodPreset = 'all_year';
+  let calSingleMonth = new Date().getMonth() + 1;
+  let calCustomEndDate = '';
+  let calSelectedMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  let cachedYearSchedules = [];
 
   const DEFAULT_FEE_PLAN_OPTIONS = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
   let feeCourseOptions = (() => {
@@ -474,10 +545,12 @@
     const mode = (r.pay_mode) || (rule ? rule.mode : 'per_hour');
     if (mode === 'none') return 0;
     const d = Number(r.days || 0);
-    const rateVal = (r.rate !== '' && r.rate !== undefined && r.rate !== null) ? Number(r.rate) : (rule && rule.rate !== '' ? Number(rule.rate) : 0);
+    const rateVal = (r.rate !== '' && r.rate !== undefined && r.rate !== null && String(r.rate).trim() !== '')
+      ? Number(r.rate)
+      : (rule && rule.rate !== '' ? Number(rule.rate) : 0);
     if (!d || !rateVal) return 0;
     if (mode === 'per_session') return Math.round(d * rateVal);
-    const h = (r.hours !== '' && r.hours !== undefined && r.hours !== null && Number(r.hours) > 0)
+    const h = (r.hours !== '' && r.hours !== undefined && r.hours !== null && String(r.hours).trim() !== '' && Number(r.hours) > 0)
       ? Number(r.hours)
       : (rule && Number(rule.hours) > 0 ? Number(rule.hours) : 1);
     return Math.round(d * h * rateVal);
@@ -514,6 +587,29 @@
     ];
   }
 
+  async function syncPlanRatesFromCloud() {
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('instructor_plan_rate_configs')
+        .select('instructor_name, plan_name, pay_mode, rate, hours');
+      if (!error && Array.isArray(data) && data.length > 0) {
+        data.forEach(row => {
+          const inst = (row.instructor_name || '').trim();
+          const plan = (row.plan_name || '').trim();
+          if (!inst || !plan) return;
+          if (!instructorPlanRates[inst]) instructorPlanRates[inst] = {};
+          instructorPlanRates[inst][plan] = {
+            mode: row.pay_mode || 'per_hour',
+            rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
+            hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
+          };
+        });
+        localStorage.setItem('lz_instructor_plan_rates_v2', JSON.stringify(instructorPlanRates));
+      }
+    } catch (e) {}
+  }
+
   function getCheckedInstKey() { return `lz_fee_checked_inst_${currentYear}`; }
 
   function loadCheckedInstructorsForYear() {
@@ -545,8 +641,7 @@
     renderPickerPanels();
     renderFeeInstructorSelect();
     if (activeTab === 'fee') {
-      if (showAllCheckedInstructorsInFee) loadAllCheckedInstructorsFee();
-      else loadFeeRecordsForInstructor();
+      loadFeeDataForCurrentMode();
     } else if (activeTab === 'taxInstructor') {
       renderTaxInstructorTable();
     }
@@ -556,7 +651,7 @@
   function getTaxGroupAssignKey() { return `lz_tax_group_assign_${currentYear}`; }
 
   let taxTableCount = 1;
-  let taxInstructorGroupMap = {}; // { [instName]: 1 | 2 | 3 | 4 }
+  let taxInstructorGroupMap = {};
 
   function loadTaxSplitConfig() {
     const sc = localStorage.getItem(getTaxSplitCountKey());
@@ -567,7 +662,6 @@
     } else {
       taxInstructorGroupMap = {};
     }
-    // Default 吳貴英、詹細珍、詹益誠 to group 2 when taxTableCount >= 2
     BOGONG_INSTRUCTORS.forEach(n => {
       if (taxInstructorGroupMap[n] === undefined) {
         taxInstructorGroupMap[n] = 2;
@@ -604,8 +698,6 @@
     if (p1) p1.innerHTML = itemsHtml;
 
     if (p2) {
-      const groupOpts = Array.from({ length: taxTableCount }, (_, idx) => idx + 1)
-        .map(g => `<option value="${g}">第${g}張表</option>`).join('');
       const taxItemsHtml = masterInstructors.map(m => {
         const isChk = checkedInstructors.includes(m.name);
         const assignedGrp = Math.min(taxTableCount, Math.max(1, Number(taxInstructorGroupMap[m.name] || 1)));
@@ -712,17 +804,18 @@
     const bodyRows = insts.map(inst => {
       const tds = plans.map(plan => {
         const rule = getConfiguredPlanRule(inst, plan) || { mode: 'per_hour', rate: '', hours: 1 };
+        const isNone = rule.mode === 'none';
         return `
-          <td style="min-width:155px;">
+          <td style="min-width:165px;">
             <select class="rate-cfg-mode" data-inst="${escapeAttr(inst)}" data-plan="${escapeAttr(plan)}" onchange="onRateModeSelectChange(this)" style="margin-bottom:4px; font-size:0.82rem;">
               <option value="per_hour" ${rule.mode === 'per_hour' ? 'selected' : ''}>費用/1H</option>
               <option value="per_session" ${rule.mode === 'per_session' ? 'selected' : ''}>費用/1堂</option>
               <option value="none" ${rule.mode === 'none' ? 'selected' : ''}>無</option>
             </select>
             <div style="display:flex; gap:4px; align-items:center;">
-              <input type="text" inputmode="decimal" class="num-input rate-cfg-amt" data-inst="${escapeAttr(inst)}" data-plan="${escapeAttr(plan)}" value="${rule.rate}" placeholder="金額" style="width:76px; font-size:0.84rem;">
+              <input type="text" inputmode="decimal" class="num-input rate-cfg-amt" data-inst="${escapeAttr(inst)}" data-plan="${escapeAttr(plan)}" value="${isNone ? '' : rule.rate}" placeholder="金額" ${isNone ? 'disabled' : ''} style="width:76px; font-size:0.84rem;">
               <span style="font-size:0.76rem; color:#475569;">時數</span>
-              <input type="text" inputmode="decimal" class="num-input rate-cfg-hrs" data-inst="${escapeAttr(inst)}" data-plan="${escapeAttr(plan)}" value="${rule.hours}" placeholder="1" style="width:42px; font-size:0.84rem;">
+              <input type="text" inputmode="decimal" class="num-input rate-cfg-hrs" data-inst="${escapeAttr(inst)}" data-plan="${escapeAttr(plan)}" value="${isNone ? '' : rule.hours}" placeholder="1" ${isNone ? 'disabled' : ''} style="width:42px; font-size:0.84rem;">
             </div>
           </td>
         `;
@@ -738,7 +831,7 @@
     `;
   }
 
-  function saveInstructorPlanRates() {
+  async function saveInstructorPlanRates() {
     const modeMap = new Map();
     const amtMap = new Map();
     const hrsMap = new Map();
@@ -747,138 +840,268 @@
     document.querySelectorAll('.rate-cfg-hrs').forEach(el => hrsMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, '')));
 
     instructorPlanRates = {};
-    amtMap.forEach((rawAmt, key) => {
+    const cloudPayload = [];
+
+    modeMap.forEach((mode, key) => {
       const [inst, plan] = key.split('__');
-      const mode = modeMap.get(key) || 'per_hour';
+      const rawAmt = amtMap.get(key) || '';
       const rawHrs = hrsMap.get(key) || '1';
       if (!instructorPlanRates[inst]) instructorPlanRates[inst] = {};
+
       if (mode === 'none') {
         instructorPlanRates[inst][plan] = { mode: 'none', rate: '', hours: '' };
+        cloudPayload.push({ instructor_name: inst, plan_name: plan, pay_mode: 'none', rate: null, hours: null });
       } else if (rawAmt !== '' && Number.isFinite(Number(rawAmt))) {
+        const hrsNum = (rawHrs !== '' && Number.isFinite(Number(rawHrs))) ? Number(rawHrs) : 1;
         instructorPlanRates[inst][plan] = {
           mode,
           rate: Number(rawAmt),
-          hours: (rawHrs !== '' && Number.isFinite(Number(rawHrs))) ? Number(rawHrs) : 1
+          hours: hrsNum
         };
+        cloudPayload.push({ instructor_name: inst, plan_name: plan, pay_mode: mode, rate: Number(rawAmt), hours: hrsNum });
       }
     });
     localStorage.setItem('lz_instructor_plan_rates_v2', JSON.stringify(instructorPlanRates));
 
-    const applyToList = (instName, list) => {
+    if (supabaseClient && cloudPayload.length > 0) {
+      try {
+        await supabaseClient.from('instructor_plan_rate_configs').upsert(cloudPayload, { onConflict: 'instructor_name,plan_name' });
+      } catch (e) {}
+    }
+
+    const applyToCalList = (instName, list) => {
       list.forEach(r => {
         const rule = getConfiguredPlanRule(instName, r.course_name);
         if (rule) {
           r.pay_mode = rule.mode;
-          if (rule.rate !== '') r.rate = rule.rate;
-          if (rule.mode === 'per_hour' && rule.hours > 0) r.hours = rule.hours;
+          if (rule.mode === 'none') {
+            r.rate = '';
+            r.hours = '';
+          } else {
+            if (rule.rate !== '') r.rate = rule.rate;
+            if (rule.mode === 'per_hour' && rule.hours > 0) r.hours = rule.hours;
+            if (rule.mode === 'per_session') r.hours = '';
+          }
           r.amount = calcRowTotalByRule(r, instName);
         }
       });
-      persistFeeLocal(instName);
+      persistModeLocal('calendar', instName);
     };
 
     if (showAllCheckedInstructorsInFee) {
-      checkedInstructors.forEach(inst => applyToList(inst, multiFeeMap[inst] || []));
+      checkedInstructors.forEach(inst => applyToCalList(inst, calendarFeeMap[inst] || []));
     } else if (currentFeeInstructor) {
-      applyToList(currentFeeInstructor, feeRows);
+      applyToCalList(currentFeeInstructor, singleCalendarRows);
     }
+
     renderFeeTable();
     setStatus('已儲存各講師不同計畫鐘點費設定並套用計算');
   }
 
-  function setFeeInputMode(mode) {
+  function getModeStorageKey(mode, instName) {
+    return `lz_fee_${mode}_${currentYear}_${instName}`;
+  }
+
+  function getActiveRowsForInstructor(instName) {
+    if (feeInputMode === 'manual') {
+      if (showAllCheckedInstructorsInFee) {
+        if (!manualFeeMap[instName]) manualFeeMap[instName] = createBlankManualRows(instName);
+        return manualFeeMap[instName];
+      }
+      return singleManualRows;
+    } else {
+      if (showAllCheckedInstructorsInFee) {
+        if (!calendarFeeMap[instName]) calendarFeeMap[instName] = [];
+        return calendarFeeMap[instName];
+      }
+      return singleCalendarRows;
+    }
+  }
+
+  function setActiveRowsForInstructor(instName, rows) {
+    if (feeInputMode === 'manual') {
+      if (showAllCheckedInstructorsInFee) manualFeeMap[instName] = rows;
+      else singleManualRows = rows;
+    } else {
+      if (showAllCheckedInstructorsInFee) calendarFeeMap[instName] = rows;
+      else singleCalendarRows = rows;
+    }
+  }
+
+  function createBlankManualRow(instName = '') {
+    return {
+      id: 'man_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      course_name: '',
+      period_text: '',
+      days: '',
+      hours: '',
+      rate: '',
+      pay_mode: 'per_hour',
+      amount: 0,
+      remark: ''
+    };
+  }
+
+  function createBlankManualRows(instName = '') {
+    return [createBlankManualRow(instName)];
+  }
+
+  function persistModeLocal(mode, instName) {
+    if (!instName) return;
+    const list = (mode === 'manual')
+      ? (showAllCheckedInstructorsInFee ? (manualFeeMap[instName] || []) : singleManualRows)
+      : (showAllCheckedInstructorsInFee ? (calendarFeeMap[instName] || []) : singleCalendarRows);
+    localStorage.setItem(getModeStorageKey(mode, instName), JSON.stringify(list));
+  }
+
+  function initCalPeriodControls() {
+    const today = new Date();
+    const adYear = currentYear + 1911;
+    const defaultEnd = `${adYear}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const endInp = document.getElementById('calCustomEndDate');
+    if (endInp && !endInp.value) endInp.value = defaultEnd;
+
+    const singleSel = document.getElementById('calSingleMonthSelect');
+    if (singleSel) singleSel.value = String(calSingleMonth);
+
+    const multiWrap = document.getElementById('calMultiMonthWrap');
+    if (multiWrap) {
+      multiWrap.innerHTML = Array.from({ length: 12 }, (_, idx) => idx + 1).map(m => {
+        const checked = calSelectedMonths.includes(m) ? 'checked' : '';
+        return `
+          <label class="month-chk-pill">
+            <input type="checkbox" value="${m}" ${checked} onchange="onCalMultiMonthToggle()">
+            <span>${m}月</span>
+          </label>
+        `;
+      }).join('');
+    }
+    updateCalPeriodVisibility();
+  }
+
+  function updateCalPeriodVisibility() {
+    const preset = document.getElementById('calPeriodPreset')?.value || calPeriodPreset;
+    calPeriodPreset = preset;
+    const sWrap = document.getElementById('calSingleMonthWrap');
+    const cWrap = document.getElementById('calCustomEndWrap');
+    const mWrap = document.getElementById('calMultiMonthWrap');
+    if (sWrap) sWrap.style.display = (preset === 'single_month') ? 'inline-block' : 'none';
+    if (cWrap) cWrap.style.display = (preset === 'custom_end') ? 'inline-flex' : 'none';
+    if (mWrap) mWrap.style.display = (preset === 'multi_months') ? 'inline-flex' : 'none';
+  }
+
+  function onCalMultiMonthToggle() {
+    const checks = [...document.querySelectorAll('#calMultiMonthWrap input[type="checkbox"]:checked')];
+    calSelectedMonths = checks.map(c => parseInt(c.value, 10)).sort((a, b) => a - b);
+    applyCalendarPeriodFilter();
+  }
+
+  function onCalPeriodPresetChange() {
+    updateCalPeriodVisibility();
+    applyCalendarPeriodFilter();
+  }
+
+  function getFilteredSchedulesByPeriod(schedules) {
+    const preset = document.getElementById('calPeriodPreset')?.value || calPeriodPreset;
+    const adYear = currentYear + 1911;
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    return (schedules || []).filter(c => {
+      const dStr = String(c.course_date || '').slice(0, 10);
+      if (!dStr) return false;
+      const parts = dStr.split('-');
+      const m = parseInt(parts[1], 10) || 0;
+
+      if (preset === 'all_year') return true;
+      if (preset === 'up_to_today') {
+        if (today.getFullYear() === adYear) return dStr <= todayIso;
+        return dStr <= `${adYear}-12-31`;
+      }
+      if (preset === 'custom_end') {
+        const endVal = document.getElementById('calCustomEndDate')?.value || '';
+        if (!endVal) return true;
+        return dStr <= endVal;
+      }
+      if (preset === 'single_month') {
+        const selM = parseInt(document.getElementById('calSingleMonthSelect')?.value || '1', 10);
+        return m === selM;
+      }
+      if (preset === 'multi_months') {
+        if (!calSelectedMonths || calSelectedMonths.length === 0) return false;
+        return calSelectedMonths.includes(m);
+      }
+      return true;
+    });
+  }
+
+  function updateCalPeriodSummaryText(filteredCount) {
+    const bar = document.getElementById('calPeriodSummaryBar');
+    if (!bar) return;
+    if (feeInputMode !== 'calendar') {
+      bar.textContent = '目前為「手動輸入模式」：課程期間預設空白、欄位清空，與依行事曆代入天數分開存檔。';
+      bar.style.color = '#92400e';
+      return;
+    }
+    bar.style.color = '#0f766e';
+    const preset = document.getElementById('calPeriodPreset')?.value || calPeriodPreset;
+    const today = new Date();
+    const todayStr = `${today.getMonth() + 1}/${today.getDate()}`;
+    let desc = '全年（1/1～12/31）';
+    if (preset === 'up_to_today') desc = `目前為止（1/1～${todayStr}）`;
+    else if (preset === 'custom_end') {
+      const endVal = document.getElementById('calCustomEndDate')?.value || '';
+      desc = endVal ? `1/1 算到 ${endVal}` : '自訂截止日';
+    } else if (preset === 'single_month') {
+      const selM = document.getElementById('calSingleMonthSelect')?.value || '1';
+      desc = `${selM}月`;
+    } else if (preset === 'multi_months') {
+      desc = calSelectedMonths.length > 0 ? calSelectedMonths.map(m => `${m}月`).join('、') : '未勾選月份';
+    }
+    bar.textContent = `目前依行事曆計算區間：${desc}（符合 ${filteredCount ?? 0} 筆排課紀錄）`;
+  }
+
+  async function applyCalendarPeriodFilter() {
+    if (feeInputMode !== 'calendar') return;
+    await calculateFromCalendar(false);
+  }
+
+  async function setFeeInputMode(mode) {
     feeInputMode = mode;
     const isManual = (mode === 'manual');
     const badge = document.getElementById('feeModeBadge');
     const btnToManual = document.getElementById('btnSwitchToManual');
     const btnToCal = document.getElementById('btnSwitchToCalendar');
+    const calCtrl = document.getElementById('calendarPeriodControls');
     const manCtrl = document.getElementById('manualModeControls');
 
     if (badge) {
-      badge.textContent = isManual ? '目前模式：手動輸入' : '預設：依行事曆代入天數';
-      badge.style.background = isManual ? '#fef3c7' : '#dcfce7';
-      badge.style.color = isManual ? '#92400e' : '#166534';
+      badge.textContent = isManual ? '目前模式：手動輸入（獨立存檔）' : '預設：依行事曆代入天數';
+      badge.className = isManual ? 'mode-pill-man' : 'mode-pill-cal';
     }
     if (btnToManual) btnToManual.style.display = isManual ? 'none' : 'inline-block';
     if (btnToCal) btnToCal.style.display = isManual ? 'inline-block' : 'none';
+    if (calCtrl) calCtrl.style.display = isManual ? 'none' : 'flex';
     if (manCtrl) manCtrl.style.display = isManual ? 'inline-flex' : 'none';
 
-    renderFeeTable();
+    await loadFeeDataForCurrentMode();
   }
 
-  function getFeeStorageKeyFor(instName) { return `lz_fee_detail_${currentYear}_${instName}`; }
-  function persistFeeLocal(instName) {
-    if (!instName) return;
-    const rows = showAllCheckedInstructorsInFee ? (multiFeeMap[instName] || []) : feeRows;
-    localStorage.setItem(getFeeStorageKeyFor(instName), JSON.stringify(rows));
-  }
+  async function fetchSingleModeRows(mode, instName) {
+    if (!instName) return mode === 'manual' ? createBlankManualRows('') : [];
 
-  function consolidateRowsByPlan(instName, rows) {
-    if (!Array.isArray(rows) || rows.length === 0) return [];
-    const byPlan = new Map();
-    rows.forEach(r => {
-      let cname = String(r.course_name || '關懷課程').trim();
-      if (cname.includes('老幼同樂') || cname.includes('伯公')) cname = '伯公課程';
-      else if (cname.includes('多元')) cname = '多元課程';
-      else if (cname.includes('延緩')) {
-        const m = cname.match(/延緩\s*([1-3一二三])\s*期?/);
-        const numMap = { '一': '1', '二': '2', '三': '3' };
-        cname = m ? `延緩${numMap[m[1]] || m[1]}期` : '延緩1期';
-      } else if (cname.includes('樂齡')) cname = '樂齡-活躍老化';
-      else if (cname.includes('關懷')) cname = '關懷課程';
-
-      if (!byPlan.has(cname)) {
-        const rule = getConfiguredPlanRule(instName, cname);
-        byPlan.set(cname, {
-          id: r.id || ('plan_' + instName + '_' + cname),
-          course_name: cname,
-          _periods: [],
-          period_text: r.period_text || '',
-          days: 0,
-          hours: (r.hours !== '' && r.hours !== undefined && r.hours !== '') ? r.hours : (rule ? rule.hours : 1),
-          rate: (r.rate !== '' && r.rate !== undefined && r.rate !== '') ? r.rate : (rule ? rule.rate : ''),
-          pay_mode: r.pay_mode || (rule ? rule.mode : 'per_hour'),
-          amount: 0,
-          remark: r.remark || ''
-        });
-      }
-      const target = byPlan.get(cname);
-      target.days = Number(target.days || 0) + (Number(r.days) || 0);
-      if (r.period_text && String(r.period_text).trim() !== '') {
-        target._periods.push(String(r.period_text).trim());
-      }
-      if (r.rate !== '' && r.rate !== undefined && Number(r.rate) > 0 && !target.rate) target.rate = Number(r.rate);
-    });
-
-    const out = [];
-    byPlan.forEach(item => {
-      if (item._periods && item._periods.length > 1) {
-        const firstPart = item._periods[0].split('-')[0];
-        const lastRaw = item._periods[item._periods.length - 1];
-        const lastPart = lastRaw.includes('-') ? lastRaw.split('-')[1] : lastRaw;
-        item.period_text = `${firstPart}-${lastPart}`;
-      } else if (item._periods && item._periods.length === 1) {
-        item.period_text = item._periods[0];
-      }
-      delete item._periods;
-      item.amount = calcRowTotalByRule(item, instName);
-      out.push(item);
-    });
-    return out;
-  }
-
-  async function fetchSingleInstructorRows(instName) {
-    if (!instName) return [];
     if (supabaseClient) {
       try {
+        const entryType = (mode === 'manual') ? 'manual' : 'actual';
         const { data, error } = await supabaseClient
           .from('instructor_fee_records')
           .select('*')
           .eq('roc_year', currentYear)
           .eq('instructor_name', instName)
-          .eq('entry_type', 'actual')
+          .eq('entry_type', entryType)
           .order('sort_order', { ascending: true })
           .order('id', { ascending: true });
+
         if (!error && Array.isArray(data) && data.length > 0) {
           return data.map(r => {
             let cname = r.course_name || '';
@@ -897,75 +1120,82 @@
         }
       } catch (e) {}
     }
-    const raw = localStorage.getItem(getFeeStorageKeyFor(instName));
+
+    const raw = localStorage.getItem(getModeStorageKey(mode, instName));
     if (raw) {
-      try { return JSON.parse(raw); } catch (e) { return []; }
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
+    }
+
+    if (mode === 'manual') {
+      return createBlankManualRows(instName);
     }
     return [];
   }
 
-  async function loadAllCheckedInstructorsFee() {
-    multiFeeMap = {};
-    for (const name of checkedInstructors) {
-      const rows = await fetchSingleInstructorRows(name);
-      multiFeeMap[name] = rows.length > 0 ? rows : [{
-        id: 'init_' + name + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
-        course_name: document.getElementById('feeCourseSelect')?.value || '關懷課程',
-        period_text: '',
-        days: '',
-        hours: 1,
-        rate: '',
-        amount: 0,
-        remark: ''
-      }];
-    }
-    if (currentFeeInstructor && multiFeeMap[currentFeeInstructor]) {
-      feeRows = multiFeeMap[currentFeeInstructor];
-    }
-    renderFeeTable();
-  }
+  async function loadFeeDataForCurrentMode() {
+    const targets = showAllCheckedInstructorsInFee
+      ? checkedInstructors
+      : (currentFeeInstructor ? [currentFeeInstructor] : []);
 
-  async function loadFeeRecordsForInstructor() {
-    if (!currentFeeInstructor) { feeRows = []; renderFeeTable(); return; }
-    feeRows = await fetchSingleInstructorRows(currentFeeInstructor);
-    renderFeeTable();
+    if (feeInputMode === 'manual') {
+      if (showAllCheckedInstructorsInFee) {
+        for (const name of targets) {
+          manualFeeMap[name] = await fetchSingleModeRows('manual', name);
+        }
+      } else if (currentFeeInstructor) {
+        singleManualRows = await fetchSingleModeRows('manual', currentFeeInstructor);
+      }
+      updateCalPeriodSummaryText(0);
+      renderFeeTable();
+      return;
+    }
+
+    if (showAllCheckedInstructorsInFee) {
+      for (const name of targets) {
+        calendarFeeMap[name] = await fetchSingleModeRows('calendar', name);
+      }
+    } else if (currentFeeInstructor) {
+      singleCalendarRows = await fetchSingleModeRows('calendar', currentFeeInstructor);
+    }
+
+    await calculateFromCalendar(false);
   }
 
   async function onFeeContextChange(fromDropdown = false) {
     currentYear = parseInt(document.getElementById('feeYearSelect').value, 10) || 115;
     loadCheckedInstructorsForYear();
+    initCalPeriodControls();
     renderPickerPanels();
     renderFeeInstructorSelect();
     renderFeeCourseSelect();
+
     if (fromDropdown) {
       const selVal = document.getElementById('feeInstructorSelect').value;
       if (selVal) currentFeeInstructor = selVal;
       showAllCheckedInstructorsInFee = false;
-      await loadFeeRecordsForInstructor();
-    } else if (showAllCheckedInstructorsInFee && checkedInstructors.length > 0) {
-      await loadAllCheckedInstructorsFee();
-    } else {
-      await loadFeeRecordsForInstructor();
+    } else if (checkedInstructors.length > 0) {
+      showAllCheckedInstructorsInFee = true;
     }
+
+    await loadFeeDataForCurrentMode();
   }
 
   function addFeeRowFromToolbar() {
     const targetInst = currentFeeInstructor || checkedInstructors[0] || '';
     if (!targetInst) { alert('請先勾選講師'); return; }
     currentFeeInstructor = targetInst;
-    const courseName = document.getElementById('feeCourseSelect').value || '關懷課程';
-    const newRow = {
-      id: 'row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
-      course_name: courseName,
-      period_text: '',
-      days: '',
-      hours: 1,
-      rate: '',
-      amount: 0,
-      remark: ''
-    };
-    if (showAllCheckedInstructorsInFee && multiFeeMap[targetInst]) multiFeeMap[targetInst].push(newRow);
-    else feeRows.push(newRow);
+    const newRow = createBlankManualRow(targetInst);
+    if (showAllCheckedInstructorsInFee) {
+      if (!manualFeeMap[targetInst]) manualFeeMap[targetInst] = [];
+      manualFeeMap[targetInst].push(newRow);
+      persistModeLocal('manual', targetInst);
+    } else {
+      singleManualRows.push(newRow);
+      persistModeLocal('manual', targetInst);
+    }
     renderFeeTable();
   }
 
@@ -973,38 +1203,40 @@
     currentFeeInstructor = instName;
     const sel = document.getElementById('feeInstructorSelect');
     if (sel && [...sel.options].some(o => o.value === instName)) sel.value = instName;
-    const courseName = document.getElementById('feeCourseSelect').value || '關懷課程';
-    const newRow = {
-      id: 'row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
-      course_name: courseName,
-      period_text: '',
-      days: '',
-      hours: 1,
-      rate: '',
-      amount: 0,
-      remark: ''
-    };
-    if (!multiFeeMap[instName]) multiFeeMap[instName] = [];
-    multiFeeMap[instName].push(newRow);
+    const newRow = createBlankManualRow(instName);
+    if (!manualFeeMap[instName]) manualFeeMap[instName] = [];
+    manualFeeMap[instName].push(newRow);
+    persistModeLocal('manual', instName);
     renderFeeTable();
   }
 
+  function clearManualModeRows() {
+    const targets = showAllCheckedInstructorsInFee
+      ? checkedInstructors
+      : (currentFeeInstructor ? [currentFeeInstructor] : []);
+    if (targets.length === 0) return;
+    if (!confirm('確定要將目前手動輸入模式的欄位全部清空嗎？（不會影響依行事曆代入天數模式資料）')) return;
+
+    targets.forEach(instName => {
+      const blank = createBlankManualRows(instName);
+      if (showAllCheckedInstructorsInFee) manualFeeMap[instName] = blank;
+      else singleManualRows = blank;
+      localStorage.setItem(getModeStorageKey('manual', instName), JSON.stringify(blank));
+    });
+    renderFeeTable();
+    setStatus('已清空手動輸入模式所有欄位');
+  }
+
   function onFeeFieldChange(rowId, field, value, instOwner = null) {
-    let list = feeRows;
-    if (instOwner && multiFeeMap[instOwner]) list = multiFeeMap[instOwner];
-    else if (showAllCheckedInstructorsInFee) {
-      for (const k of Object.keys(multiFeeMap)) {
-        const hit = multiFeeMap[k].find(r => String(r.id) === String(rowId));
-        if (hit) { list = multiFeeMap[k]; break; }
-      }
-    }
+    const ownerName = instOwner || currentFeeInstructor;
+    let list = getActiveRowsForInstructor(ownerName);
     const item = list.find(r => String(r.id) === String(rowId));
     if (!item) return;
     item[field] = value;
 
-    const ownerName = instOwner || currentFeeInstructor;
     const tr = document.querySelector(`tr[data-fee-row-id="${rowId}"]`);
-    if (field === 'course_name') {
+
+    if (field === 'course_name' && feeInputMode === 'calendar') {
       const rule = getConfiguredPlanRule(ownerName, value);
       if (rule) {
         item.pay_mode = rule.mode;
@@ -1027,7 +1259,7 @@
       }
       refreshFeeTotalsDom();
     }
-    persistFeeLocal(instOwner || currentFeeInstructor);
+    persistModeLocal(feeInputMode, ownerName);
   }
 
   function refreshFeeTotalsDom() {
@@ -1035,7 +1267,7 @@
       let grandDays = 0;
       let grandAmt = 0;
       checkedInstructors.forEach(name => {
-        const rows = multiFeeMap[name] || [];
+        const rows = getActiveRowsForInstructor(name);
         const dSum = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
         const aSum = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
         grandDays += dSum;
@@ -1052,8 +1284,9 @@
         gRow.querySelector('.grand-amt-val').textContent = fmtNum(grandAmt);
       }
     } else {
-      const totalDays = feeRows.reduce((s, r) => s + (Number(r.days) || 0), 0);
-      const totalAmt = feeRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+      const rows = getActiveRowsForInstructor(currentFeeInstructor);
+      const totalDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
+      const totalAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
       const tRow = document.getElementById('fee_single_total_row');
       if (tRow) {
         tRow.querySelector('.single-days-val').textContent = totalDays > 0 ? fmtNum(totalDays) : '';
@@ -1062,45 +1295,78 @@
     }
   }
 
-  async function saveFeeRecordsForInstructor(instName) {
-    if (!instName) { alert('請先選擇講師'); return; }
-    const rowsToSave = showAllCheckedInstructorsInFee ? (multiFeeMap[instName] || []) : feeRows;
-    localStorage.setItem(getFeeStorageKeyFor(instName), JSON.stringify(rowsToSave));
+  async function saveFeeRecordsForInstructor(instName, silent = false) {
+    if (!instName) { if (!silent) alert('請先選擇講師'); return; }
+    const rowsToSave = getActiveRowsForInstructor(instName);
+    localStorage.setItem(getModeStorageKey(feeInputMode, instName), JSON.stringify(rowsToSave));
+
+    const entryType = (feeInputMode === 'manual') ? 'manual' : 'actual';
+    let cloudSaved = false;
     if (supabaseClient) {
       try {
-        await supabaseClient.from('instructor_fee_records').delete().eq('roc_year', currentYear).eq('instructor_name', instName).eq('entry_type', 'actual');
+        await supabaseClient
+          .from('instructor_fee_records')
+          .delete()
+          .eq('roc_year', currentYear)
+          .eq('instructor_name', instName)
+          .eq('entry_type', entryType);
+
         if (rowsToSave.length > 0) {
           const payload = rowsToSave.map((r, idx) => ({
             roc_year: currentYear,
             instructor_name: instName,
-            entry_type: 'actual',
+            entry_type: entryType,
             plan_name: r.course_name || null,
             course_name: r.course_name || '',
             period_text: r.period_text || '',
-            days: r.days === '' ? null : Number(r.days),
-            hours: r.hours === '' ? null : Number(r.hours),
-            rate: r.rate === '' ? null : Number(r.rate),
+            days: (r.days === '' || r.days === null || r.days === undefined) ? null : Number(r.days),
+            hours: (r.hours === '' || r.hours === null || r.hours === undefined) ? null : Number(r.hours),
+            rate: (r.rate === '' || r.rate === null || r.rate === undefined) ? null : Number(r.rate),
             amount: Number(r.amount || 0),
             remark: r.remark || '',
             sort_order: idx + 1
           }));
-          await supabaseClient.from('instructor_fee_records').insert(payload);
+          const { error } = await supabaseClient.from('instructor_fee_records').insert(payload);
+          if (!error) cloudSaved = true;
+        } else {
+          cloudSaved = true;
         }
       } catch (e) {}
     }
-    setStatus(`已儲存 ${currentYear} 年 ${instName} 鐘點費`);
-    alert(`已儲存 ${currentYear} 年 ${instName} 鐘點費！`);
+
+    const modeLabel = (feeInputMode === 'manual') ? '手動輸入' : '依行事曆代入天數';
+    if (!silent) {
+      setStatus(`已儲存 ${currentYear} 年 ${instName}（${modeLabel}）${cloudSaved ? '並同步雲端' : '（本機快取）'}`);
+      alert(`已儲存 ${currentYear} 年 ${instName}（${modeLabel}）鐘點費！`);
+    }
+  }
+
+  async function saveCurrentModeRecords() {
+    const targets = showAllCheckedInstructorsInFee
+      ? checkedInstructors
+      : (currentFeeInstructor ? [currentFeeInstructor] : []);
+    if (targets.length === 0) { alert('請先勾選或選擇講師'); return; }
+    for (const name of targets) {
+      await saveFeeRecordsForInstructor(name, true);
+    }
+    const modeLabel = (feeInputMode === 'manual') ? '手動輸入' : '依行事曆代入天數';
+    setStatus(`已儲存 ${targets.length} 位講師（${modeLabel}）資料`);
+    alert(`已儲存 ${targets.length} 位講師（${modeLabel}）鐘點費資料！`);
   }
 
   function deleteFeeRow(rowId, instOwner = null) {
     const owner = instOwner || currentFeeInstructor;
-    if (instOwner && multiFeeMap[instOwner]) multiFeeMap[instOwner] = multiFeeMap[instOwner].filter(r => String(r.id) !== String(rowId));
-    else feeRows = feeRows.filter(r => String(r.id) !== String(rowId));
-    persistFeeLocal(owner);
+    const curList = getActiveRowsForInstructor(owner);
+    const nextList = curList.filter(r => String(r.id) !== String(rowId));
+    if (feeInputMode === 'manual' && nextList.length === 0) {
+      nextList.push(createBlankManualRow(owner));
+    }
+    setActiveRowsForInstructor(owner, nextList);
+    persistModeLocal(feeInputMode, owner);
     renderFeeTable();
   }
 
-  function buildPlanGroupedRowsFromSchedules(instName, instSchedules) {
+  function buildPlanGroupedRowsFromSchedules(instName, instSchedules, existingMapForInst = null) {
     const map = new Map();
     instSchedules.forEach(c => {
       const planLabel = normalizePlanLabel(c);
@@ -1110,15 +1376,30 @@
       if (p.length === 3) map.get(planLabel).push(`${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`);
     });
 
+    const prevByPlan = new Map();
+    if (Array.isArray(existingMapForInst)) {
+      existingMapForInst.forEach(pr => {
+        if (pr.course_name) prevByPlan.set(pr.course_name, pr);
+      });
+    }
+
     const builtRows = [];
     map.forEach((dates, cName) => {
       const days = dates.length;
       const period = dates.length > 1 ? `${dates[0]}-${dates[dates.length - 1]}` : (dates[0] || '');
       const rule = getConfiguredPlanRule(instName, cName);
-      const hrsVal = rule ? (rule.mode === 'per_session' ? '' : rule.hours) : 1;
-      const rateVal = rule ? rule.rate : '';
+      const prev = prevByPlan.get(cName);
+
+      const hrsVal = rule
+        ? (rule.mode === 'per_session' ? '' : rule.hours)
+        : (prev && prev.hours !== '' && prev.hours !== undefined ? prev.hours : 1);
+      const rateVal = rule
+        ? (rule.mode === 'none' ? '' : rule.rate)
+        : (prev && prev.rate !== '' && prev.rate !== undefined ? prev.rate : '');
+      const remarkVal = prev ? (prev.remark || '') : '';
+
       const rowObj = {
-        id: 'cal_' + instName + '_' + cName + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+        id: (prev && prev.id) ? prev.id : ('cal_' + instName + '_' + cName + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5)),
         course_name: cName,
         period_text: period,
         days,
@@ -1126,7 +1407,7 @@
         rate: rateVal,
         pay_mode: rule ? rule.mode : 'per_hour',
         amount: 0,
-        remark: ''
+        remark: remarkVal
       };
       rowObj.amount = calcRowTotalByRule(rowObj, instName);
       builtRows.push(rowObj);
@@ -1134,48 +1415,75 @@
     return builtRows;
   }
 
-  async function calculateFromCalendar() {
+  async function calculateFromCalendar(showToast = false) {
+    if (feeInputMode === 'manual') return;
     const targets = (showAllCheckedInstructorsInFee && checkedInstructors.length > 0)
       ? checkedInstructors
       : (currentFeeInstructor ? [currentFeeInstructor] : []);
-    if (targets.length === 0 || !supabaseClient) { renderFeeTable(); return; }
+    if (targets.length === 0) {
+      updateCalPeriodSummaryText(0);
+      renderFeeTable();
+      return;
+    }
 
     const adYear = currentYear + 1911;
-    try {
-      const { data, error } = await supabaseClient
-        .from('course_schedules')
-        .select('*')
-        .gte('course_date', `${adYear}-01-01`)
-        .lte('course_date', `${adYear}-12-31`)
-        .in('instructor_name', targets)
-        .order('course_date', { ascending: true });
-
-      if (error || !data || data.length === 0) {
-        renderFeeTable();
-        return;
-      }
-
-      let totalImported = 0;
-      targets.forEach(instName => {
-        const instSchedules = data.filter(c => (c.instructor_name || '').trim() === instName);
-        if (instSchedules.length === 0) return;
-
-        const builtRows = buildPlanGroupedRowsFromSchedules(instName, instSchedules);
-        totalImported += builtRows.length;
-        if (showAllCheckedInstructorsInFee) multiFeeMap[instName] = builtRows;
-        if (instName === currentFeeInstructor || targets.length === 1) feeRows = builtRows;
-      });
-
-      saveFeeCourseOptions();
-      renderFeeCourseSelect();
-      setStatus(`已依行事曆帶入 ${totalImported} 筆課程天數`);
-      renderFeeTable();
-    } catch (e) {
-      renderFeeTable();
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('course_schedules')
+          .select('*')
+          .gte('course_date', `${adYear}-01-01`)
+          .lte('course_date', `${adYear}-12-31`)
+          .in('instructor_name', targets)
+          .order('course_date', { ascending: true });
+        if (!error && Array.isArray(data)) {
+          cachedYearSchedules = data;
+        }
+      } catch (e) {}
     }
+
+    const filtered = getFilteredSchedulesByPeriod(cachedYearSchedules);
+    updateCalPeriodSummaryText(filtered.length);
+
+    let totalRows = 0;
+    targets.forEach(instName => {
+      const instSchedules = filtered.filter(c => (c.instructor_name || '').trim() === instName);
+      const existingRows = showAllCheckedInstructorsInFee
+        ? (calendarFeeMap[instName] || [])
+        : singleCalendarRows;
+
+      if (instSchedules.length > 0) {
+        const built = buildPlanGroupedRowsFromSchedules(instName, instSchedules, existingRows);
+        totalRows += built.length;
+        if (showAllCheckedInstructorsInFee) calendarFeeMap[instName] = built;
+        if (instName === currentFeeInstructor || targets.length === 1) singleCalendarRows = built;
+        persistModeLocal('calendar', instName);
+      } else {
+        if (showAllCheckedInstructorsInFee && !calendarFeeMap[instName]) {
+          calendarFeeMap[instName] = [];
+        }
+      }
+    });
+
+    saveFeeCourseOptions();
+    renderFeeCourseSelect();
+    if (showToast) {
+      setStatus(`已依選定期間帶入 ${totalRows} 筆課程天數`);
+    }
+    renderFeeTable();
   }
 
-  function buildCourseDropdownCell(rowId, currentVal, instOwner = null) {
+  function buildManualCourseCell(rowId, currentVal, instOwner = null) {
+    const ownerArg = instOwner ? `'${escapeAttr(instOwner)}'` : 'null';
+    const listId = `manPlanList_${rowId}`;
+    const optsHtml = feeCourseOptions.map(c => `<option value="${escapeAttr(c)}"></option>`).join('');
+    return `
+      <input type="text" list="${listId}" value="${escapeAttr(currentVal || '')}" placeholder="選擇或手動輸入計畫" oninput="onFeeFieldChange('${rowId}', 'course_name', this.value, ${ownerArg})" onchange="onFeeFieldChange('${rowId}', 'course_name', this.value, ${ownerArg})">
+      <datalist id="${listId}">${optsHtml}</datalist>
+    `;
+  }
+
+  function buildCalendarCourseCell(rowId, currentVal, instOwner = null) {
     const ownerArg = instOwner ? `'${escapeAttr(instOwner)}'` : 'null';
     const opts = feeCourseOptions.map(c =>
       `<option value="${escapeAttr(c)}" ${currentVal === c ? 'selected' : ''}>${escapeHtml(c)}</option>`
@@ -1193,15 +1501,20 @@
 
   function buildFeeRowHtml(r, instOwner = null) {
     const ownerArg = instOwner ? `'${escapeAttr(instOwner)}'` : 'null';
+    const isManual = (feeInputMode === 'manual');
+    const planCellHtml = isManual
+      ? buildManualCourseCell(r.id, r.course_name, instOwner)
+      : buildCalendarCourseCell(r.id, r.course_name, instOwner);
+
     return `
       <tr data-fee-row-id="${r.id}">
-        <td>${buildCourseDropdownCell(r.id, r.course_name, instOwner)}</td>
-        <td><input type="text" value="${escapeAttr(r.period_text)}" oninput="onFeeFieldChange('${r.id}', 'period_text', this.value, ${ownerArg})" placeholder="如：1/5-4/13"></td>
+        <td>${planCellHtml}</td>
+        <td><input type="text" value="${escapeAttr(r.period_text || '')}" oninput="onFeeFieldChange('${r.id}', 'period_text', this.value, ${ownerArg})" placeholder="${isManual ? '請手動輸入期間（預設空白）' : '如：1/5-4/13'}"></td>
         <td><input type="text" inputmode="decimal" class="num-input" value="${r.days ?? ''}" oninput="onFeeFieldChange('${r.id}', 'days', this.value, ${ownerArg})" placeholder="輸入天數"></td>
         <td><input type="text" inputmode="decimal" class="num-input row-hours-input" value="${r.hours ?? ''}" oninput="onFeeFieldChange('${r.id}', 'hours', this.value, ${ownerArg})" placeholder="時數"></td>
-        <td><input type="text" inputmode="decimal" class="num-input row-rate-input" value="${r.rate ?? ''}" oninput="onFeeFieldChange('${r.id}', 'rate', this.value, ${ownerArg})" placeholder="每小時費用"></td>
+        <td><input type="text" inputmode="decimal" class="num-input row-rate-input" value="${r.rate ?? ''}" oninput="onFeeFieldChange('${r.id}', 'rate', this.value, ${ownerArg})" placeholder="費用"></td>
         <td class="num-col row-amount-cell" style="font-weight:bold;">${fmtNum(r.amount)}</td>
-        <td><input type="text" value="${escapeAttr(r.remark)}" oninput="onFeeFieldChange('${r.id}', 'remark', this.value, ${ownerArg})"></td>
+        <td><input type="text" value="${escapeAttr(r.remark || '')}" oninput="onFeeFieldChange('${r.id}', 'remark', this.value, ${ownerArg})"></td>
         <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteFeeRow('${r.id}', ${ownerArg})">刪除</button></td>
       </tr>
     `;
@@ -1211,8 +1524,8 @@
     return `
       <thead>
         <tr>
-          <th style="width:17%;">計畫名稱</th>
-          <th style="width:20%;">課程期間</th>
+          <th style="width:18%;">計畫名稱</th>
+          <th style="width:19%;">課程期間</th>
           <th style="width:9%;">天數</th>
           <th style="width:9%;">時數</th>
           <th style="width:12%;">費用 / 1H</th>
@@ -1227,15 +1540,14 @@
   function renderFeeTable() {
     const container = document.getElementById('feeTablesContainer');
     if (!container) return;
+    const isManual = (feeInputMode === 'manual');
 
     if (showAllCheckedInstructorsInFee && checkedInstructors.length > 0) {
       let grandDays = 0;
       let grandAmt = 0;
 
       const blocksHtml = checkedInstructors.map(instName => {
-        const rawRows = multiFeeMap[instName] || [];
-        const rows = consolidateRowsByPlan(instName, rawRows);
-        multiFeeMap[instName] = rows;
+        const rows = getActiveRowsForInstructor(instName);
         const subDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
         const subAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
         grandDays += subDays;
@@ -1244,8 +1556,8 @@
         return `
           <div style="margin-bottom:22px;">
             <div class="sheet-title-banner" style="display:flex; justify-content:center; align-items:center; gap:10px;">
-              <span>${currentYear}年度 ${escapeHtml(instName)} 講師鐘點費用</span>
-              ${feeInputMode === 'manual' ? `
+              <span>${currentYear}年度 ${escapeHtml(instName)} 講師鐘點費用${isManual ? '（手動輸入）' : ''}</span>
+              ${isManual ? `
                 <button type="button" class="btn btn-blue btn-sm no-print" onclick="addFeeRowForInstructor('${escapeAttr(instName)}')" style="font-size:0.78rem;">＋ 加入一列</button>
                 <button type="button" class="btn btn-primary btn-sm no-print" onclick="saveFeeRecordsForInstructor('${escapeAttr(instName)}')" style="font-size:0.78rem;">儲存</button>
               ` : ''}
@@ -1293,14 +1605,14 @@
       return;
     }
 
-    feeRows = consolidateRowsByPlan(currentFeeInstructor, feeRows);
-    const totalDays = feeRows.reduce((s, r) => s + (Number(r.days) || 0), 0);
-    const totalAmt = feeRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+    const rows = getActiveRowsForInstructor(currentFeeInstructor);
+    const totalDays = rows.reduce((s, r) => s + (Number(r.days) || 0), 0);
+    const totalAmt = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
     container.innerHTML = `
       <div class="sheet-title-banner" style="display:flex; justify-content:center; align-items:center; gap:10px;">
-        <span>${currentYear}年度 ${escapeHtml(currentFeeInstructor || '')} 講師鐘點費用</span>
-        ${feeInputMode === 'manual' ? `
+        <span>${currentYear}年度 ${escapeHtml(currentFeeInstructor || '')} 講師鐘點費用${isManual ? '（手動輸入）' : ''}</span>
+        ${isManual ? `
           <button type="button" class="btn btn-blue btn-sm no-print" onclick="addFeeRowFromToolbar()" style="font-size:0.78rem;">＋ 加入一列</button>
           <button type="button" class="btn btn-primary btn-sm no-print" onclick="saveFeeRecordsForInstructor('${escapeAttr(currentFeeInstructor || '')}')" style="font-size:0.78rem;">儲存</button>
         ` : ''}
@@ -1309,7 +1621,7 @@
         <table class="excel-table">
           ${buildFeeTableHeaderHtml()}
           <tbody>
-            ${feeRows.map(r => buildFeeRowHtml(r, null)).join('')}
+            ${rows.map(r => buildFeeRowHtml(r, null)).join('')}
             <tr class="total-row" id="fee_single_total_row">
               <td class="center-col">總計</td>
               <td></td>
@@ -1368,7 +1680,6 @@
         });
       }
     });
-    // Sort standard courses in their canonical order (with '上課次數' at bottom), keeping any custom rows in place
     const orderMap = new Map(FULL_DEFAULT_TAX_COURSES.map((c, i) => [c, i]));
     baseList.sort((a, b) => {
       const ca = String(a.course_name || '').trim();
@@ -1378,12 +1689,6 @@
       return ia - ib;
     });
     return baseList;
-  }
-
-  function restoreAllDefaultTaxCourses() {
-    taxMatrixRows = ensureFullDefaultTaxRows(currentYear, taxMatrixRows);
-    localStorage.setItem(getTaxMatrixKey(), JSON.stringify(taxMatrixRows));
-    renderTaxInstructorTable();
   }
 
   async function onTaxContextChange() {
@@ -1402,18 +1707,7 @@
     }
     taxMatrixRows = ensureFullDefaultTaxRows(currentYear, parsedM);
     localStorage.setItem(getTaxMatrixKey(), JSON.stringify(taxMatrixRows));
-
-    const savedB = localStorage.getItem(getBogongTaxKey());
-    if (savedB) {
-      try { bogongTaxRows = JSON.parse(savedB); } catch (e) { bogongTaxRows = []; }
-    } else {
-      bogongTaxRows = [
-        { id: 'bg_def_' + currentYear + '_1', course_name: '伯公', values: {} },
-        { id: 'bg_def_' + currentYear + '_2', course_name: '上課次數', values: {} }
-      ];
-    }
     renderTaxInstructorTable();
-    renderBogongTaxTable();
   }
 
   function renderTaxCourseChips() {
@@ -1520,7 +1814,6 @@
       } catch (e) {}
     }
 
-    localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
     setStatus(`已儲存 ${currentYear} 年度個人所得稅計算-講師資料`);
     alert(`已儲存 ${currentYear} 年度個人所得稅計算-講師資料！`);
   }
@@ -1598,7 +1891,6 @@
 
       const colSums = {};
       cols.forEach(n => { colSums[n] = 0; });
-
       const delHandler = isSecondOrLaterTable ? 'deleteTaxTable2Row' : 'deleteTaxMatrixRow';
 
       const buildManualRowHtml = (row) => {
@@ -1661,94 +1953,6 @@
     }).join('');
 
     wrap.innerHTML = datalistHtml + tablesHtml;
-  }
-
-  function getBogongTaxKey() { return `lz_bogong_tax_matrix_${currentYear}`; }
-
-  function addBogongTaxRow() {
-    bogongTaxRows.push({
-      id: 'bg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
-      course_name: '伯公',
-      values: {}
-    });
-    localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
-    renderBogongTaxTable();
-  }
-
-  function deleteBogongTaxRow(rowId) {
-    bogongTaxRows = bogongTaxRows.filter(r => String(r.id) !== String(rowId));
-    localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
-    renderBogongTaxTable();
-  }
-
-  function onBogongRowCourseChange(rowId, val) {
-    const row = bogongTaxRows.find(r => String(r.id) === String(rowId));
-    if (row) {
-      row.course_name = val;
-      localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
-    }
-  }
-
-  function onBogongCellChange(rowId, instName, val) {
-    const row = bogongTaxRows.find(r => String(r.id) === String(rowId));
-    if (!row) return;
-    row.values[instName] = String(val).replace(/,/g, '').trim();
-    localStorage.setItem(getBogongTaxKey(), JSON.stringify(bogongTaxRows));
-    renderBogongTaxTable();
-  }
-
-  function renderBogongTaxTable() {
-    const titleEl = document.getElementById('bogongTaxTitle');
-    const headEl = document.getElementById('bogongTaxHead');
-    const bodyEl = document.getElementById('bogongTaxBody');
-    if (!titleEl || !headEl || !bodyEl) return;
-
-    titleEl.textContent = `${currentYear}年度伯公課程講師所得稅統計`;
-    headEl.innerHTML = `
-      <tr>
-        <th style="width:150px;"></th>
-        ${BOGONG_INSTRUCTORS.map(n => `<th>${escapeHtml(n)}</th>`).join('')}
-        <th class="no-print" style="width:70px;">操作</th>
-      </tr>
-    `;
-
-    const colSums = {};
-    BOGONG_INSTRUCTORS.forEach(n => { colSums[n] = 0; });
-
-    const beforeLesson = bogongTaxRows.filter(r => String(r.course_name || '').trim() !== '上課次數');
-    const lessonRows = bogongTaxRows.filter(r => String(r.course_name || '').trim() === '上課次數');
-
-    const buildRow = (row) => {
-      const isLesson = String(row.course_name || '').trim() === '上課次數';
-      const tds = BOGONG_INSTRUCTORS.map(n => {
-        const raw = row.values ? (row.values[n] ?? '') : '';
-        const cleaned = String(raw).replace(/,/g, '').trim();
-        const isNum = cleaned !== '' && /^-?\d+(\.\d+)?$/.test(cleaned);
-        const numVal = isNum ? Number(cleaned) : NaN;
-        if (!isLesson && isNum && Number.isFinite(numVal)) colSums[n] += numVal;
-        const disp = isNum ? fmtNum(numVal) : raw;
-        return `<td><input type="text" class="${isNum ? 'num-input' : 'center-col'}" value="${escapeAttr(disp)}" onchange="onBogongCellChange('${row.id}', '${escapeAttr(n)}', this.value)"></td>`;
-      }).join('');
-
-      return `
-        <tr>
-          <td><input type="text" list="taxCourseDatalist" value="${escapeAttr(row.course_name)}" onchange="onBogongRowCourseChange('${row.id}', this.value)"></td>
-          ${tds}
-          <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteBogongTaxRow('${row.id}')">刪除</button></td>
-        </tr>
-      `;
-    };
-
-    const beforeHtml = beforeLesson.map(buildRow).join('');
-    const totalRowHtml = `
-      <tr class="total-row">
-        <td class="center-col">核銷金額</td>
-        ${BOGONG_INSTRUCTORS.map(n => `<td class="num-col">${fmtNum(colSums[n])}</td>`).join('')}
-        <td class="no-print"></td>
-      </tr>
-    `;
-    const lessonHtml = lessonRows.map(buildRow).join('');
-    bodyEl.innerHTML = beforeHtml + totalRowHtml + lessonHtml;
   }
 
   async function loadTempStaffQuarterData() {
@@ -1836,9 +2040,9 @@
 
   (async function init() {
     await loadInstructorsFromHr();
+    await syncPlanRatesFromCloud();
+    initCalPeriodControls();
     await onFeeContextChange();
-    renderFeeTable();
-    await calculateFromCalendar();
   })();
 </script>
 
