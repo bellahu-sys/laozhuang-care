@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>延緩課程前測記錄管理 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root { --primary: #2c5e4f; --primary-dark: #1e4237; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", "PingFang TC", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 260px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1340px; margin: 22px auto 50px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 6px 0; font-size: 1.4rem; color: var(--primary); }
+    h2 {
+      margin: 0 0 14px 0; font-size: 1.12rem; color: var(--primary);
+      border-bottom: 2px solid var(--primary); padding-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+    .sub-note { font-size: 0.9rem; color: #475569; margin: 0; }
+
+    .toolbar {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      background: #f8fafc; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    input[type="text"], input[type="date"], select {
+      padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.92rem; background: #fff;
+    }
+    button.btn {
+      padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: #0284c7; color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
+    .btn-green { background: #15803d; color: #fff; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-gray { background: #64748b; color: #fff; }
+    .btn-del { background: #dc2626; color: #fff; padding: 4px 8px; font-size: 0.8rem; }
+    .btn-sm { padding: 4px 9px; font-size: 0.82rem; }
+
+    .reuse-box {
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+      padding: 12px 15px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    }
+
+    table.pre-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; min-width: 1180px; }
+    table.pre-table th, table.pre-table td { border: 1px solid #cbd5e1; padding: 6px 6px; text-align: center; }
+    table.pre-table th { background: #e2e8f0; color: #1e293b; font-weight: bold; line-height: 1.3; }
+    table.pre-table tr:nth-child(even) { background: #f8fafc; }
+    table.pre-table select, table.pre-table input[type="text"] {
+      padding: 4px 5px; font-size: 0.84rem; width: 100%; border-radius: 4px;
+    }
+
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5);
+      z-index: 900; justify-content: center; align-items: center; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card {
+      background: #fff; border-radius: 10px; width: 100%; max-width: 680px;
+      padding: 20px; box-shadow: 0 12px 28px rgba(0,0,0,0.22); max-height: 88vh; overflow-y: auto;
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 2px solid var(--primary); padding-bottom: 8px; margin-bottom: 12px;
+    }
+    .pick-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 8px;
+      max-height: 360px; overflow-y: auto; padding: 6px; border: 1px solid #e2e8f0; border-radius: 6px;
+    }
+    .pick-card {
+      border: 1px solid #cbd5e1; border-radius: 6px; padding: 7px 9px; cursor: pointer;
+      display: flex; align-items: center; gap: 6px; font-size: 0.88rem; background: #f8fafc;
+    }
+    .pick-card:hover { background: #f0fdfa; border-color: var(--primary); }
+    .has-prev-tag { font-size: 0.72rem; background: #dbeafe; color: #1e40af; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="食材費收據管理.html">食材費計算</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+        <div class="dropdown-divider">其他計畫核銷</div>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>延緩課程前測記錄管理</h1>
+        <p class="sub-note">每年約 2–3 期延緩課程前測記錄表（ICOPE、SPPB、MNA）；已建立過的前測紀錄可於新期別重複套用，免重複從頭填寫。</p>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" onclick="saveCurrentTermAll()">儲存本期全部修改</button>
+        <button type="button" class="btn btn-green" onclick="exportTermExcel()">匯出本期前測 Excel (.xlsx)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>
+      <span>一、選擇期別與排入前測名單</span>
+      <span id="syncStatus" style="font-size:0.86rem; color:#0f766e;">載入中...</span>
+    </h2>
+
+    <div class="toolbar">
+      <label><strong>選擇或切換期別：</strong>
+        <select id="termSelect" onchange="onTermChange()" style="min-width:190px; font-weight:bold;"></select>
+      </label>
+      <input type="text" id="newTermInput" placeholder="新增期別，如：115年第2期" style="width:185px;">
+      <button type="button" class="btn btn-blue" onclick="createNewTerm()">＋ 建立新期別</button>
+      <button type="button" class="btn btn-primary" onclick="openBatchPickModal()">＋ 從常來個案排入本期名單（自動帶入舊紀錄）</button>
+    </div>
+
+    <div class="reuse-box">
+      <strong>重複使用既有前測紀錄：</strong>
+      <span>從來源期別</span>
+      <select id="sourceTermSelect" style="min-width:160px;"></select>
+      <button type="button" class="btn btn-amber" onclick="copyRecordsFromSourceTerm()">一鍵複製／套用該期前測紀錄至本期</button>
+      <span style="font-size:0.84rem; color:#1e3a8a;">（會自動帶入居住情況、自覺健康、ICOPE 與測驗底稿，已存在於本期的長輩不會重複加入）</span>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="pre-table">
+        <thead>
+          <tr>
+            <th style="width:48px;">編號</th>
+            <th style="width:92px;">姓名</th>
+            <th style="width:115px;">居住情況</th>
+            <th style="width:90px;">自覺健康</th>
+            <th style="width:72px;">自行填寫</th>
+            <th style="width:68px;">1.記憶<br>減退</th>
+            <th style="width:68px;">2.行動<br>跌倒</th>
+            <th style="width:68px;">3.體重<br>減輕</th>
+            <th style="width:68px;">4.食慾<br>不振</th>
+            <th style="width:68px;">5.視力<br>困難</th>
+            <th style="width:68px;">6.聽力<br>困難</th>
+            <th style="width:68px;">7.情緒<br>悶悶</th>
+            <th style="width:68px;">8.減少<br>活動</th>
+            <th style="width:82px;">SPPB 測驗</th>
+            <th style="width:82px;">MNA 測驗</th>
+            <th style="width:92px;">ICOPE 結果</th>
+            <th style="width:110px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="pretestBody">
+          <tr><td colspan="17" style="padding:22px; color:#64748b;">載入前測資料中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 批次挑選常來長輩排入本期名單彈窗 -->
+<div class="modal-backdrop" id="pickModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 style="margin:0; color:var(--primary);">挑選常來據點長輩排入本期前測（共約十多位）</h3>
+      <button type="button" class="btn btn-gray btn-sm" onclick="closeBatchPickModal()">關閉</button>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
+      <input type="text" id="modalSearchInput" placeholder="搜尋姓名或編號..." oninput="renderModalCaseGrid()" style="flex:1;">
+      <label style="font-size:0.86rem; display:inline-flex; align-items:center; gap:4px;">
+        <input type="checkbox" id="modalOnlyRegChk" checked onchange="renderModalCaseGrid()"> 僅顯示常來個案
+      </label>
+    </div>
+    <div class="pick-grid" id="modalCaseGrid"></div>
+    <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+      <span id="modalSelectedCount" style="font-weight:bold; color:#0f766e;">已勾選 0 位長輩</span>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-gray" onclick="closeBatchPickModal()">取消</button>
+        <button type="button" class="btn btn-primary" onclick="confirmAddPickedCases()">加入本期並自動帶入既有前測底稿</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const DEFAULT_TERMS = ['既有前測底稿', '115年第1期', '115年第2期', '115年第3期'];
+  const ICOPE_KEYS = ['q1_memory', 'q2_mobility', 'q3_weight_loss', 'q4_appetite', 'q5_vision', 'q6_hearing', 'q7_mood_1', 'q8_mood_2'];
+
+  let allCases = [];
+  let allPretests = [];
+  let activeTerm = '115年第1期';
+  let modalPickedNames = new Set();
+
+  async function initPage() {
+    const statusEl = document.getElementById('syncStatus');
+    const [casesRes, preRes] = await Promise.all([
+      supabaseClient.from('cases').select('*').order('case_number', { ascending: true }),
+      supabaseClient.from('delay_pretests').select('*').order('seq_no', { ascending: true }).order('id', { ascending: true })
+    ]);
+
+    allCases = casesRes.data || [];
+    if (preRes.error) {
+      statusEl.textContent = '尚未建立 delay_pretests 資料表（請先在 Supabase 執行建表 SQL）';
+      allPretests = [];
+    } else {
+      allPretests = preRes.data || [];
+      statusEl.textContent = `已載入雲端前測資料庫（共 ${allPretests.length} 筆紀錄）`;
+    }
+
+    refreshTermDropdowns();
+    renderPretestTable();
+  }
+
+  function refreshTermDropdowns() {
+    const termSet = new Set(DEFAULT_TERMS);
+    allPretests.forEach(r => { if (r.term_label) termSet.add(r.term_label); });
+    const terms = [...termSet];
+
+    const sel = document.getElementById('termSelect');
+    const srcSel = document.getElementById('sourceTermSelect');
+    sel.innerHTML = terms.map(t => `<option value="${t}" ${t === activeTerm ? 'selected' : ''}>${t}</option>`).join('');
+    srcSel.innerHTML = terms.map(t => `<option value="${t}" ${t === '既有前測底稿' ? 'selected' : ''}>${t}</option>`).join('');
+  }
+
+  function onTermChange() {
+    activeTerm = document.getElementById('termSelect').value;
+    renderPretestTable();
+  }
+
+  function createNewTerm() {
+    const val = document.getElementById('newTermInput').value.trim();
+    if (!val) { alert('請輸入新期別名稱（例如：115年第2期）！'); return; }
+    activeTerm = val;
+    document.getElementById('newTermInput').value = '';
+    const sel = document.getElementById('termSelect');
+    if (![...sel.options].some(o => o.value === val)) {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = val;
+      sel.appendChild(opt);
+    }
+    sel.value = val;
+    renderPretestTable();
+  }
+
+  function findLatestHistoryByName(name) {
+    const clean = String(name || '').trim();
+    const matches = allPretests.filter(r => String(r.case_name || '').trim() === clean);
+    if (matches.length === 0) return null;
+    // Prefer non-empty living_situation / icope_answers
+    const rich = matches.find(m => m.living_situation || m.self_health);
+    return rich || matches[matches.length - 1];
+  }
+
+  function yesNoSelect(rowId, key, curVal) {
+    const v = curVal || '否';
+    return `
+      <select onchange="onIcopeChange(${rowId}, '${key}', this.value)">
+        <option value="否" ${v === '否' ? 'selected' : ''}>否</option>
+        <option value="是" ${v === '是' ? 'selected' : ''}>是</option>
+        <option value="" ${v === '' ? 'selected' : ''}>-</option>
+      </select>
+    `;
+  }
+
+  function renderPretestTable() {
+    const tbody = document.getElementById('pretestBody');
+    const rows = allPretests.filter(r => r.term_label === activeTerm);
+
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="17" style="padding:24px; color:#64748b;">「${activeTerm}」目前尚無名單，請點上方「＋ 從常來個案排入本期名單」或「一鍵複製／套用既有前測紀錄」。</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map((r, idx) => {
+      const ic = r.icope_answers || {};
+      const liv = r.living_situation || '與親友同住';
+      const hlth = r.self_health || '良好';
+      const sf = r.self_filled || '否';
+      return `
+        <tr>
+          <td><strong>${r.seq_no || (idx + 1)}</strong></td>
+          <td><strong>${r.case_name || ''}</strong></td>
+          <td>
+            <select onchange="onFieldChange(${r.id}, 'living_situation', this.value)">
+              <option value="與親友同住" ${liv === '與親友同住' ? 'selected' : ''}>與親友同住</option>
+              <option value="獨居" ${liv === '獨居' ? 'selected' : ''}>獨居</option>
+              <option value="夫妻同住" ${liv === '夫妻同住' ? 'selected' : ''}>夫妻同住</option>
+              <option value="" ${!r.living_situation ? 'selected' : ''}>未填</option>
+            </select>
+          </td>
+          <td>
+            <select onchange="onFieldChange(${r.id}, 'self_health', this.value)">
+              <option value="良好" ${hlth === '良好' ? 'selected' : ''}>良好</option>
+              <option value="普通" ${hlth === '普通' ? 'selected' : ''}>普通</option>
+              <option value="不佳" ${hlth === '不佳' ? 'selected' : ''}>不佳</option>
+              <option value="" ${!r.self_health ? 'selected' : ''}>未填</option>
+            </select>
+          </td>
+          <td>
+            <select onchange="onFieldChange(${r.id}, 'self_filled', this.value)">
+              <option value="否" ${sf === '否' ? 'selected' : ''}>否</option>
+              <option value="是" ${sf === '是' ? 'selected' : ''}>是</option>
+            </select>
+          </td>
+          ${ICOPE_KEYS.map(k => `<td>${yesNoSelect(r.id, k, ic[k])}</td>`).join('')}
+          <td><input type="text" value="${r.sppb_score || ''}" placeholder="分數" onchange="onFieldChange(${r.id}, 'sppb_score', this.value)"></td>
+          <td><input type="text" value="${r.mna_score || ''}" placeholder="分數" onchange="onFieldChange(${r.id}, 'mna_score', this.value)"></td>
+          <td><input type="text" value="${r.icope_result || ''}" placeholder="結果" onchange="onFieldChange(${r.id}, 'icope_result', this.value)"></td>
+          <td>
+            <button type="button" class="btn btn-blue btn-sm" onclick="reuseSingleRow(${r.id})" title="從歷史紀錄帶入此長輩前測資料">帶入舊檔</button>
+            <button type="button" class="btn btn-del" onclick="deletePretestRow(${r.id})">刪</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function onFieldChange(id, field, val) {
+    const item = allPretests.find(r => r.id === id);
+    if (item) item[field] = val;
+  }
+
+  function onIcopeChange(id, key, val) {
+    const item = allPretests.find(r => r.id === id);
+    if (!item) return;
+    if (!item.icope_answers) item.icope_answers = {};
+    item.icope_answers[key] = val;
+  }
+
+  async function reuseSingleRow(id) {
+    const item = allPretests.find(r => r.id === id);
+    if (!item) return;
+    const hist = allPretests.find(r => r.id !== id && String(r.case_name).trim() === String(item.case_name).trim() && (r.living_situation || r.self_health));
+    if (!hist) {
+      alert(`找不到「${item.case_name}」的既有前測紀錄！`);
+      return;
+    }
+    item.living_situation = hist.living_situation;
+    item.self_health = hist.self_health;
+    item.self_filled = hist.self_filled;
+    item.icope_answers = JSON.parse(JSON.stringify(hist.icope_answers || {}));
+    item.sppb_score = hist.sppb_score;
+    item.mna_score = hist.mna_score;
+    item.icope_result = hist.icope_result;
+    renderPretestTable();
+  }
+
+  async function saveCurrentTermAll() {
+    const rows = allPretests.filter(r => r.term_label === activeTerm);
+    if (rows.length === 0) { alert('本期尚無資料可儲存！'); return; }
+
+    for (const r of rows) {
+      const { error } = await supabaseClient
+        .from('delay_pretests')
+        .update({
+          living_situation: r.living_situation || null,
+          self_health: r.self_health || null,
+          self_filled: r.self_filled || '否',
+          icope_answers: r.icope_answers || {},
+          sppb_score: r.sppb_score || null,
+          mna_score: r.mna_score || null,
+          icope_result: r.icope_result || null
+        })
+        .eq('id', r.id);
+      if (error) {
+        alert('儲存失敗：' + error.message);
+        return;
+      }
+    }
+    alert(`已成功儲存「${activeTerm}」共 ${rows.length} 筆前測資料！`);
+  }
+
+  async function deletePretestRow(id) {
+    if (!confirm('確定要從本期前測名單移除這位長輩嗎？')) return;
+    const { error } = await supabaseClient.from('delay_pretests').delete().eq('id', id);
+    if (!error) {
+      allPretests = allPretests.filter(r => r.id !== id);
+      renderPretestTable();
+    }
+  }
+
+  function openBatchPickModal() {
+    modalPickedNames.clear();
+    document.getElementById('modalSelectedCount').textContent = '已勾選 0 位長輩';
+    renderModalCaseGrid();
+    document.getElementById('pickModal').classList.add('open');
+  }
+
+  function closeBatchPickModal() {
+    document.getElementById('pickModal').classList.remove('open');
+  }
+
+  function renderModalCaseGrid() {
+    const kw = document.getElementById('modalSearchInput').value.trim().toLowerCase();
+    const onlyReg = document.getElementById('modalOnlyRegChk').checked;
+    const histNames = new Set(allPretests.map(r => String(r.case_name || '').trim()));
+
+    // Combine cases and any names in pretests
+    const map = new Map();
+    allCases.forEach(c => {
+      if (onlyReg && !c.is_regular) return;
+      map.set(c.name, { name: c.name, code: c.case_number || '', id: c.id });
+    });
+    if (!onlyReg) {
+      allPretests.forEach(p => {
+        if (!map.has(p.case_name)) map.set(p.case_name, { name: p.case_name, code: '', id: p.case_id || null });
+      });
+    }
+
+    const list = [...map.values()].filter(it => !kw || it.name.toLowerCase().includes(kw) || it.code.toLowerCase().includes(kw));
+    const grid = document.getElementById('modalCaseGrid');
+    grid.innerHTML = list.map(it => {
+      const checked = modalPickedNames.has(it.name) ? 'checked' : '';
+      const hasPrev = histNames.has(it.name);
+      return `
+        <label class="pick-card">
+          <input type="checkbox" ${checked} onchange="toggleModalPick('${it.name}', this.checked)">
+          <span>${it.code ? it.code + ' ' : ''}<strong>${it.name}</strong></span>
+          ${hasPrev ? '<span class="has-prev-tag">有舊紀錄</span>' : ''}
+        </label>
+      `;
+    }).join('');
+  }
+
+  function toggleModalPick(name, checked) {
+    if (checked) modalPickedNames.add(name);
+    else modalPickedNames.delete(name);
+    document.getElementById('modalSelectedCount').textContent = `已勾選 ${modalPickedNames.size} 位長輩`;
+  }
+
+  async function confirmAddPickedCases() {
+    if (modalPickedNames.size === 0) { alert('請至少勾選一位長輩！'); return; }
+    const existingInTerm = new Set(allPretests.filter(r => r.term_label === activeTerm).map(r => r.case_name));
+    let nextSeq = allPretests.filter(r => r.term_label === activeTerm).length + 1;
+
+    const toInsert = [];
+    modalPickedNames.forEach(name => {
+      if (existingInTerm.has(name)) return;
+      const cObj = allCases.find(c => c.name === name);
+      const hist = findLatestHistoryByName(name);
+      toInsert.push({
+        case_id: cObj ? cObj.id : null,
+        roc_year: 115,
+        term_label: activeTerm,
+        seq_no: nextSeq++,
+        case_name: name,
+        living_situation: hist ? hist.living_situation : '與親友同住',
+        self_health: hist ? hist.self_health : '良好',
+        self_filled: hist ? hist.self_filled : '否',
+        icope_answers: hist ? (hist.icope_answers || {}) : { q1_memory:'否', q2_mobility:'否', q3_weight_loss:'否', q4_appetite:'否', q5_vision:'否', q6_hearing:'否', q7_mood_1:'否', q8_mood_2:'否' },
+        sppb_score: hist ? hist.sppb_score : null,
+        mna_score: hist ? hist.mna_score : null,
+        icope_result: hist ? hist.icope_result : null
+      });
+    });
+
+    if (toInsert.length === 0) {
+      alert('所勾選的長輩皆已在本期名單中！');
+      closeBatchPickModal();
+      return;
+    }
+
+    const { error } = await supabaseClient.from('delay_pretests').insert(toInsert);
+    if (error) {
+      alert('新增失敗：' + error.message);
+      return;
+    }
+
+    closeBatchPickModal();
+    await initPage();
+  }
+
+  async function copyRecordsFromSourceTerm() {
+    const srcTerm = document.getElementById('sourceTermSelect').value;
+    if (srcTerm === activeTerm) {
+      alert('來源期別與目前期別相同，請選擇其他期別作為來源！');
+      return;
+    }
+    const srcRows = allPretests.filter(r => r.term_label === srcTerm);
+    if (srcRows.length === 0) {
+      alert(`來源期別「${srcTerm}」沒有資料可複製！`);
+      return;
+    }
+    const existingNames = new Set(allPretests.filter(r => r.term_label === activeTerm).map(r => r.case_name));
+    let nextSeq = existingNames.size + 1;
+
+    const toInsert = srcRows
+      .filter(s => !existingNames.has(s.case_name))
+      .map(s => ({
+        case_id: s.case_id || null,
+        roc_year: s.roc_year || 115,
+        term_label: activeTerm,
+        seq_no: nextSeq++,
+        case_name: s.case_name,
+        living_situation: s.living_situation || null,
+        self_health: s.self_health || null,
+        self_filled: s.self_filled || '否',
+        icope_answers: s.icope_answers || {},
+        sppb_score: s.sppb_score || null,
+        mna_score: s.mna_score || null,
+        icope_result: s.icope_result || null
+      }));
+
+    if (toInsert.length === 0) {
+      alert(`「${srcTerm}」的長輩已全數存在於「${activeTerm}」中！`);
+      return;
+    }
+
+    if (!confirm(`確定要將「${srcTerm}」的 ${toInsert.length} 筆前測紀錄複製套用到「${activeTerm}」嗎？`)) return;
+
+    const { error } = await supabaseClient.from('delay_pretests').insert(toInsert);
+    if (error) {
+      alert('複製失敗：' + error.message);
+      return;
+    }
+    await initPage();
+  }
+
+  function exportTermExcel() {
+    const rows = allPretests.filter(r => r.term_label === activeTerm);
+    if (rows.length === 0) { alert('本期尚無資料可匯出！'); return; }
+
+    const headers = [
+      '編號', '姓名', '居住情況', '自覺健康狀況', '長輩是否自行填寫',
+      '1.記憶明顯減退', '2.行動功能/跌倒', '3.體重減輕3公斤以上', '4.食慾不振',
+      '5.視力障礙', '6.聽力困難', '7.感到悶悶不樂', '8.減少活動與興趣',
+      'SPPB 測驗', 'MNA 測驗', 'ICOPE 結果'
+    ];
+    const dataRows = rows.map((r, idx) => {
+      const ic = r.icope_answers || {};
+      return [
+        r.seq_no || (idx + 1),
+        r.case_name || '',
+        r.living_situation || '',
+        r.self_health || '',
+        r.self_filled || '',
+        ic.q1_memory || '',
+        ic.q2_mobility || '',
+        ic.q3_weight_loss || '',
+        ic.q4_appetite || '',
+        ic.q5_vision || '',
+        ic.q6_hearing || '',
+        ic.q7_mood_1 || '',
+        ic.q8_mood_2 || '',
+        r.sppb_score || '',
+        r.mna_score || '',
+        r.icope_result || ''
+      ];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, activeTerm);
+    XLSX.writeFile(wb, `延緩前測記錄_${activeTerm}.xlsx`);
+  }
+
+  initPage();
+</script>
+</body>
+</html>
