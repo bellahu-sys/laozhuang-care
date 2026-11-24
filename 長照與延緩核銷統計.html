@@ -271,79 +271,43 @@
     </div>
   </div>
 
-  <!-- 子頁面 1：1. 長照與延緩經費收支（所有數值儲存於資料庫） -->
+  <!-- 子頁面 1：1. 長照與延緩經費收支（跨期累計＋一鍵複製核銷明細表） -->
   <div id="viewFunding">
-    <div class="card">
+    <div class="card no-print">
       <h2>
-        <span>長照與延緩核銷金額統計</span>
+        <span>一、年度共用核定額度與核銷順序設定</span>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-amber btn-sm" onclick="loadSampleSequence115()">載入範例（1-3月長照➔4-6月長照➔延緩第1期）</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="saveFundingToDatabase()">儲存至資料庫</button>
+        </div>
       </h2>
-
-      <div class="official-sheet-wrap" id="statsSheetWrap">
-        <table class="official-table" style="min-width:560px;">
-          <tbody>
-            <tr>
-              <td colspan="2" style="font-weight:bold; background:#f1f5f9;">長照 + 延緩目前累計金額</td>
-            </tr>
-            <tr>
-              <td style="width:36%;">1-3月長照</td>
-              <td class="td-right" style="width:64%;"><input type="text" class="sheet-cell-input" id="stLtcQ1" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            </tr>
-            <tr>
-              <td>4-6月長照</td>
-              <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ2" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            </tr>
-            <tr>
-              <td>7-9月長照</td>
-              <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ3" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            </tr>
-            <tr>
-              <td>10-12月長照</td>
-              <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ4" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            </tr>
-            <tr style="background:#f8fafc; font-weight:bold;">
-              <td>長照累計金額</td>
-              <td class="td-right" id="stLtcTotal">0</td>
-            </tr>
-            <tr>
-              <td>延緩1期</td>
-              <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP1" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            </tr>
-            <tr>
-              <td>延緩2期</td>
-              <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP2" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            </tr>
-            <tr>
-              <td>延緩3期</td>
-              <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP3" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-            </tr>
-            <tr style="background:#f8fafc; font-weight:bold;">
-              <td>累計金額</td>
-              <td class="td-right" id="stDelayTotal">0</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="controls-bar" style="margin-bottom:0;">
+        <label style="font-weight:bold;">
+          核定業務費（長照）：
+          <input type="text" id="sharedBudgetBiz" class="sheet-cell-input" style="width:125px; margin-left:4px;" value="480,000" onchange="onSharedBudgetChange()">
+        </label>
+        <label style="font-weight:bold;">
+          核定預防及延緩失能服務：
+          <input type="text" id="sharedBudgetDelay" class="sheet-cell-input" style="width:125px; margin-left:4px;" value="108,000" onchange="onSharedBudgetChange()">
+        </label>
+        <label style="font-weight:bold;">
+          送核銷階段／順序：
+          <select id="fundingStageSelect" onchange="onFundingStageChange(this.value)" style="font-weight:bold; margin-left:4px;"></select>
+        </label>
+        <button type="button" class="btn btn-outline btn-sm" onclick="addFundingStage()">＋ 新增送核銷階段</button>
+        <button type="button" class="btn btn-blue btn-sm" onclick="copySheetBlock('fundingOfficialWrap', '補助經費收支明細表')">一鍵複製收支明細表</button>
       </div>
     </div>
 
-    <!-- 2. 長照補助經費 -->
+    <!-- 官方格式：接受衛生福利部長照服務發展基金補助經費收支明細表 -->
     <div class="card">
       <h2>
-        <span>長照補助經費</span>
-        <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <label style="font-size:0.9rem; font-weight:bold; color:#334155;">季別下拉選單：</label>
-          <select id="ltcQuarterFilterSelect" onchange="onLtcQuarterSelectChange(this.value)" style="padding:6px 10px; font-weight:bold;">
-            <option value="all">全部 4 季</option>
-            <option value="1">第1季 1-3月</option>
-            <option value="2">第2季 4-6月</option>
-            <option value="3">第3季 7-9月</option>
-            <option value="4">第4季 10-12月</option>
-          </select>
-          <button type="button" class="btn btn-blue" onclick="copySheetBlock('ltcSheetWrap', '長照補助經費')">一鍵複製表格</button>
-        </div>
+        <span id="officialSheetHeading">接受衛生福利部長照服務發展基金補助經費收支明細表</span>
+        <span class="no-print" style="font-size:0.86rem; color:#475569; font-weight:normal;">當次核銷金額與各期明細可直接編輯，累計金額與餘額自動跨期加總</span>
       </h2>
 
-      <div class="official-sheet-wrap" id="ltcSheetWrap">
-        <table class="official-table">
+      <div class="official-sheet-wrap" id="fundingOfficialWrap">
+        <table class="official-table" id="fundingOfficialTable">
           <thead>
             <tr>
               <th class="th-yellow" style="width:17%;">經費來源</th>
@@ -355,41 +319,19 @@
               <th class="th-plain" style="width:13%;">餘額</th>
             </tr>
           </thead>
-          <tbody id="ltcTableBody"></tbody>
+          <tbody id="fundingOfficialBody"></tbody>
         </table>
       </div>
     </div>
 
-    <!-- 3. 延緩補助經費 -->
+    <!-- 各送核銷階段累計總覽表（清楚對照每次送件順序的累計金額） -->
     <div class="card">
       <h2>
-        <span>延緩補助經費</span>
-        <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <label style="font-size:0.9rem; font-weight:bold; color:#334155;">期別下拉選單：</label>
-          <select id="delayPeriodSelect" onchange="onDelayPeriodSelectChange(this.value)" style="padding:6px 10px; font-weight:bold;">
-            <option value="1">延緩1期</option>
-            <option value="2">延緩2期</option>
-            <option value="3">延緩3期</option>
-          </select>
-          <button type="button" class="btn btn-blue" onclick="copySheetBlock('delaySheetWrap', '延緩補助經費')">一鍵複製表格</button>
-        </div>
+        <span>各送核銷階段累計總覽（點選任一列可切換上方明細表）</span>
+        <span class="no-print" style="font-size:0.84rem; color:#64748b; font-weight:normal;">長照與延緩共用同一筆核定經費，分開送件時自動帶出先前累計</span>
       </h2>
-
-      <div class="official-sheet-wrap" id="delaySheetWrap">
-        <table class="official-table">
-          <thead>
-            <tr>
-              <th class="th-yellow" style="width:17%;">經費來源</th>
-              <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
-              <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
-              <th class="th-peach" style="width:16%;">補助項目</th>
-              <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
-              <th class="th-plain-red" style="width:12%;">核銷累計金額</th>
-              <th class="th-plain" style="width:13%;">餘額</th>
-            </tr>
-          </thead>
-          <tbody id="delayTableBody"></tbody>
-        </table>
+      <div class="official-sheet-wrap" id="fundingStagesOverviewWrap">
+        <table class="matrix-table" id="fundingStagesOverviewTable"></table>
       </div>
     </div>
   </div>
@@ -437,152 +379,95 @@
     } catch (e) {}
   }
 
-  const STORAGE_KEY_LTC_Q = 'laozhuang_ltc_quarterly_v2';
-  const STORAGE_KEY_DELAY_P = 'laozhuang_delay_periods_v2';
-  const STORAGE_KEY_STATS = 'laozhuang_ltc_delay_stats_v2';
+  const STORAGE_KEY_FUNDING_STAGES = 'laozhuang_ltc_delay_stages_v3';
 
-  const LTC_QUARTER_LABELS = {
-    1: '第1季 1-3月',
-    2: '第2季 4-6月',
-    3: '第3季 7-9月',
-    4: '第4季 10-12月'
-  };
-  const LTC_QUARTER_MONTHS = {
-    1: [1, 2, 3],
-    2: [4, 5, 6],
-    3: [7, 8, 9],
-    4: [10, 11, 12]
-  };
-  const DELAY_PERIOD_LABELS = {
-    1: '延緩1期',
-    2: '延緩2期',
-    3: '延緩3期'
-  };
+  let fundingStagesByYear = {}; // { [yr]: { budgetBiz, budgetDelay, activeStageId, stages: [...] } }
 
-  let activeSubView = 'funding';
-  let ltcQuarters = [];
-  let delayPeriods = [];
-  let statsByYear = {};
-  let ltcFilterMode = 'all';
-  let activeDelayPeriod = 1;
-
-  // 講師鐘點費核銷狀態
-  let masterInstructors = [];
-  let rebSelectedTeachers = [];
-  let reimburseRateConfigs = {}; // { [instName]: { [planName]: { rate, hours } } }
-  let yearSchedules = [];
-  let rebClaimOverrides = {}; // { [`${yr}__${prog}__${periodKey}__${instName}__${colKey}`]: amount }
-
-  function fmt(num) {
-    const n = Math.round(Number(num) || 0);
-    return n.toLocaleString('en-US');
-  }
-  function parseNumVal(val) {
-    const n = parseFloat(String(val ?? '').replace(/[,，\s$元]/g, ''));
-    return Number.isFinite(n) ? Math.round(n) : 0;
-  }
-  function getYear() {
-    return (document.getElementById('cfgYear').value || '115').trim();
-  }
-  function setSyncStatus(msg, isErr = false) {
-    const el = document.getElementById('syncStatus');
-    if (!el) return;
-    el.style.color = isErr ? '#be123c' : '#0f766e';
-    el.textContent = msg;
-  }
-  function escapeHtml(s) {
-    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-  }
-  function escapeAttr(s) {
-    return String(s || '').replace(/"/g, '&quot;');
+  function createDefaultStagesForYear(yr) {
+    return [
+      {
+        id: `st_${yr}_1`,
+        order: 1,
+        sourceLabel: '衛生福利部補助款',
+        periodTitle: '1-3月份 核銷',
+        curBiz: 120000,
+        curDelay: 0
+      },
+      {
+        id: `st_${yr}_2`,
+        order: 2,
+        sourceLabel: '衛生福利部補助款',
+        periodTitle: '4-6月份 核銷',
+        curBiz: 120000,
+        curDelay: 0
+      },
+      {
+        id: `st_${yr}_3`,
+        order: 3,
+        sourceLabel: '衛生福利部補助款',
+        periodTitle: '第 1 期預防及延緩失能服務費核銷',
+        curBiz: 0,
+        curDelay: 28800
+      }
+    ];
   }
 
-  function createDefaultLtcQuarters(yr) {
-    return [1, 2, 3, 4].map(q => ({
-      id: `ltc_${yr}_q${q}`,
-      year: yr,
-      quarter: q,
-      sourceLabel: LTC_QUARTER_LABELS[q],
-      budgetBiz: 480000,
-      budgetDelay: 0,
-      curBiz: 0,
-      curDelay: 0
-    }));
-  }
-
-  function createDefaultDelayPeriods(yr) {
-    return [1, 2, 3].map(p => ({
-      id: `delay_${yr}_p${p}`,
-      year: yr,
-      period: p,
-      sourceLabel: DELAY_PERIOD_LABELS[p],
-      budgetBiz: 108000,
-      budgetDelay: 0,
-      curBiz: 0,
-      curDelay: 0
-    }));
-  }
-
-  function ensureYearData(yr) {
-    if (!ltcQuarters.some(r => String(r.year) === yr)) {
-      ltcQuarters.push(...createDefaultLtcQuarters(yr));
+  function ensureYearFundingData(yr) {
+    if (!fundingStagesByYear[yr] || !Array.isArray(fundingStagesByYear[yr].stages) || fundingStagesByYear[yr].stages.length === 0) {
+      const stages = createDefaultStagesForYear(yr);
+      fundingStagesByYear[yr] = {
+        budgetBiz: 480000,
+        budgetDelay: 108000,
+        activeStageId: stages[stages.length - 1].id,
+        stages
+      };
     }
-    if (!delayPeriods.some(r => String(r.year) === yr)) {
-      delayPeriods.push(...createDefaultDelayPeriods(yr));
-    }
+    return fundingStagesByYear[yr];
   }
 
-  function saveAllLocalCache() {
-    localStorage.setItem(STORAGE_KEY_LTC_Q, JSON.stringify(ltcQuarters));
-    localStorage.setItem(STORAGE_KEY_DELAY_P, JSON.stringify(delayPeriods));
-    localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(statsByYear));
+  function saveFundingLocalCache() {
+    localStorage.setItem(STORAGE_KEY_FUNDING_STAGES, JSON.stringify(fundingStagesByYear));
   }
 
   async function loadFundingFromDatabase(yr) {
-    ensureYearData(yr);
+    ensureYearFundingData(yr);
     if (!supabaseClient) return;
     try {
       const { data, error } = await supabaseClient
         .from('ltc_delay_funding_records')
         .select('*')
         .eq('roc_year', parseInt(yr, 10) || 115);
+
       if (!error && Array.isArray(data) && data.length > 0) {
-        const stRec = data.find(r => r.section_key === 'stats');
-        if (stRec && stRec.payload) {
-          statsByYear[yr] = stRec.payload;
+        const stagesRec = data.find(r => r.section_key === 'funding_stages_v3');
+        if (stagesRec && stagesRec.payload && Array.isArray(stagesRec.payload.stages) && stagesRec.payload.stages.length > 0) {
+          fundingStagesByYear[yr] = stagesRec.payload;
+          saveFundingLocalCache();
+          setSyncStatus(`已載入 ${yr} 年度長照與延緩經費收支`);
+          return;
         }
-        const ltcRec = data.find(r => r.section_key === 'ltc_quarters');
-        if (ltcRec && Array.isArray(ltcRec.payload)) {
-          ltcQuarters = ltcQuarters.filter(r => String(r.year) !== yr).concat(ltcRec.payload);
-        }
-        const delRec = data.find(r => r.section_key === 'delay_periods');
-        if (delRec && Array.isArray(delRec.payload)) {
-          delayPeriods = delayPeriods.filter(r => String(r.year) !== yr).concat(delRec.payload);
-        }
-        saveAllLocalCache();
       }
     } catch (e) {}
   }
 
-  async function saveFundingToDatabase() {
+  async function saveFundingToDatabase(silent = false) {
     const yr = getYear();
     const yrNum = parseInt(yr, 10) || 115;
-    saveStatsState();
-    saveAllLocalCache();
-
-    const yearLtcRows = ltcQuarters.filter(r => String(r.year) === yr);
-    const yearDelayRows = delayPeriods.filter(r => String(r.year) === yr);
-    const yearStats = statsByYear[yr] || {};
+    const state = ensureYearFundingData(yr);
+    saveFundingLocalCache();
 
     if (!supabaseClient) {
-      alert(`已儲存 ${yr} 年度資料至本機（未偵測到雲端連線）`);
+      if (!silent) alert(`已儲存 ${yr} 年度長照與延緩經費收支至本機`);
       return;
     }
 
     const payload = [
-      { roc_year: yrNum, section_key: 'stats', payload: yearStats, updated_at: new Date().toISOString() },
-      { roc_year: yrNum, section_key: 'ltc_quarters', payload: yearLtcRows, updated_at: new Date().toISOString() },
-      { roc_year: yrNum, section_key: 'delay_periods', payload: yearDelayRows, updated_at: new Date().toISOString() }
+      {
+        roc_year: yrNum,
+        section_key: 'funding_stages_v3',
+        payload: state,
+        updated_at: new Date().toISOString()
+      }
     ];
 
     const { error } = await supabaseClient
@@ -591,288 +476,268 @@
 
     if (error) {
       setSyncStatus('儲存至資料庫失敗：' + error.message, true);
-      alert('儲存至資料庫失敗：' + error.message);
+      if (!silent) alert('儲存至資料庫失敗：' + error.message);
       return;
     }
-    setSyncStatus(`已將 ${yr} 年度經費收支儲存至資料庫`);
-    alert(`已將 ${yr} 年度長照與延緩經費收支儲存至資料庫！`);
+    setSyncStatus(`已將 ${yr} 年度長照與延緩經費收支儲存至資料庫`);
+    if (!silent) alert(`已將 ${yr} 年度長照與延緩經費收支儲存至資料庫！`);
   }
 
-  async function onYearChange() {
-    const yr = getYear();
-    await loadFundingFromDatabase(yr);
-    loadStatsInputsForYear(yr);
-    renderQuarterTables();
-    recalcStatsAmounts();
-    if (activeSubView === 'reimburse') {
-      await loadReimburseContextAndRender();
-    }
-  }
-
-  function onLtcQuarterSelectChange(val) {
-    ltcFilterMode = val || 'all';
-    renderLtcTable();
-  }
-
-  function onDelayPeriodSelectChange(val) {
-    activeDelayPeriod = Math.min(3, Math.max(1, parseInt(val, 10) || 1));
-    renderDelayTable();
-  }
-
-  function onLtcRowSourceChange(rowId, newLabel) {
-    const item = ltcQuarters.find(r => String(r.id) === String(rowId));
-    if (!item) return;
-    item.sourceLabel = newLabel;
-    const matchQ = Object.entries(LTC_QUARTER_LABELS).find(([, lbl]) => lbl === newLabel);
-    if (matchQ) item.quarter = Number(matchQ[0]);
-    saveAllLocalCache();
-  }
-
-  function onDelayRowSourceChange(rowId, newLabel) {
-    const item = delayPeriods.find(r => String(r.id) === String(rowId));
-    if (!item) return;
-    item.sourceLabel = newLabel;
-    const matchP = Object.entries(DELAY_PERIOD_LABELS).find(([, lbl]) => lbl === newLabel);
-    if (matchP) {
-      item.period = Number(matchP[0]);
-      activeDelayPeriod = item.period;
-      document.getElementById('delayPeriodSelect').value = String(activeDelayPeriod);
-    }
-    saveAllLocalCache();
-    renderDelayTable();
-  }
-
-  function onLtcFieldChange(rowId, field, rawVal) {
-    const item = ltcQuarters.find(r => String(r.id) === String(rowId));
-    if (!item) return;
-    item[field] = parseNumVal(rawVal);
-    saveAllLocalCache();
-    renderLtcTable();
-  }
-
-  function onDelayFieldChange(rowId, field, rawVal) {
-    const item = delayPeriods.find(r => String(r.id) === String(rowId));
-    if (!item) return;
-    item[field] = parseNumVal(rawVal);
-    saveAllLocalCache();
-    renderDelayTable();
-  }
-
-  function renderLtcTable() {
-    const yr = getYear();
-    const allYearRows = ltcQuarters
-      .filter(r => String(r.year) === yr)
-      .sort((a, b) => Number(a.quarter) - Number(b.quarter));
-
-    const visibleRows = (ltcFilterMode === 'all')
-      ? allYearRows
-      : allYearRows.filter(r => Number(r.quarter) === Number(ltcFilterMode));
+  function computeStagesWithCumulative(yr) {
+    const state = ensureYearFundingData(yr);
+    const budgetBiz = Number(state.budgetBiz) || 0;
+    const budgetDelay = Number(state.budgetDelay) || 0;
+    const sorted = [...state.stages].sort((a, b) => (Number(a.order) - Number(b.order)));
 
     let cumBiz = 0;
     let cumDelay = 0;
-    let sumBudgetBiz = 0;
-    let sumBudgetDelay = 0;
-    let sumCurBiz = 0;
-    let sumCurDelay = 0;
 
-    allYearRows.forEach(r => {
-      const bBiz = Number(r.budgetBiz) || 0;
-      const bDel = Number(r.budgetDelay) || 0;
-      const cBiz = Number(r.curBiz) || 0;
-      const cDel = Number(r.curDelay) || 0;
-      const isIncludedInVisible = visibleRows.some(v => String(v.id) === String(r.id));
-      if (isIncludedInVisible) {
-        sumBudgetBiz += bBiz;
-        sumBudgetDelay += bDel;
-        sumCurBiz += cBiz;
-        sumCurDelay += cDel;
-      }
+    return sorted.map((st, idx) => {
+      const seq = idx + 1;
+      st.order = seq;
+      const cBiz = Number(st.curBiz) || 0;
+      const cDel = Number(st.curDelay) || 0;
+      cumBiz += cBiz;
+      cumDelay += cDel;
+
+      const remBiz = budgetBiz - cumBiz;
+      const remDelay = budgetDelay - cumDelay;
+      const curTotal = cBiz + cDel;
+      const cumTotal = cumBiz + cumDelay;
+      const remTotal = (budgetBiz + budgetDelay) - cumTotal;
+
+      return {
+        ...st,
+        order: seq,
+        curBiz: cBiz,
+        curDelay: cDel,
+        cumBiz,
+        cumDelay,
+        remBiz,
+        remDelay,
+        curTotal,
+        cumTotal,
+        remTotal
+      };
     });
-
-    let runningCumBiz = 0;
-    let runningCumDelay = 0;
-
-    const rowsHtml = allYearRows.map(r => {
-      const bBiz = Number(r.budgetBiz) || 0;
-      const bDel = Number(r.budgetDelay) || 0;
-      const cBiz = Number(r.curBiz) || 0;
-      const cDel = Number(r.curDelay) || 0;
-
-      runningCumBiz += cBiz;
-      runningCumDelay += cDel;
-
-      const isIncluded = visibleRows.some(v => String(v.id) === String(r.id));
-      if (!isIncluded) return '';
-
-      cumBiz = runningCumBiz;
-      cumDelay = runningCumDelay;
-
-      const remBiz = bBiz - cumBiz;
-      const remDel = bDel - cumDelay;
-      const curSrc = r.sourceLabel || LTC_QUARTER_LABELS[r.quarter] || `第${r.quarter}季`;
-
-      const selectOptionsHtml = Object.values(LTC_QUARTER_LABELS).map(lbl =>
-        `<option value="${lbl}" ${curSrc === lbl ? 'selected' : ''}>${lbl}</option>`
-      ).join('');
-
-      return `
-        <tr>
-          <td rowspan="2" class="td-center">
-            <select onchange="onLtcRowSourceChange('${r.id}', this.value)" style="width:100%; font-weight:bold;">
-              ${selectOptionsHtml}
-            </select>
-          </td>
-          <td class="td-center">業務費</td>
-          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bBiz)}" onchange="onLtcFieldChange('${r.id}','budgetBiz',this.value)"></td>
-          <td class="td-center">業務費</td>
-          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cBiz)}" onchange="onLtcFieldChange('${r.id}','curBiz',this.value)"></td>
-          <td class="td-right"><strong>${fmt(cumBiz)}</strong></td>
-          <td class="td-right">${fmt(remBiz)}</td>
-        </tr>
-        <tr>
-          <td class="td-center">預防及延緩失能服務</td>
-          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bDel)}" onchange="onLtcFieldChange('${r.id}','budgetDelay',this.value)"></td>
-          <td class="td-center">預防及延緩失能服務</td>
-          <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cDel)}" onchange="onLtcFieldChange('${r.id}','curDelay',this.value)"></td>
-          <td class="td-right"><strong>${fmt(cumDelay)}</strong></td>
-          <td class="td-right">${fmt(remDel)}</td>
-        </tr>
-      `;
-    }).join('');
-
-    const totalBudget = sumBudgetBiz + sumBudgetDelay;
-    const totalCur = sumCurBiz + sumCurDelay;
-    const totalCum = cumBiz + cumDelay;
-    const totalRem = totalBudget - totalCum;
-
-    const totalHtml = `
-      <tr>
-        <td colspan="2" class="td-total-yellow">年度總計</td>
-        <td class="td-total-yellow">${fmt(totalBudget)}</td>
-        <td class="td-total-peach">年度合計</td>
-        <td class="td-total-peach">${fmt(totalCur)}</td>
-        <td class="td-total-bold">${fmt(totalCum)}</td>
-        <td class="td-total-bold">${fmt(totalRem)}</td>
-      </tr>
-    `;
-
-    document.getElementById('ltcTableBody').innerHTML = rowsHtml + totalHtml;
   }
 
-  function renderDelayTable() {
+  function populateFundingStageSelect(computedList) {
     const yr = getYear();
-    const allPeriods = delayPeriods
-      .filter(r => String(r.year) === yr && Number(r.period) >= 1 && Number(r.period) <= 3)
-      .sort((a, b) => Number(a.period) - Number(b.period));
+    const state = ensureYearFundingData(yr);
+    const sel = document.getElementById('fundingStageSelect');
+    if (!sel) return;
 
-    let cumBiz = 0;
-    let cumDelay = 0;
-    allPeriods.forEach(p => {
-      if (Number(p.period) <= Number(activeDelayPeriod)) {
-        cumBiz += Number(p.curBiz) || 0;
-        cumDelay += Number(p.curDelay) || 0;
-      }
-    });
+    if (!computedList.some(s => String(s.id) === String(state.activeStageId)) && computedList.length > 0) {
+      state.activeStageId = computedList[computedList.length - 1].id;
+    }
 
-    const curRow = allPeriods.find(p => Number(p.period) === Number(activeDelayPeriod)) || allPeriods[0];
-    if (!curRow) return;
-
-    const bBiz = Number(curRow.budgetBiz) || 0;
-    const bDel = Number(curRow.budgetDelay) || 0;
-    const cBiz = Number(curRow.curBiz) || 0;
-    const cDel = Number(curRow.curDelay) || 0;
-
-    const remBiz = bBiz - cumBiz;
-    const remDel = bDel - cumDelay;
-
-    const totalBudget = bBiz + bDel;
-    const totalCur = cBiz + cDel;
-    const totalCum = cumBiz + cumDelay;
-    const totalRem = totalBudget - totalCum;
-
-    const periodSelectOptions = [1, 2, 3].map(num =>
-      `<option value="${DELAY_PERIOD_LABELS[num]}" ${Number(activeDelayPeriod) === num ? 'selected' : ''}>${DELAY_PERIOD_LABELS[num]}</option>`
+    sel.innerHTML = computedList.map(st =>
+      `<option value="${escapeAttr(st.id)}" ${String(st.id) === String(state.activeStageId) ? 'selected' : ''}>第${st.order}次：${escapeHtml(st.periodTitle || '核銷階段')}</option>`
     ).join('');
+  }
 
-    document.getElementById('delayTableBody').innerHTML = `
+  function onFundingStageChange(stageId) {
+    const yr = getYear();
+    const state = ensureYearFundingData(yr);
+    state.activeStageId = stageId;
+    saveFundingLocalCache();
+    renderQuarterTables();
+  }
+
+  function onSharedBudgetChange() {
+    const yr = getYear();
+    const state = ensureYearFundingData(yr);
+    state.budgetBiz = parseNumVal(document.getElementById('sharedBudgetBiz').value);
+    state.budgetDelay = parseNumVal(document.getElementById('sharedBudgetDelay').value);
+    saveFundingLocalCache();
+    renderQuarterTables();
+  }
+
+  function onStageFieldChange(stageId, field, rawVal) {
+    const yr = getYear();
+    const state = ensureYearFundingData(yr);
+    const target = state.stages.find(s => String(s.id) === String(stageId));
+    if (!target) return;
+    if (field === 'periodTitle' || field === 'sourceLabel') {
+      target[field] = String(rawVal || '');
+    } else if (field === 'order') {
+      target.order = Math.max(1, parseInt(rawVal, 10) || 1);
+    } else {
+      target[field] = parseNumVal(rawVal);
+    }
+    saveFundingLocalCache();
+    renderQuarterTables();
+  }
+
+  async function addFundingStage() {
+    const yr = getYear();
+    const state = ensureYearFundingData(yr);
+    const nextOrder = state.stages.length + 1;
+    const newStage = {
+      id: `st_${yr}_${Date.now()}`,
+      order: nextOrder,
+      sourceLabel: '衛生福利部補助款',
+      periodTitle: `第 ${nextOrder} 次核銷`,
+      curBiz: 0,
+      curDelay: 0
+    };
+    state.stages.push(newStage);
+    state.activeStageId = newStage.id;
+    saveFundingLocalCache();
+    renderQuarterTables();
+    await saveFundingToDatabase(true);
+  }
+
+  async function deleteFundingStage(stageId) {
+    const yr = getYear();
+    const state = ensureYearFundingData(yr);
+    if (state.stages.length <= 1) {
+      alert('至少需保留 1 個送核銷階段');
+      return;
+    }
+    if (!confirm('確定要刪除此送核銷階段嗎？後續階段的累計金額會自動重新計算。')) return;
+    state.stages = state.stages.filter(s => String(s.id) !== String(stageId));
+    if (String(state.activeStageId) === String(stageId)) {
+      state.activeStageId = state.stages[state.stages.length - 1].id;
+    }
+    saveFundingLocalCache();
+    renderQuarterTables();
+    await saveFundingToDatabase(true);
+  }
+
+  async function loadSampleSequence115() {
+    const yr = getYear();
+    if (!confirm(`要將 ${yr} 年度載入示範順序：1-3月長照(120,000) ➔ 4-6月長照(120,000) ➔ 延緩第1期(28,800) 嗎？`)) return;
+    const stages = createDefaultStagesForYear(yr);
+    fundingStagesByYear[yr] = {
+      budgetBiz: 480000,
+      budgetDelay: 108000,
+      activeStageId: stages[stages.length - 1].id,
+      stages
+    };
+    saveFundingLocalCache();
+    renderQuarterTables();
+    await saveFundingToDatabase(true);
+  }
+
+  function renderQuarterTables() {
+    const yr = getYear();
+    const state = ensureYearFundingData(yr);
+    document.getElementById('sharedBudgetBiz').value = fmt(state.budgetBiz);
+    document.getElementById('sharedBudgetDelay').value = fmt(state.budgetDelay);
+
+    const computedList = computeStagesWithCumulative(yr);
+    populateFundingStageSelect(computedList);
+
+    const activeRow = computedList.find(s => String(s.id) === String(state.activeStageId)) || computedList[computedList.length - 1];
+    const budgetBiz = Number(state.budgetBiz) || 0;
+    const budgetDelay = Number(state.budgetDelay) || 0;
+    const budgetTotal = budgetBiz + budgetDelay;
+
+    const cBiz = activeRow ? activeRow.curBiz : 0;
+    const cDel = activeRow ? activeRow.curDelay : 0;
+    const cumBiz = activeRow ? activeRow.cumBiz : 0;
+    const cumDelay = activeRow ? activeRow.cumDelay : 0;
+    const remBiz = activeRow ? activeRow.remBiz : (budgetBiz - cumBiz);
+    const remDelay = activeRow ? activeRow.remDelay : (budgetDelay - cumDelay);
+
+    const curTotal = cBiz + cDel;
+    const cumTotal = cumBiz + cumDelay;
+    const remTotal = budgetTotal - cumTotal;
+
+    const stageIdAttr = activeRow ? escapeAttr(activeRow.id) : '';
+    const srcLabelVal = activeRow ? (activeRow.sourceLabel || '衛生福利部補助款') : '衛生福利部補助款';
+    const periodTitleVal = activeRow ? (activeRow.periodTitle || '') : '';
+
+    document.getElementById('officialSheetHeading').textContent =
+      `${yr}年度 補助經費收支明細表（${periodTitleVal || '第' + (activeRow ? activeRow.order : 1) + '次核銷'}）`;
+
+    document.getElementById('fundingOfficialBody').innerHTML = `
       <tr>
-        <td rowspan="2" class="td-center">
-          <select onchange="onDelayRowSourceChange('${curRow.id}', this.value)" style="width:100%; font-weight:bold;">
-            ${periodSelectOptions}
-          </select>
+        <td colspan="7" style="background:#f8fafc; font-weight:bold;">
+          總支出明細：
+          <input type="text" class="sheet-cell-input" style="width:290px; text-align:left; font-weight:bold; color:#0369a1;"
+            value="${escapeAttr(periodTitleVal)}"
+            onchange="onStageFieldChange('${stageIdAttr}', 'periodTitle', this.value)">
+        </td>
+      </tr>
+      <tr>
+        <td rowspan="3" class="td-center">
+          <input type="text" class="sheet-cell-input" style="text-align:center; font-weight:bold;"
+            value="${escapeAttr(srcLabelVal)}"
+            onchange="onStageFieldChange('${stageIdAttr}', 'sourceLabel', this.value)">
         </td>
         <td class="td-center">業務費</td>
-        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bBiz)}" onchange="onDelayFieldChange('${curRow.id}','budgetBiz',this.value)"></td>
+        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(budgetBiz)}" onchange="onSharedBudgetChange()"></td>
         <td class="td-center">業務費</td>
-        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cBiz)}" onchange="onDelayFieldChange('${curRow.id}','curBiz',this.value)"></td>
+        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cBiz)}" onchange="onStageFieldChange('${stageIdAttr}', 'curBiz', this.value)"></td>
         <td class="td-right"><strong>${fmt(cumBiz)}</strong></td>
         <td class="td-right">${fmt(remBiz)}</td>
       </tr>
       <tr>
         <td class="td-center">預防及延緩失能服務</td>
-        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(bDel)}" onchange="onDelayFieldChange('${curRow.id}','budgetDelay',this.value)"></td>
+        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(budgetDelay)}" onchange="onSharedBudgetChange()"></td>
         <td class="td-center">預防及延緩失能服務</td>
-        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cDel)}" onchange="onDelayFieldChange('${curRow.id}','curDelay',this.value)"></td>
+        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cDel)}" onchange="onStageFieldChange('${stageIdAttr}', 'curDelay', this.value)"></td>
         <td class="td-right"><strong>${fmt(cumDelay)}</strong></td>
-        <td class="td-right">${fmt(remDel)}</td>
+        <td class="td-right">${fmt(remDelay)}</td>
       </tr>
       <tr>
-        <td colspan="2" class="td-total-yellow">年度總計</td>
-        <td class="td-total-yellow">${fmt(totalBudget)}</td>
-        <td class="td-total-peach">年度合計</td>
-        <td class="td-total-peach">${fmt(totalCur)}</td>
-        <td class="td-total-bold">${fmt(totalCum)}</td>
-        <td class="td-total-bold">${fmt(totalRem)}</td>
+        <td class="td-total-yellow">總計</td>
+        <td class="td-total-yellow">${fmt(budgetTotal)}</td>
+        <td class="td-total-peach">合計</td>
+        <td class="td-total-peach">${fmt(curTotal)}</td>
+        <td class="td-total-bold">${fmt(cumTotal)}</td>
+        <td class="td-total-bold">${fmt(remTotal)}</td>
       </tr>
     `;
-  }
 
-  function renderQuarterTables() {
-    renderLtcTable();
-    renderDelayTable();
-  }
-
-  function loadStatsInputsForYear(yr) {
-    const st = statsByYear[yr] || {};
-    document.getElementById('stLtcQ1').value = st.ltcQ1 ? fmt(st.ltcQ1) : '';
-    document.getElementById('stLtcQ2').value = st.ltcQ2 ? fmt(st.ltcQ2) : '';
-    document.getElementById('stLtcQ3').value = st.ltcQ3 ? fmt(st.ltcQ3) : '';
-    document.getElementById('stLtcQ4').value = st.ltcQ4 ? fmt(st.ltcQ4) : '';
-    document.getElementById('stDelayP1').value = st.delayP1 ? fmt(st.delayP1) : '';
-    document.getElementById('stDelayP2').value = st.delayP2 ? fmt(st.delayP2) : '';
-    document.getElementById('stDelayP3').value = st.delayP3 ? fmt(st.delayP3) : '';
-  }
-
-  function recalcStatsAmounts() {
-    const q1 = parseNumVal(document.getElementById('stLtcQ1').value);
-    const q2 = parseNumVal(document.getElementById('stLtcQ2').value);
-    const q3 = parseNumVal(document.getElementById('stLtcQ3').value);
-    const q4 = parseNumVal(document.getElementById('stLtcQ4').value);
-    document.getElementById('stLtcTotal').textContent = fmt(q1 + q2 + q3 + q4);
-
-    const p1 = parseNumVal(document.getElementById('stDelayP1').value);
-    const p2 = parseNumVal(document.getElementById('stDelayP2').value);
-    const p3 = parseNumVal(document.getElementById('stDelayP3').value);
-    document.getElementById('stDelayTotal').textContent = fmt(p1 + p2 + p3);
-  }
-
-  function saveStatsState() {
-    const yr = getYear();
-    statsByYear[yr] = {
-      ltcQ1: parseNumVal(document.getElementById('stLtcQ1').value),
-      ltcQ2: parseNumVal(document.getElementById('stLtcQ2').value),
-      ltcQ3: parseNumVal(document.getElementById('stLtcQ3').value),
-      ltcQ4: parseNumVal(document.getElementById('stLtcQ4').value),
-      delayP1: parseNumVal(document.getElementById('stDelayP1').value),
-      delayP2: parseNumVal(document.getElementById('stDelayP2').value),
-      delayP3: parseNumVal(document.getElementById('stDelayP3').value)
-    };
-    saveAllLocalCache();
-  }
-
-  function onStatsAmountChange() {
-    recalcStatsAmounts();
-    saveStatsState();
+    const ovTbl = document.getElementById('fundingStagesOverviewTable');
+    if (ovTbl) {
+      const head = `
+        <thead>
+          <tr>
+            <th style="width:70px;">順序</th>
+            <th style="width:260px;">送核銷項目／期別</th>
+            <th style="width:130px;">當次業務費</th>
+            <th style="width:130px;">當次延緩費</th>
+            <th style="width:140px;">累計業務費</th>
+            <th style="width:140px;">累計延緩費</th>
+            <th style="width:140px;">剩餘總額</th>
+            <th class="no-print" style="width:90px;">操作</th>
+          </tr>
+        </thead>
+      `;
+      const rows = computedList.map(st => {
+        const isAct = activeRow && String(st.id) === String(activeRow.id);
+        return `
+          <tr style="${isAct ? 'background:#fef9c3;' : ''}" onclick="onFundingStageChange('${escapeAttr(st.id)}')">
+            <td class="td-center">
+              <input type="number" class="sheet-cell-input" style="text-align:center; width:56px;" min="1"
+                value="${st.order}" onclick="event.stopPropagation();" onchange="onStageFieldChange('${escapeAttr(st.id)}', 'order', this.value)">
+            </td>
+            <td>
+              <input type="text" class="sheet-cell-input" style="text-align:left; font-weight:bold;"
+                value="${escapeAttr(st.periodTitle)}" onclick="event.stopPropagation();" onchange="onStageFieldChange('${escapeAttr(st.id)}', 'periodTitle', this.value)">
+            </td>
+            <td class="num-col">
+              <input type="text" class="sheet-cell-input" value="${fmt(st.curBiz)}" onclick="event.stopPropagation();" onchange="onStageFieldChange('${escapeAttr(st.id)}', 'curBiz', this.value)">
+            </td>
+            <td class="num-col">
+              <input type="text" class="sheet-cell-input" value="${fmt(st.curDelay)}" onclick="event.stopPropagation();" onchange="onStageFieldChange('${escapeAttr(st.id)}', 'curDelay', this.value)">
+            </td>
+            <td class="num-col" style="color:#b91c1c; font-weight:bold;">${fmt(st.cumBiz)}</td>
+            <td class="num-col" style="color:#b45309; font-weight:bold;">${fmt(st.cumDelay)}</td>
+            <td class="num-col" style="font-weight:bold;">${fmt(st.remTotal)}</td>
+            <td class="td-center no-print" onclick="event.stopPropagation();">
+              <button type="button" class="btn btn-gray btn-sm" onclick="deleteFundingStage('${escapeAttr(st.id)}')">刪除</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      ovTbl.innerHTML = head + `<tbody>${rows}</tbody>`;
+    }
   }
 
   // ==================== 2. 講師鐘點費核銷 ====================
@@ -1256,11 +1121,12 @@
       populateRebPeriodSelect();
     }
 
+    try {
+      fundingStagesByYear = JSON.parse(localStorage.getItem(STORAGE_KEY_FUNDING_STAGES) || '{}');
+    } catch (e) { fundingStagesByYear = {}; }
     const yr = getYear();
     await loadFundingFromDatabase(yr);
-    loadStatsInputsForYear(yr);
     renderQuarterTables();
-    recalcStatsAmounts();
 
     if (params.get('view') === 'reimburse') {
       switchSubView('reimburse');
