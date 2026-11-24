@@ -18,7 +18,7 @@
       --border: #cbd5e1;
       --text: #1e293b;
     }
-    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", "DFKai-SB", sans-serif; }
     body { margin: 0; background: var(--bg); color: var(--text); }
 
     nav.topbar {
@@ -50,9 +50,9 @@
     .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
-    .container { max-width: 1280px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .container { max-width: 1120px; margin: 22px auto 60px auto; padding: 0 16px; }
     .card {
-      background: #fff; border-radius: 12px; padding: 20px 24px;
+      background: #fff; border-radius: 12px; padding: 22px 26px;
       border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       margin-bottom: 20px;
     }
@@ -80,39 +80,46 @@
     .btn-primary:hover { background: var(--primary-dark); }
     .btn-indigo { background: var(--indigo); color: #fff; }
     .btn-indigo:hover { background: var(--indigo-dark); }
+    .btn-blue { background: #0284c7; color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
     .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
     .btn-outline:hover { background: #e2e8f0; }
     .btn-danger { background: #dc2626; color: #fff; }
     .btn-danger:hover { background: #b91c1c; }
     .btn-sm { padding: 4px 9px; font-size: 0.82rem; }
 
+    /* 正式列印與預覽區塊 */
+    .printable-sheet {
+      background: #fff;
+      color: #000;
+    }
     .sheet-title-banner {
-      text-align: center; font-size: 1.38rem; font-weight: bold;
-      color: #0f172a; padding: 8px 0 14px 0; letter-spacing: 1px;
+      text-align: center; font-size: 1.45rem; font-weight: bold;
+      color: #000; padding: 6px 0 14px 0; letter-spacing: 1.5px;
     }
 
     .table-wrap { overflow-x: auto; }
     table.act-table {
-      width: 100%; border-collapse: collapse; min-width: 860px;
-      background: #fff; color: #000; font-size: 0.94rem;
+      width: 100%; border-collapse: collapse;
+      background: #fff; color: #000; font-size: 0.96rem;
     }
     table.act-table th {
-      background: #cbd5e1; color: #0f172a; font-weight: bold;
-      border: 1.5px solid #334155; padding: 8px 10px; text-align: center;
+      background: #d9d9d9; color: #000; font-weight: bold;
+      border: 1.5px solid #000; padding: 8px 10px; text-align: center;
     }
     table.act-table td {
-      border: 1.2px solid #475569; padding: 5px 7px; vertical-align: middle;
+      border: 1.2px solid #000; padding: 5px 7px; vertical-align: middle;
     }
     table.act-table td.time-col {
-      text-align: center; font-weight: bold; background: #f8fafc; width: 130px;
+      text-align: center; font-weight: bold; background: #d9d9d9; width: 130px;
     }
     table.act-table td.merged-row-cell {
       text-align: center; font-weight: bold; background: #ffffff;
     }
     table.act-table textarea.cell-ta {
       width: 100%; border: 1px solid transparent; background: transparent;
-      text-align: center; font-size: 0.9rem; font-family: "Microsoft JhengHei", sans-serif;
-      line-height: 1.35; resize: none; overflow: hidden; padding: 2px 4px;
+      text-align: center; font-size: 0.94rem; font-family: inherit;
+      line-height: 1.38; resize: none; overflow: hidden; padding: 2px 4px;
       color: #000; display: block;
     }
     table.act-table textarea.cell-ta:hover, table.act-table textarea.cell-ta:focus {
@@ -120,21 +127,81 @@
     }
     table.act-table input.time-inp {
       width: 100%; border: 1px solid transparent; background: transparent;
-      text-align: center; font-weight: bold; font-size: 0.9rem; padding: 2px 4px;
+      text-align: center; font-weight: bold; font-size: 0.94rem; padding: 2px 4px;
+      color: #000;
     }
     table.act-table input.time-inp:hover, table.act-table input.time-inp:focus {
       border: 1px dashed #6366f1; background: #fafaff; outline: none; border-radius: 3px;
     }
 
+    /* 課程說明區塊 */
+    .course-notes-box {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .course-notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .course-notes-label {
+      font-weight: bold;
+      font-size: 1.02rem;
+      color: #000;
+    }
+    textarea.notes-ta {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      line-height: 1.6;
+      color: #000;
+      resize: vertical;
+      overflow: hidden;
+      min-height: 120px;
+      display: block;
+    }
+    textarea.notes-ta:focus {
+      outline: 2px solid #c7d2fe;
+      border-color: var(--indigo);
+    }
+
     #dbStatus { font-size: 0.88rem; font-weight: bold; color: #0f766e; }
 
     @media print {
+      @page { size: A4 portrait; margin: 10mm 12mm; }
       nav.topbar, .no-print { display: none !important; }
       body { background: #fff; }
       .container { max-width: 100%; margin: 0; padding: 0; }
-      .card { border: none; box-shadow: none; padding: 0; }
+      .card { border: none; box-shadow: none; padding: 0; margin: 0; }
+      .sheet-title-banner { font-size: 16pt; padding: 0 0 10px 0; }
+      table.act-table { font-size: 10.5pt; }
+      table.act-table th, table.act-table td { padding: 4px 6px !important; }
       table.act-table textarea.cell-ta, table.act-table input.time-inp {
         border: none !important; background: transparent !important; padding: 0 !important;
+        font-size: 10.5pt !important;
+      }
+      .course-notes-box {
+        border: none !important;
+        background: transparent !important;
+        padding: 10px 2px 0 2px !important;
+        margin-top: 10px !important;
+      }
+      .course-notes-label { font-size: 11pt !important; }
+      textarea.notes-ta {
+        border: none !important;
+        background: transparent !important;
+        padding: 2px 0 0 0 !important;
+        font-size: 10.5pt !important;
+        line-height: 1.5 !important;
+        resize: none !important;
       }
     }
   </style>
@@ -221,11 +288,11 @@
 
 <div class="container">
   <div class="card">
-    <div class="top-bar">
-      <h1 class="page-h1">課程活動表</h1>
-      <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+    <div class="top-bar no-print">
+      <h1 class="page-h1">課程活動表（長照核銷專用）</h1>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <span id="dbStatus"></span>
-        <button type="button" class="btn btn-outline" onclick="window.print()">列印</button>
+        <button type="button" class="btn btn-blue" onclick="window.print()">直接列印（長照核銷課程表）</button>
       </div>
     </div>
 
@@ -248,28 +315,40 @@
 
       <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
         <button type="button" class="btn btn-indigo btn-sm" onclick="addActivityRow()">＋ 新增時段列</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="resetDefaultTemplate()">套用預設課表版面</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="resetDefaultTemplate()">套用預設課表與說明</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="loadFromDatabase()">重新從資料庫載入</button>
         <button type="button" class="btn btn-primary" onclick="saveToDatabase()">儲存至資料庫</button>
       </div>
     </div>
 
-    <div class="sheet-title-banner" id="sheetTitleBanner">115年10月老庄社區關懷據點課程活動表</div>
+    <!-- 正式列印區塊：標題 + 課表 + 課程說明 -->
+    <div class="printable-sheet">
+      <div class="sheet-title-banner" id="sheetTitleBanner">115年10月老庄社區關懷據點課程活動表</div>
 
-    <div class="table-wrap">
-      <table class="act-table">
-        <thead>
-          <tr>
-            <th style="width:13%;">時間</th>
-            <th style="width:17.4%;">週一</th>
-            <th style="width:17.4%;">週二</th>
-            <th style="width:17.4%;">週三</th>
-            <th style="width:17.4%;">週四</th>
-            <th style="width:17.4%;">週五</th>
-          </tr>
-        </thead>
-        <tbody id="activityTableBody"></tbody>
-      </table>
+      <div class="table-wrap">
+        <table class="act-table">
+          <thead>
+            <tr>
+              <th style="width:13%;">時間</th>
+              <th style="width:17.4%;">週一</th>
+              <th style="width:17.4%;">週二</th>
+              <th style="width:17.4%;">週三</th>
+              <th style="width:17.4%;">週四</th>
+              <th style="width:17.4%;">週五</th>
+            </tr>
+          </thead>
+          <tbody id="activityTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- 課程說明區（可直接編輯、儲存至資料庫並隨課表一同列印） -->
+      <div class="course-notes-box">
+        <div class="course-notes-header">
+          <div class="course-notes-label">課程說明：</div>
+          <button type="button" class="btn btn-outline btn-sm no-print" onclick="appendCourseNoteLine()">＋ 新增一項課程說明</button>
+        </div>
+        <textarea id="courseNotesTextarea" class="notes-ta" oninput="autoResizeAll(); onCourseNotesChange(this.value)" placeholder="請輸入課程說明，例如：&#10;肌力課程：課程內容主要是帶領長輩運動，增加肌力訓練。"></textarea>
+      </div>
     </div>
   </div>
 </div>
@@ -285,6 +364,16 @@
   let currentYear = 115;
   let currentMonth = 10;
   let sheetRows = [];
+  let courseNotes = '';
+
+  const DEFAULT_COURSE_NOTES = [
+    '肌力課程：課程內容主要是帶領長輩運動，增加肌力訓練。',
+    '環境教育：介紹台灣各區的地理環境、歷史背景，已經各縣市所盛產的水果、食物。',
+    '手作ＤＩＹ：藉平常日常生活可以利用之資源,由勞作與遊戲的方法教導於長輩,讓長輩們可以手腦並用。',
+    '運動有夠讚：藉由音樂來帶動唱，有時會配合自己帶的樂器，與手腳動作來達到學習的效果。',
+    '手作課程：課程內容讓長輩藉由一些簡單的畫畫或剪貼來動動腦。'
+  ].join('
+');
 
   function setStatus(msg, isErr = false) {
     const el = document.getElementById('dbStatus');
@@ -302,6 +391,11 @@
       ta.style.height = 'auto';
       ta.style.height = Math.max(24, ta.scrollHeight) + 'px';
     });
+    const notesEl = document.getElementById('courseNotesTextarea');
+    if (notesEl) {
+      notesEl.style.height = 'auto';
+      notesEl.style.height = Math.max(110, notesEl.scrollHeight) + 'px';
+    }
   }
 
   function createDefaultRows() {
@@ -319,7 +413,7 @@
         cols: {
           mon: '肌力訓練',
           tue: '環境教育',
-          wed: '手作 DIY',
+          wed: '手作DIY',
           thu: '舞蹈運動',
           fri: '繪畫勞作'
         }
@@ -412,6 +506,14 @@
     document.title = `${titleStr} - 老庄社區照顧關懷據點`;
   }
 
+  function renderNotesTextarea() {
+    const notesEl = document.getElementById('courseNotesTextarea');
+    if (notesEl) {
+      notesEl.value = courseNotes;
+    }
+    autoResizeAll();
+  }
+
   async function loadFromDatabase() {
     currentYear = parseInt(document.getElementById('yearSelect').value, 10) || 115;
     currentMonth = parseInt(document.getElementById('monthSelect').value, 10) || 10;
@@ -420,7 +522,9 @@
 
     if (!supabaseClient) {
       sheetRows = createDefaultRows();
+      courseNotes = DEFAULT_COURSE_NOTES;
       renderTable();
+      renderNotesTextarea();
       setStatus('尚未連線至 Supabase 資料庫，請確認 config.js 設定', true);
       return;
     }
@@ -435,22 +539,37 @@
 
       if (error) {
         sheetRows = createDefaultRows();
+        courseNotes = DEFAULT_COURSE_NOTES;
         renderTable();
+        renderNotesTextarea();
         setStatus('讀取資料庫失敗：' + error.message, true);
         return;
       }
 
-      if (data && Array.isArray(data.rows_data) && data.rows_data.length > 0) {
-        sheetRows = data.rows_data;
-        setStatus(`已載入 ${currentYear}年${currentMonth}月 課程活動表`);
+      if (data && data.rows_data) {
+        if (Array.isArray(data.rows_data) && data.rows_data.length > 0) {
+          sheetRows = data.rows_data;
+          courseNotes = DEFAULT_COURSE_NOTES;
+        } else if (typeof data.rows_data === 'object' && Array.isArray(data.rows_data.rows)) {
+          sheetRows = data.rows_data.rows.length > 0 ? data.rows_data.rows : createDefaultRows();
+          courseNotes = (data.rows_data.notes !== undefined) ? data.rows_data.notes : DEFAULT_COURSE_NOTES;
+        } else {
+          sheetRows = createDefaultRows();
+          courseNotes = DEFAULT_COURSE_NOTES;
+        }
+        setStatus(`已載入 ${currentYear}年${currentMonth}月 課程活動表與課程說明`);
       } else {
         sheetRows = createDefaultRows();
+        courseNotes = DEFAULT_COURSE_NOTES;
         setStatus(`${currentYear}年${currentMonth}月 尚未存檔，已載入預設版面`);
       }
       renderTable();
+      renderNotesTextarea();
     } catch (e) {
       sheetRows = createDefaultRows();
+      courseNotes = DEFAULT_COURSE_NOTES;
       renderTable();
+      renderNotesTextarea();
       setStatus('讀取發生錯誤：' + e.message, true);
     }
   }
@@ -469,11 +588,29 @@
     renderTable();
   }
 
+  function appendCourseNoteLine() {
+    const cName = prompt('請輸入課程名稱（例如：舞蹈運動）：');
+    if (!cName || !cName.trim()) return;
+    const cDesc = prompt(`請輸入「${cName.trim()}」的課程內容說明：`) || '';
+    const line = `${cName.trim()}：${cDesc.trim()}`;
+    courseNotes = courseNotes ? `${courseNotes.replace(/\s+$/, '')}
+${line}` : line;
+    renderNotesTextarea();
+    const notesEl = document.getElementById('courseNotesTextarea');
+    if (notesEl) notesEl.focus();
+  }
+
+  function onCourseNotesChange(val) {
+    courseNotes = val;
+  }
+
   function resetDefaultTemplate() {
-    if (!confirm(`確定要將 ${currentYear}年${currentMonth}月 恢復為預設課表版面嗎？`)) return;
+    if (!confirm(`確定要將 ${currentYear}年${currentMonth}月 恢復為預設課表與課程說明嗎？`)) return;
     sheetRows = createDefaultRows();
+    courseNotes = DEFAULT_COURSE_NOTES;
     renderTable();
-    setStatus('已恢復預設課表版面，請按「儲存至資料庫」寫入雲端');
+    renderNotesTextarea();
+    setStatus('已恢復預設課表版面與課程說明，請按「儲存至資料庫」寫入雲端');
   }
 
   function onTimeChange(rowId, val) {
@@ -499,14 +636,18 @@
       alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
       return;
     }
-    setStatus('正在儲存課程活動表至資料庫...');
+    setStatus('正在儲存課程活動表與課程說明至資料庫...');
     try {
+      const payloadData = {
+        rows: sheetRows,
+        notes: courseNotes
+      };
       const { error } = await supabaseClient
         .from('course_activity_sheets')
         .upsert({
           roc_year: currentYear,
           month: currentMonth,
-          rows_data: sheetRows,
+          rows_data: payloadData,
           updated_at: new Date().toISOString()
         }, { onConflict: 'roc_year,month' });
 
@@ -515,8 +656,8 @@
         alert('儲存至資料庫失敗：' + error.message);
         return;
       }
-      setStatus(`已將 ${currentYear}年${currentMonth}月 課程活動表儲存至資料庫`);
-      alert(`已將 ${currentYear}年${currentMonth}月 課程活動表儲存至資料庫！`);
+      setStatus(`已將 ${currentYear}年${currentMonth}月 課程活動表與課程說明儲存至資料庫`);
+      alert(`已將 ${currentYear}年${currentMonth}月 課程活動表與課程說明儲存至資料庫！`);
     } catch (e) {
       setStatus('儲存發生錯誤：' + e.message, true);
       alert('儲存發生錯誤：' + e.message);
