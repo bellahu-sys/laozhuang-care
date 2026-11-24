@@ -238,7 +238,7 @@
         <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
         <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
         <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
-        <a href="長照與延緩核銷統計.html?view=reimburse">2. 講師鐘點費核銷</a>
+        <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
         <a href="長照講師核銷記錄.html">3. 長照核銷統計</a>
         <a href="長照與延緩核銷統計.html?plan=delay">4. 延緩核銷統計</a>
       </div>
@@ -266,7 +266,6 @@
 
     <div class="sub-tabs no-print">
       <button type="button" class="sub-tab-btn active" id="subTabFunding" onclick="switchSubView('funding')">1. 長照與延緩經費收支</button>
-      <button type="button" class="sub-tab-btn" id="subTabReimburse" onclick="switchSubView('reimburse')">2. 講師鐘點費核銷</button>
     </div>
   </div>
 
@@ -334,39 +333,6 @@
     </div>
   </div>
 
-  <!-- 子頁面 2：2. 講師鐘點費核銷（統計長照 4 季與延緩 3 期各講師核銷金額，金額來源為講師鐘點費設定中的「鐘點費-核銷」） -->
-  <div id="viewReimburse" style="display:none;">
-    <div class="card">
-      <h2>
-        <span id="rebMatrixTitle">講師鐘點費核銷</span>
-        <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <button type="button" class="btn btn-blue btn-sm" onclick="syncReimburseFromScheduleAndConfig()">依排課與「鐘點費-核銷」重新帶入</button>
-          <button type="button" class="btn btn-rose btn-sm" onclick="saveReimburseClaimsToDb()">儲存核銷統計至資料庫</button>
-          <button type="button" class="btn btn-outline btn-sm" onclick="copySheetBlock('rebMatrixWrap', '講師鐘點費核銷')">一鍵複製表格</button>
-        </div>
-      </h2>
-
-      <div class="controls-bar no-print">
-        <label style="font-weight:bold;">計畫類別：</label>
-        <select id="rebProgramTypeSelect" onchange="onRebFilterChange()" style="font-weight:bold;">
-          <option value="ltc">長照（4季）</option>
-          <option value="delay">延緩（3期）</option>
-        </select>
-
-        <label style="font-weight:bold;" id="rebPeriodLabel">季別／期別：</label>
-        <select id="rebPeriodSelect" onchange="onRebFilterChange()" style="font-weight:bold;"></select>
-
-        <div class="picker-dropdown-wrap">
-          <button type="button" class="btn btn-outline btn-sm" id="rebInstFilterBtn" onclick="toggleRebInstPanel()">勾選顯示講師 ▾</button>
-          <div class="picker-panel" id="rebInstFilterPanel"></div>
-        </div>
-      </div>
-
-      <div class="official-sheet-wrap" id="rebMatrixWrap">
-        <table class="matrix-table" id="rebMatrixTable"></table>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -1141,8 +1107,10 @@
   function switchSubView(viewName) {
     activeSubView = viewName;
     const isReb = viewName === 'reimburse';
-    document.getElementById('subTabFunding').classList.toggle('active', !isReb);
-    document.getElementById('subTabReimburse').classList.toggle('active', isReb);
+    const fTab = document.getElementById('subTabFunding');
+    if (fTab) fTab.classList.toggle('active', !isReb);
+    const rTab = document.getElementById('subTabReimburse');
+    if (rTab) rTab.classList.toggle('active', isReb);
     document.getElementById('viewFunding').style.display = isReb ? 'none' : 'block';
     document.getElementById('viewReimburse').style.display = isReb ? 'block' : 'none';
     document.getElementById('mainPageTitle').textContent = isReb ? '2. 講師鐘點費核銷' : '長照與延緩經費收支';
