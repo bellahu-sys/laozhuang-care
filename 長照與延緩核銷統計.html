@@ -269,7 +269,6 @@
       <h2>
         <span>一、年度共用核定額度與核銷順序設定</span>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" class="btn btn-amber btn-sm" id="btnLoadSample">載入範例（1-3月長照➔4-6月長照➔延緩第1期）</button>
         </div>
       </h2>
       <div class="controls-bar" style="margin-bottom:0;">
@@ -798,7 +797,6 @@
   });
 
   (async function init() {
-    document.getElementById('btnLoadSample')?.addEventListener('click', loadSampleSequence115);
     document.getElementById('btnAddStage')?.addEventListener('click', addFundingStage);
     document.getElementById('btnCopyFunding')?.addEventListener('click', () => copySheetBlock('fundingOfficialWrap', '補助經費收支明細表'));
     document.getElementById('sharedBudgetBiz')?.addEventListener('change', onSharedBudgetChange);
