@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>長照與延緩核銷統計（補助經費收支明細表）- 老庄社區照顧關懷據點</title>
+  <title>長照與延緩核銷統計 - 老庄社區照顧關懷據點</title>
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -11,7 +11,9 @@
       --primary: #2c5e4f;
       --primary-dark: #1e4237;
       --accent: #0284c7;
-      --bg: #f1f5f9;
+      --rose: #be123c;
+      --rose-dark: #9f1239;
+      --bg: #eef2f6;
       --border: #cbd5e1;
       --text: #1e293b;
     }
@@ -47,57 +49,53 @@
     .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
-    .container { max-width: 1180px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .container { max-width: 1240px; margin: 22px auto 60px auto; padding: 0 16px; }
     .card {
       background: #fff; border-radius: 12px; padding: 20px 24px;
       border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       margin-bottom: 20px;
     }
     h1 { margin: 0 0 6px 0; font-size: 1.4rem; color: var(--primary); }
-    .sub-note { font-size: 0.9rem; color: #475569; margin: 0; }
     h2 {
       margin: 0 0 14px 0; font-size: 1.12rem; color: var(--primary);
       border-bottom: 2px solid var(--primary); padding-bottom: 6px;
       display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
     }
 
-    .form-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;
-      margin-bottom: 14px;
+    .sub-tabs {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;
     }
-    .field-group { display: flex; flex-direction: column; gap: 5px; }
-    .field-group label { font-size: 0.88rem; font-weight: bold; color: #334155; }
+    .sub-tab-btn {
+      padding: 8px 16px; border-radius: 7px; border: 1.5px solid #cbd5e1;
+      background: #f8fafc; color: #334155; font-weight: bold; cursor: pointer; font-size: 0.94rem;
+    }
+    .sub-tab-btn.active {
+      background: var(--rose); color: #fff; border-color: var(--rose);
+    }
+
     input[type="text"], input[type="number"], select {
-      padding: 8px 11px; border: 1px solid #cbd5e1; border-radius: 6px;
-      font-size: 0.95rem; background: #fff;
+      padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.92rem; background: #fff;
     }
     input:focus, select:focus { outline: 2px solid #99f6e4; border-color: var(--primary); }
-    .num-input { text-align: right; font-weight: bold; }
 
-    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
     button.btn {
-      padding: 9px 16px; border: none; border-radius: 6px; font-weight: bold;
-      cursor: pointer; font-size: 0.93rem; display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 15px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px;
     }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: var(--primary-dark); }
     .btn-blue { background: var(--accent); color: #fff; }
     .btn-blue:hover { background: #0369a1; }
+    .btn-rose { background: var(--rose); color: #fff; }
+    .btn-rose:hover { background: var(--rose-dark); }
     .btn-amber { background: #d97706; color: #fff; }
     .btn-amber:hover { background: #b45309; }
     .btn-gray { background: #64748b; color: #fff; }
     .btn-gray:hover { background: #475569; }
-    .btn-danger { background: #dc2626; color: #fff; padding: 5px 10px; font-size: 0.82rem; }
-    .btn-danger:hover { background: #b91c1c; }
-    .btn-edit { background: #0d9488; color: #fff; padding: 5px 10px; font-size: 0.82rem; }
-    .btn-edit:hover { background: #0f766e; }
-
-    .pill-type {
-      display: inline-block; padding: 3px 9px; border-radius: 12px;
-      font-size: 0.8rem; font-weight: bold;
-    }
-    .pill-ltc { background: #dbeafe; color: #1e40af; }
-    .pill-delay { background: #fef3c7; color: #92400e; }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-sm { padding: 5px 10px; font-size: 0.83rem; }
 
     .official-sheet-wrap { overflow-x: auto; }
     table.official-table {
@@ -105,18 +103,8 @@
       background: #fff; color: #000; font-size: 0.96rem;
     }
     table.official-table th, table.official-table td {
-      border: 1.5px solid #000; padding: 9px 10px;
+      border: 1.5px solid #000; padding: 8px 10px;
     }
-    .sheet-org {
-      text-align: center; font-weight: bold; font-size: 1.05rem; color: #0369a1;
-      background: #f8fafc;
-    }
-    .sheet-title {
-      text-align: center; font-weight: bold; font-size: 1.15rem; letter-spacing: 1px;
-    }
-    .sheet-meta { font-size: 0.93rem; }
-    .sheet-meta .red-val { color: #dc2626; font-weight: bold; }
-    .sheet-meta .blue-val { color: #0369a1; font-weight: bold; }
     .th-yellow { background: #ffff00; text-align: center; font-weight: bold; }
     .th-yellow-red { background: #ffff00; text-align: center; font-weight: bold; color: #dc2626; }
     .th-peach { background: #f8cbad; text-align: center; font-weight: bold; }
@@ -128,31 +116,23 @@
     .td-total-yellow { background: #ffff00; text-align: right; font-weight: bold; }
     .td-total-peach { background: #f8cbad; text-align: right; font-weight: bold; }
     .td-total-bold { font-weight: bold; text-align: right; }
-    .highlight-cum-box {
-      outline: 3px solid #db2777;
-      outline-offset: -3px;
-      background: #fdf2f8;
-      font-weight: bold;
-    }
-    .sign-row {
-      display: flex; justify-content: space-between; padding: 14px 8px 4px 8px;
-      font-weight: bold; color: #0369a1; font-size: 0.95rem;
-    }
-    .sign-row span.red-hint { color: #dc2626; }
 
-    table.history-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-    table.history-table th, table.history-table td {
-      border-bottom: 1px solid #e2e8f0; padding: 9px 10px; text-align: left;
+    table.matrix-table {
+      width: 100%; border-collapse: collapse; background: #fff; color: #000; font-size: 0.95rem;
     }
-    table.history-table th { background: #f1f5f9; color: #334155; }
-    table.history-table tr:hover { background: #f8fafc; }
+    table.matrix-table th {
+      background: #e2e8f0; color: #0f172a; font-weight: bold;
+      border: 1.5px solid #000; padding: 8px 10px; text-align: center;
+    }
+    table.matrix-table td {
+      border: 1.5px solid #000; padding: 7px 10px; vertical-align: middle;
+    }
+    table.matrix-table td.name-col { font-weight: bold; background: #f8fafc; }
+    table.matrix-table td.num-col { text-align: right; font-variant-numeric: tabular-nums; }
+    table.matrix-table tr.total-row td {
+      background: #f1f5f9; font-weight: bold; font-size: 1rem; color: #0f172a;
+    }
 
-    .info-banner {
-      background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
-      padding: 10px 14px; border-radius: 8px; font-size: 0.88rem; line-height: 1.5;
-      margin-bottom: 14px;
-    }
-    #syncStatus { font-size: 0.85rem; font-weight: bold; color: #0f766e; }
     input.sheet-cell-input {
       width: 100%; border: 1px dashed #94a3b8; background: #fffef5;
       text-align: right; font-size: 0.95rem; font-family: inherit;
@@ -163,12 +143,31 @@
       outline: 2px solid #0284c7; border-style: solid; background: #f0f9ff;
     }
 
+    .controls-bar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px;
+      border-radius: 8px; margin-bottom: 14px;
+    }
+    .picker-dropdown-wrap { position: relative; display: inline-block; }
+    .picker-panel {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 240px; max-height: 300px; overflow-y: auto;
+      background: #fff; border: 1px solid #94a3b8; border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.16); padding: 10px; z-index: 400; margin-top: 4px;
+    }
+    .picker-panel.open { display: block; }
+    .picker-item {
+      display: flex; align-items: center; gap: 6px; padding: 5px 6px;
+      border-radius: 5px; cursor: pointer; font-size: 0.88rem; font-weight: bold;
+    }
+    .picker-item:hover { background: #f1f5f9; }
+
+    #syncStatus { font-size: 0.86rem; font-weight: bold; color: #0f766e; }
+
     @media print {
       nav.topbar, .no-print { display: none !important; }
       body { background: #fff; }
       .container { max-width: 100%; margin: 0; padding: 0; }
       .card { border: none; box-shadow: none; padding: 0; }
-      .highlight-cum-box { outline: none !important; background: transparent !important; }
     }
   </style>
 </head>
@@ -186,7 +185,7 @@
   }
 </script>
 
-<nav class="topbar">
+<nav class="topbar no-print">
   <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
   <div class="nav-menu">
     <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
@@ -194,9 +193,12 @@
       <button type="button" class="nav-btn">人事資料 ▾</button>
       <div class="dropdown-content">
         <div class="dropdown-divider">長輩個案管理</div>
-        <a href="個案翻閱本.html">個案資料翻閱本</a>
-        <a href="個案資料表.html">新增個案基本資料</a>
+        <a href="個案資料管理.html">個案資料管理</a>
         <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+        <a href="聯絡電話.html">聯絡電話</a>
         <div class="dropdown-divider">工作人員與師資</div>
         <a href="講師資料.html">講師資料管理</a>
         <a href="臨時人員資料.html">臨時人員資料管理</a>
@@ -205,10 +207,17 @@
     <div class="nav-item">
       <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
       <div class="dropdown-content">
-        <a href="聯絡電話.html">聯絡電話</a>
-        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
-        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
-        <a href="講師鐘點費記錄.html">講師鐘點費記錄</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="食材費收據管理.html">食材費計算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
       </div>
     </div>
     <div class="nav-item">
@@ -228,7 +237,10 @@
         <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
         <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
         <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
-        <a href="長照與延緩核銷統計.html">長照與延緩核銷統計（補助經費收支明細表）</a>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照與延緩核銷統計.html?view=reimburse">2. 講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">3. 長照核銷統計</a>
+        <a href="長照與延緩核銷統計.html?plan=delay">4. 延緩核銷統計</a>
       </div>
     </div>
   </div>
@@ -238,7 +250,7 @@
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div>
-        <h1 style="margin:0;">長照與延緩經費收支</h1>
+        <h1 id="mainPageTitle">長照與延緩經費收支</h1>
       </div>
       <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <span id="syncStatus"></span>
@@ -248,136 +260,183 @@
           <option value="116">116 年</option>
           <option value="117">117 年</option>
         </select>
-        <button type="button" class="btn btn-primary" onclick="saveAllSheets()">儲存本年度資料</button>
-        <button type="button" class="btn btn-amber" onclick="loadSample115()">載入 115 範例</button>
+        <button type="button" class="btn btn-primary" onclick="saveCurrentActiveViewToDb()">儲存至資料庫</button>
         <button type="button" class="btn btn-gray" onclick="window.print()">列印</button>
       </div>
     </div>
-  </div>
 
-  <!-- 1. 長照與延緩核銷金額統計（依圖 1 紅叉精簡） -->
-  <div class="card">
-    <h2>
-      <span>長照與延緩核銷金額統計</span>
-    </h2>
-
-    <div class="official-sheet-wrap" id="statsSheetWrap">
-      <table class="official-table" style="min-width:560px;">
-        <tbody>
-          <tr>
-            <td colspan="2" style="font-weight:bold; background:#f1f5f9;">長照 + 延緩目前累計金額</td>
-          </tr>
-          <tr>
-            <td style="width:36%;">1-3月長照</td>
-            <td class="td-right" style="width:64%;"><input type="text" class="sheet-cell-input" id="stLtcQ1" value="120,000" onchange="onStatsAmountChange()"></td>
-          </tr>
-          <tr>
-            <td>4-6月長照</td>
-            <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ2" value="120,000" onchange="onStatsAmountChange()"></td>
-          </tr>
-          <tr>
-            <td>7-9月長照</td>
-            <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ3" value="120,000" onchange="onStatsAmountChange()"></td>
-          </tr>
-          <tr>
-            <td>10-12月長照</td>
-            <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ4" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-          </tr>
-          <tr style="background:#f8fafc; font-weight:bold;">
-            <td>長照累計金額</td>
-            <td class="td-right" id="stLtcTotal">360,000</td>
-          </tr>
-          <tr>
-            <td>延緩1期</td>
-            <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP1" value="28,800" onchange="onStatsAmountChange()"></td>
-          </tr>
-          <tr>
-            <td>延緩2期</td>
-            <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP2" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-          </tr>
-          <tr>
-            <td>延緩3期</td>
-            <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP3" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
-          </tr>
-          <tr style="background:#f8fafc; font-weight:bold;">
-            <td>累計金額</td>
-            <td class="td-right" id="stDelayTotal">28,800</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="sub-tabs no-print">
+      <button type="button" class="sub-tab-btn active" id="subTabFunding" onclick="switchSubView('funding')">1. 長照與延緩經費收支</button>
+      <button type="button" class="sub-tab-btn" id="subTabReimburse" onclick="switchSubView('reimburse')">2. 講師鐘點費核銷</button>
     </div>
   </div>
 
-  <!-- 2. 長照補助經費（依圖 2：手動紀錄表，經費來源下拉清單 1年4季如 第1季 1-3月） -->
-  <div class="card">
-    <h2>
-      <span>長照補助經費</span>
-      <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <label style="font-size:0.9rem; font-weight:bold; color:#334155;">季別下拉選單：</label>
-        <select id="ltcQuarterFilterSelect" onchange="onLtcQuarterSelectChange(this.value)" style="padding:6px 10px; font-weight:bold;">
-          <option value="all">全部 4 季</option>
-          <option value="1">第1季 1-3月</option>
-          <option value="2">第2季 4-6月</option>
-          <option value="3">第3季 7-9月</option>
-          <option value="4">第4季 10-12月</option>
-        </select>
-        <button type="button" class="btn btn-blue" onclick="copySheetBlock('ltcSheetWrap', '長照補助經費')">一鍵複製表格</button>
-      </div>
-    </h2>
+  <!-- 子頁面 1：1. 長照與延緩經費收支（所有數值儲存於資料庫） -->
+  <div id="viewFunding">
+    <div class="card">
+      <h2>
+        <span>長照與延緩核銷金額統計</span>
+      </h2>
 
-    <div class="official-sheet-wrap" id="ltcSheetWrap">
-      <table class="official-table">
-        <thead>
-          <tr>
-            <th class="th-yellow" style="width:17%;">經費來源</th>
-            <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
-            <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
-            <th class="th-peach" style="width:16%;">補助項目</th>
-            <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
-            <th class="th-plain-red" style="width:12%;">核銷累計金額</th>
-            <th class="th-plain" style="width:13%;">餘額</th>
-          </tr>
-        </thead>
-        <tbody id="ltcTableBody"></tbody>
-      </table>
+      <div class="official-sheet-wrap" id="statsSheetWrap">
+        <table class="official-table" style="min-width:560px;">
+          <tbody>
+            <tr>
+              <td colspan="2" style="font-weight:bold; background:#f1f5f9;">長照 + 延緩目前累計金額</td>
+            </tr>
+            <tr>
+              <td style="width:36%;">1-3月長照</td>
+              <td class="td-right" style="width:64%;"><input type="text" class="sheet-cell-input" id="stLtcQ1" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
+            </tr>
+            <tr>
+              <td>4-6月長照</td>
+              <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ2" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
+            </tr>
+            <tr>
+              <td>7-9月長照</td>
+              <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ3" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
+            </tr>
+            <tr>
+              <td>10-12月長照</td>
+              <td class="td-right"><input type="text" class="sheet-cell-input" id="stLtcQ4" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
+            </tr>
+            <tr style="background:#f8fafc; font-weight:bold;">
+              <td>長照累計金額</td>
+              <td class="td-right" id="stLtcTotal">0</td>
+            </tr>
+            <tr>
+              <td>延緩1期</td>
+              <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP1" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
+            </tr>
+            <tr>
+              <td>延緩2期</td>
+              <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP2" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
+            </tr>
+            <tr>
+              <td>延緩3期</td>
+              <td class="td-right"><input type="text" class="sheet-cell-input" id="stDelayP3" value="" placeholder="0" onchange="onStatsAmountChange()"></td>
+            </tr>
+            <tr style="background:#f8fafc; font-weight:bold;">
+              <td>累計金額</td>
+              <td class="td-right" id="stDelayTotal">0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. 長照補助經費 -->
+    <div class="card">
+      <h2>
+        <span>長照補助經費</span>
+        <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <label style="font-size:0.9rem; font-weight:bold; color:#334155;">季別下拉選單：</label>
+          <select id="ltcQuarterFilterSelect" onchange="onLtcQuarterSelectChange(this.value)" style="padding:6px 10px; font-weight:bold;">
+            <option value="all">全部 4 季</option>
+            <option value="1">第1季 1-3月</option>
+            <option value="2">第2季 4-6月</option>
+            <option value="3">第3季 7-9月</option>
+            <option value="4">第4季 10-12月</option>
+          </select>
+          <button type="button" class="btn btn-blue" onclick="copySheetBlock('ltcSheetWrap', '長照補助經費')">一鍵複製表格</button>
+        </div>
+      </h2>
+
+      <div class="official-sheet-wrap" id="ltcSheetWrap">
+        <table class="official-table">
+          <thead>
+            <tr>
+              <th class="th-yellow" style="width:17%;">經費來源</th>
+              <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
+              <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
+              <th class="th-peach" style="width:16%;">補助項目</th>
+              <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
+              <th class="th-plain-red" style="width:12%;">核銷累計金額</th>
+              <th class="th-plain" style="width:13%;">餘額</th>
+            </tr>
+          </thead>
+          <tbody id="ltcTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 3. 延緩補助經費 -->
+    <div class="card">
+      <h2>
+        <span>延緩補助經費</span>
+        <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <label style="font-size:0.9rem; font-weight:bold; color:#334155;">期別下拉選單：</label>
+          <select id="delayPeriodSelect" onchange="onDelayPeriodSelectChange(this.value)" style="padding:6px 10px; font-weight:bold;">
+            <option value="1">延緩1期</option>
+            <option value="2">延緩2期</option>
+            <option value="3">延緩3期</option>
+          </select>
+          <button type="button" class="btn btn-blue" onclick="copySheetBlock('delaySheetWrap', '延緩補助經費')">一鍵複製表格</button>
+        </div>
+      </h2>
+
+      <div class="official-sheet-wrap" id="delaySheetWrap">
+        <table class="official-table">
+          <thead>
+            <tr>
+              <th class="th-yellow" style="width:17%;">經費來源</th>
+              <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
+              <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
+              <th class="th-peach" style="width:16%;">補助項目</th>
+              <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
+              <th class="th-plain-red" style="width:12%;">核銷累計金額</th>
+              <th class="th-plain" style="width:13%;">餘額</th>
+            </tr>
+          </thead>
+          <tbody id="delayTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
-  <!-- 3. 延緩補助經費（依圖 3：1年最多3期 延緩1期/延緩2期/延緩3期，下拉清單一次記錄和顯示1期） -->
-  <div class="card">
-    <h2>
-      <span>延緩補助經費</span>
-      <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <label style="font-size:0.9rem; font-weight:bold; color:#334155;">期別下拉選單：</label>
-        <select id="delayPeriodSelect" onchange="onDelayPeriodSelectChange(this.value)" style="padding:6px 10px; font-weight:bold;">
-          <option value="1">延緩1期</option>
-          <option value="2">延緩2期</option>
-          <option value="3">延緩3期</option>
-        </select>
-        <button type="button" class="btn btn-blue" onclick="copySheetBlock('delaySheetWrap', '延緩補助經費')">一鍵複製表格</button>
-      </div>
-    </h2>
+  <!-- 子頁面 2：2. 講師鐘點費核銷（統計長照 4 季與延緩 3 期各講師核銷金額，金額來源為講師鐘點費設定中的「鐘點費-核銷」） -->
+  <div id="viewReimburse" style="display:none;">
+    <div class="card">
+      <h2>
+        <span id="rebMatrixTitle">講師鐘點費核銷</span>
+        <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn btn-blue btn-sm" onclick="syncReimburseFromScheduleAndConfig()">依排課與「鐘點費-核銷」重新帶入</button>
+          <button type="button" class="btn btn-rose btn-sm" onclick="saveReimburseClaimsToDb()">儲存核銷統計至資料庫</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="copySheetBlock('rebMatrixWrap', '講師鐘點費核銷')">一鍵複製表格</button>
+        </div>
+      </h2>
 
-    <div class="official-sheet-wrap" id="delaySheetWrap">
-      <table class="official-table">
-        <thead>
-          <tr>
-            <th class="th-yellow" style="width:17%;">經費來源</th>
-            <th class="th-yellow-red" style="width:16%;">核定補助項目</th>
-            <th class="th-yellow-red" style="width:13%;">核定補助金額</th>
-            <th class="th-peach" style="width:16%;">補助項目</th>
-            <th class="th-peach-red" style="width:13%;">當次核銷金額</th>
-            <th class="th-plain-red" style="width:12%;">核銷累計金額</th>
-            <th class="th-plain" style="width:13%;">餘額</th>
-          </tr>
-        </thead>
-        <tbody id="delayTableBody"></tbody>
-      </table>
+      <div class="controls-bar no-print">
+        <label style="font-weight:bold;">計畫類別：</label>
+        <select id="rebProgramTypeSelect" onchange="onRebFilterChange()" style="font-weight:bold;">
+          <option value="ltc">長照（4季）</option>
+          <option value="delay">延緩（3期）</option>
+        </select>
+
+        <label style="font-weight:bold;" id="rebPeriodLabel">季別／期別：</label>
+        <select id="rebPeriodSelect" onchange="onRebFilterChange()" style="font-weight:bold;"></select>
+
+        <div class="picker-dropdown-wrap">
+          <button type="button" class="btn btn-outline btn-sm" id="rebInstFilterBtn" onclick="toggleRebInstPanel()">勾選顯示講師 ▾</button>
+          <div class="picker-panel" id="rebInstFilterPanel"></div>
+        </div>
+      </div>
+
+      <div class="official-sheet-wrap" id="rebMatrixWrap">
+        <table class="matrix-table" id="rebMatrixTable"></table>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
   const STORAGE_KEY_LTC_Q = 'laozhuang_ltc_quarterly_v2';
   const STORAGE_KEY_DELAY_P = 'laozhuang_delay_periods_v2';
   const STORAGE_KEY_STATS = 'laozhuang_ltc_delay_stats_v2';
@@ -388,18 +447,31 @@
     3: '第3季 7-9月',
     4: '第4季 10-12月'
   };
-
+  const LTC_QUARTER_MONTHS = {
+    1: [1, 2, 3],
+    2: [4, 5, 6],
+    3: [7, 8, 9],
+    4: [10, 11, 12]
+  };
   const DELAY_PERIOD_LABELS = {
     1: '延緩1期',
     2: '延緩2期',
     3: '延緩3期'
   };
 
+  let activeSubView = 'funding';
   let ltcQuarters = [];
   let delayPeriods = [];
   let statsByYear = {};
   let ltcFilterMode = 'all';
   let activeDelayPeriod = 1;
+
+  // 講師鐘點費核銷狀態
+  let masterInstructors = [];
+  let rebSelectedTeachers = [];
+  let reimburseRateConfigs = {}; // { [instName]: { [planName]: { rate, hours } } }
+  let yearSchedules = [];
+  let rebClaimOverrides = {}; // { [`${yr}__${prog}__${periodKey}__${instName}__${colKey}`]: amount }
 
   function fmt(num) {
     const n = Math.round(Number(num) || 0);
@@ -412,6 +484,18 @@
   function getYear() {
     return (document.getElementById('cfgYear').value || '115').trim();
   }
+  function setSyncStatus(msg, isErr = false) {
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    el.style.color = isErr ? '#be123c' : '#0f766e';
+    el.textContent = msg;
+  }
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function escapeAttr(s) {
+    return String(s || '').replace(/"/g, '&quot;');
+  }
 
   function createDefaultLtcQuarters(yr) {
     return [1, 2, 3, 4].map(q => ({
@@ -421,7 +505,7 @@
       sourceLabel: LTC_QUARTER_LABELS[q],
       budgetBiz: 480000,
       budgetDelay: 0,
-      curBiz: q === 1 ? 120000 : 0,
+      curBiz: 0,
       curDelay: 0
     }));
   }
@@ -434,7 +518,7 @@
       sourceLabel: DELAY_PERIOD_LABELS[p],
       budgetBiz: 108000,
       budgetDelay: 0,
-      curBiz: p === 1 ? 28800 : 0,
+      curBiz: 0,
       curDelay: 0
     }));
   }
@@ -448,24 +532,81 @@
     }
   }
 
-  function loadAllLocal() {
-    try { ltcQuarters = JSON.parse(localStorage.getItem(STORAGE_KEY_LTC_Q) || '[]'); } catch (e) { ltcQuarters = []; }
-    try { delayPeriods = JSON.parse(localStorage.getItem(STORAGE_KEY_DELAY_P) || '[]'); } catch (e) { delayPeriods = []; }
-    try { statsByYear = JSON.parse(localStorage.getItem(STORAGE_KEY_STATS) || '{}'); } catch (e) { statsByYear = {}; }
-  }
-
-  function saveAllLocal() {
+  function saveAllLocalCache() {
     localStorage.setItem(STORAGE_KEY_LTC_Q, JSON.stringify(ltcQuarters));
     localStorage.setItem(STORAGE_KEY_DELAY_P, JSON.stringify(delayPeriods));
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(statsByYear));
   }
 
-  function onYearChange() {
-    const yr = getYear();
+  async function loadFundingFromDatabase(yr) {
     ensureYearData(yr);
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('ltc_delay_funding_records')
+        .select('*')
+        .eq('roc_year', parseInt(yr, 10) || 115);
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const stRec = data.find(r => r.section_key === 'stats');
+        if (stRec && stRec.payload) {
+          statsByYear[yr] = stRec.payload;
+        }
+        const ltcRec = data.find(r => r.section_key === 'ltc_quarters');
+        if (ltcRec && Array.isArray(ltcRec.payload)) {
+          ltcQuarters = ltcQuarters.filter(r => String(r.year) !== yr).concat(ltcRec.payload);
+        }
+        const delRec = data.find(r => r.section_key === 'delay_periods');
+        if (delRec && Array.isArray(delRec.payload)) {
+          delayPeriods = delayPeriods.filter(r => String(r.year) !== yr).concat(delRec.payload);
+        }
+        saveAllLocalCache();
+      }
+    } catch (e) {}
+  }
+
+  async function saveFundingToDatabase() {
+    const yr = getYear();
+    const yrNum = parseInt(yr, 10) || 115;
+    saveStatsState();
+    saveAllLocalCache();
+
+    const yearLtcRows = ltcQuarters.filter(r => String(r.year) === yr);
+    const yearDelayRows = delayPeriods.filter(r => String(r.year) === yr);
+    const yearStats = statsByYear[yr] || {};
+
+    if (!supabaseClient) {
+      alert(`已儲存 ${yr} 年度資料至本機（未偵測到雲端連線）`);
+      return;
+    }
+
+    const payload = [
+      { roc_year: yrNum, section_key: 'stats', payload: yearStats, updated_at: new Date().toISOString() },
+      { roc_year: yrNum, section_key: 'ltc_quarters', payload: yearLtcRows, updated_at: new Date().toISOString() },
+      { roc_year: yrNum, section_key: 'delay_periods', payload: yearDelayRows, updated_at: new Date().toISOString() }
+    ];
+
+    const { error } = await supabaseClient
+      .from('ltc_delay_funding_records')
+      .upsert(payload, { onConflict: 'roc_year,section_key' });
+
+    if (error) {
+      setSyncStatus('儲存至資料庫失敗：' + error.message, true);
+      alert('儲存至資料庫失敗：' + error.message);
+      return;
+    }
+    setSyncStatus(`已將 ${yr} 年度經費收支儲存至資料庫`);
+    alert(`已將 ${yr} 年度長照與延緩經費收支儲存至資料庫！`);
+  }
+
+  async function onYearChange() {
+    const yr = getYear();
+    await loadFundingFromDatabase(yr);
     loadStatsInputsForYear(yr);
     renderQuarterTables();
     recalcStatsAmounts();
+    if (activeSubView === 'reimburse') {
+      await loadReimburseContextAndRender();
+    }
   }
 
   function onLtcQuarterSelectChange(val) {
@@ -484,7 +625,7 @@
     item.sourceLabel = newLabel;
     const matchQ = Object.entries(LTC_QUARTER_LABELS).find(([, lbl]) => lbl === newLabel);
     if (matchQ) item.quarter = Number(matchQ[0]);
-    saveAllLocal();
+    saveAllLocalCache();
   }
 
   function onDelayRowSourceChange(rowId, newLabel) {
@@ -497,7 +638,7 @@
       activeDelayPeriod = item.period;
       document.getElementById('delayPeriodSelect').value = String(activeDelayPeriod);
     }
-    saveAllLocal();
+    saveAllLocalCache();
     renderDelayTable();
   }
 
@@ -505,7 +646,7 @@
     const item = ltcQuarters.find(r => String(r.id) === String(rowId));
     if (!item) return;
     item[field] = parseNumVal(rawVal);
-    saveAllLocal();
+    saveAllLocalCache();
     renderLtcTable();
   }
 
@@ -513,7 +654,7 @@
     const item = delayPeriods.find(r => String(r.id) === String(rowId));
     if (!item) return;
     item[field] = parseNumVal(rawVal);
-    saveAllLocal();
+    saveAllLocalCache();
     renderDelayTable();
   }
 
@@ -534,13 +675,11 @@
     let sumCurBiz = 0;
     let sumCurDelay = 0;
 
-    // Cumulative calculation across quarters up to the selected/displayed quarters
     allYearRows.forEach(r => {
       const bBiz = Number(r.budgetBiz) || 0;
       const bDel = Number(r.budgetDelay) || 0;
       const cBiz = Number(r.curBiz) || 0;
       const cDel = Number(r.curDelay) || 0;
-
       const isIncludedInVisible = visibleRows.some(v => String(v.id) === String(r.id));
       if (isIncludedInVisible) {
         sumBudgetBiz += bBiz;
@@ -695,11 +834,11 @@
 
   function loadStatsInputsForYear(yr) {
     const st = statsByYear[yr] || {};
-    document.getElementById('stLtcQ1').value = st.ltcQ1 !== undefined ? fmt(st.ltcQ1) : '120,000';
-    document.getElementById('stLtcQ2').value = st.ltcQ2 !== undefined ? fmt(st.ltcQ2) : '120,000';
-    document.getElementById('stLtcQ3').value = st.ltcQ3 !== undefined ? fmt(st.ltcQ3) : '120,000';
+    document.getElementById('stLtcQ1').value = st.ltcQ1 ? fmt(st.ltcQ1) : '';
+    document.getElementById('stLtcQ2').value = st.ltcQ2 ? fmt(st.ltcQ2) : '';
+    document.getElementById('stLtcQ3').value = st.ltcQ3 ? fmt(st.ltcQ3) : '';
     document.getElementById('stLtcQ4').value = st.ltcQ4 ? fmt(st.ltcQ4) : '';
-    document.getElementById('stDelayP1').value = st.delayP1 !== undefined ? fmt(st.delayP1) : '28,800';
+    document.getElementById('stDelayP1').value = st.delayP1 ? fmt(st.delayP1) : '';
     document.getElementById('stDelayP2').value = st.delayP2 ? fmt(st.delayP2) : '';
     document.getElementById('stDelayP3').value = st.delayP3 ? fmt(st.delayP3) : '';
   }
@@ -728,7 +867,7 @@
       delayP2: parseNumVal(document.getElementById('stDelayP2').value),
       delayP3: parseNumVal(document.getElementById('stDelayP3').value)
     };
-    saveAllLocal();
+    saveAllLocalCache();
   }
 
   function onStatsAmountChange() {
@@ -736,23 +875,337 @@
     saveStatsState();
   }
 
-  function saveAllSheets() {
-    saveAllLocal();
-    saveStatsState();
-    alert(`已儲存 ${getYear()} 年度長照與延緩經費收支及核銷金額統計！`);
+  // ==================== 2. 講師鐘點費核銷 ====================
+  function populateRebPeriodSelect() {
+    const prog = document.getElementById('rebProgramTypeSelect').value;
+    const sel = document.getElementById('rebPeriodSelect');
+    const lbl = document.getElementById('rebPeriodLabel');
+    if (prog === 'ltc') {
+      lbl.textContent = '長照季別：';
+      sel.innerHTML = [1, 2, 3, 4].map(q => `<option value="q${q}">${LTC_QUARTER_LABELS[q]}</option>`).join('');
+    } else {
+      lbl.textContent = '延緩期別：';
+      sel.innerHTML = [1, 2, 3].map(p => `<option value="p${p}">${DELAY_PERIOD_LABELS[p]}</option>`).join('');
+    }
   }
 
-  function loadSample115() {
+  function toggleRebInstPanel() {
+    const p = document.getElementById('rebInstFilterPanel');
+    if (p) p.classList.toggle('open');
+  }
+
+  document.addEventListener('click', (ev) => {
+    if (!ev.target.closest('.picker-dropdown-wrap')) {
+      document.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('open'));
+    }
+  });
+
+  function renderRebInstFilterPanel() {
+    const panel = document.getElementById('rebInstFilterPanel');
+    const btn = document.getElementById('rebInstFilterBtn');
+    if (!panel) return;
+    panel.innerHTML = masterInstructors.map(inst => {
+      const checked = rebSelectedTeachers.includes(inst.name);
+      return `
+        <label class="picker-item">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="onRebInstCheckToggle('${escapeAttr(inst.name)}', this.checked)">
+          <span>${escapeHtml(inst.name)}</span>
+        </label>
+      `;
+    }).join('');
+    if (btn) btn.textContent = `勾選顯示講師 (${rebSelectedTeachers.length}) ▾`;
+  }
+
+  function onRebInstCheckToggle(name, checked) {
+    if (checked) {
+      if (!rebSelectedTeachers.includes(name)) rebSelectedTeachers.push(name);
+    } else {
+      rebSelectedTeachers = rebSelectedTeachers.filter(n => n !== name);
+    }
+    renderRebInstFilterPanel();
+    renderRebMatrixTable();
+  }
+
+  function resolveReimbursePlanRate(instName, prog, periodKey) {
+    const instRates = reimburseRateConfigs[instName] || {};
+    const candidatePlans = prog === 'ltc'
+      ? ['長照課程', '關懷課程', '樂齡-活躍老化']
+      : (periodKey === 'p1' ? ['延緩1期', '延緩課程'] : periodKey === 'p2' ? ['延緩2期', '延緩課程'] : ['延緩3期', '延緩課程']);
+
+    for (const pName of candidatePlans) {
+      if (instRates[pName] && instRates[pName].rate !== '' && Number(instRates[pName].rate) > 0) {
+        const hrs = Number(instRates[pName].hours) > 0 ? Number(instRates[pName].hours) : 1;
+        return Number(instRates[pName].rate) * hrs;
+      }
+    }
+    for (const [, cfg] of Object.entries(instRates)) {
+      if (cfg && cfg.rate !== '' && Number(cfg.rate) > 0) {
+        const hrs = Number(cfg.hours) > 0 ? Number(cfg.hours) : 1;
+        return Number(cfg.rate) * hrs;
+      }
+    }
+    return 0;
+  }
+
+  function computeAutoAmountForCell(instName, prog, periodKey, colMonth) {
+    const perSessionFee = resolveReimbursePlanRate(instName, prog, periodKey);
+    if (!perSessionFee) return 0;
+
+    const matchingSchedules = yearSchedules.filter(s => {
+      if ((s.instructor_name || '').trim() !== instName) return false;
+      const dStr = String(s.course_date || '').slice(0, 10);
+      const m = parseInt((dStr.split('-')[1] || '0'), 10);
+      if (colMonth && m !== Number(colMonth)) return false;
+      const combined = `${s.plan_name || ''} ${s.course_name || ''}`;
+      if (prog === 'ltc') {
+        return LTC_QUARTER_MONTHS[Number(periodKey.replace('q', ''))]?.includes(m);
+      }
+      if (periodKey === 'p1') return combined.includes('延緩1') || combined.includes('延緩一');
+      if (periodKey === 'p2') return combined.includes('延緩2') || combined.includes('延緩二');
+      if (periodKey === 'p3') return combined.includes('延緩3') || combined.includes('延緩三');
+      return false;
+    });
+
+    return Math.round(matchingSchedules.length * perSessionFee);
+  }
+
+  async function loadReimburseContextAndRender() {
     const yr = getYear();
-    ltcQuarters = ltcQuarters.filter(r => String(r.year) !== yr);
-    delayPeriods = delayPeriods.filter(r => String(r.year) !== yr);
-    ltcQuarters.push(...createDefaultLtcQuarters(yr));
-    delayPeriods.push(...createDefaultDelayPeriods(yr));
-    delete statsByYear[yr];
-    saveAllLocal();
-    loadStatsInputsForYear(yr);
-    renderQuarterTables();
-    recalcStatsAmounts();
+    const yrNum = parseInt(yr, 10) || 115;
+    const adYear = yrNum + 1911;
+    setSyncStatus('載入「鐘點費-核銷」設定與排課資料...');
+
+    if (supabaseClient) {
+      try {
+        const [instRes, rebCfgRes, schedRes, claimRes] = await Promise.all([
+          supabaseClient.from('instructors').select('staff_number, name, status').order('staff_number', { ascending: true }),
+          supabaseClient.from('instructor_reimburse_rate_configs').select('instructor_name, plan_name, rate, hours'),
+          supabaseClient.from('course_schedules').select('*').gte('course_date', `${adYear}-01-01`).lte('course_date', `${adYear}-12-31`),
+          supabaseClient.from('instructor_reimburse_claims').select('*').eq('roc_year', yrNum)
+        ]);
+
+        if (!instRes.error && Array.isArray(instRes.data) && instRes.data.length > 0) {
+          masterInstructors = instRes.data.filter(r => r.name && r.name.trim() !== '').map(r => ({
+            name: r.name.trim(),
+            status: r.status || '服務中'
+          }));
+        }
+
+        reimburseRateConfigs = {};
+        if (!rebCfgRes.error && Array.isArray(rebCfgRes.data)) {
+          rebCfgRes.data.forEach(row => {
+            const inst = (row.instructor_name || '').trim();
+            const plan = (row.plan_name || '').trim();
+            if (!inst || !plan) return;
+            if (!reimburseRateConfigs[inst]) reimburseRateConfigs[inst] = {};
+            reimburseRateConfigs[inst][plan] = {
+              rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
+              hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
+            };
+          });
+        }
+
+        yearSchedules = (!schedRes.error && Array.isArray(schedRes.data)) ? schedRes.data : [];
+
+        if (!claimRes.error && Array.isArray(claimRes.data)) {
+          claimRes.data.forEach(rec => {
+            const key = `${yr}__${rec.program_type}__${rec.period_key}__${rec.instructor_name}__${rec.col_key}`;
+            rebClaimOverrides[key] = Number(rec.amount || 0);
+          });
+        }
+      } catch (e) {}
+    }
+
+    if (masterInstructors.length === 0) {
+      masterInstructors = [
+        { name: '張國堂', status: '服務中' },
+        { name: '鄧美續', status: '服務中' },
+        { name: '蔡牡連', status: '服務中' },
+        { name: '吳佩珊', status: '服務中' },
+        { name: '黃仲慧', status: '服務中' }
+      ];
+    }
+
+    if (rebSelectedTeachers.length === 0) {
+      const dbNames = Object.keys(reimburseRateConfigs);
+      rebSelectedTeachers = (dbNames.length > 0 ? dbNames : masterInstructors.map(m => m.name));
+    }
+
+    renderRebInstFilterPanel();
+    renderRebMatrixTable();
+    setSyncStatus(`已同步 ${yr} 年度「鐘點費-核銷」設定`);
+  }
+
+  async function syncReimburseFromScheduleAndConfig() {
+    const yr = getYear();
+    const prog = document.getElementById('rebProgramTypeSelect').value;
+    const periodKey = document.getElementById('rebPeriodSelect').value;
+    const cols = getRebMatrixColumns(prog, periodKey);
+
+    masterInstructors.forEach(inst => {
+      cols.forEach(col => {
+        const autoAmt = computeAutoAmountForCell(inst.name, prog, periodKey, col.month);
+        const key = `${yr}__${prog}__${periodKey}__${inst.name}__${col.key}`;
+        rebClaimOverrides[key] = autoAmt;
+      });
+    });
+
+    renderRebMatrixTable();
+    setSyncStatus('已依排課與「鐘點費-核銷」重新帶入金額');
+  }
+
+  function getRebMatrixColumns(prog, periodKey) {
+    if (prog === 'ltc') {
+      const qNum = parseInt(periodKey.replace('q', ''), 10) || 1;
+      const months = LTC_QUARTER_MONTHS[qNum] || [1, 2, 3];
+      return months.map(m => ({ key: `m${m}`, month: m, label: `${m}月講師` }));
+    }
+    return [{ key: periodKey, month: null, label: `${DELAY_PERIOD_LABELS[parseInt(periodKey.replace('p', ''), 10) || 1]}講師` }];
+  }
+
+  function getCellClaimAmount(instName, prog, periodKey, col) {
+    const yr = getYear();
+    const key = `${yr}__${prog}__${periodKey}__${instName}__${col.key}`;
+    if (Object.prototype.hasOwnProperty.call(rebClaimOverrides, key)) {
+      return Number(rebClaimOverrides[key] || 0);
+    }
+    return computeAutoAmountForCell(instName, prog, periodKey, col.month);
+  }
+
+  function onRebCellAmountChange(instName, prog, periodKey, colKey, rawVal) {
+    const yr = getYear();
+    const key = `${yr}__${prog}__${periodKey}__${instName}__${colKey}`;
+    rebClaimOverrides[key] = parseNumVal(rawVal);
+    renderRebMatrixTable();
+  }
+
+  async function saveReimburseClaimsToDb() {
+    const yr = getYear();
+    const yrNum = parseInt(yr, 10) || 115;
+    const prog = document.getElementById('rebProgramTypeSelect').value;
+    const periodKey = document.getElementById('rebPeriodSelect').value;
+    const cols = getRebMatrixColumns(prog, periodKey);
+
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+
+    const rowsToUpsert = [];
+    rebSelectedTeachers.forEach(instName => {
+      cols.forEach(col => {
+        const amt = getCellClaimAmount(instName, prog, periodKey, col);
+        rowsToUpsert.push({
+          roc_year: yrNum,
+          program_type: prog,
+          period_key: periodKey,
+          col_key: col.key,
+          instructor_name: instName,
+          amount: amt,
+          updated_at: new Date().toISOString()
+        });
+      });
+    });
+
+    const { error } = await supabaseClient
+      .from('instructor_reimburse_claims')
+      .upsert(rowsToUpsert, { onConflict: 'roc_year,program_type,period_key,col_key,instructor_name' });
+
+    if (error) {
+      setSyncStatus('儲存核銷統計失敗：' + error.message, true);
+      alert('儲存核銷統計失敗：' + error.message);
+      return;
+    }
+    setSyncStatus(`已將 ${yr} 年度講師鐘點費核銷統計儲存至資料庫`);
+    alert(`已將 ${yr} 年度講師鐘點費核銷統計儲存至資料庫！`);
+  }
+
+  function onRebFilterChange() {
+    renderRebMatrixTable();
+  }
+
+  function renderRebMatrixTable() {
+    const yr = getYear();
+    const prog = document.getElementById('rebProgramTypeSelect').value;
+    const periodKey = document.getElementById('rebPeriodSelect').value;
+    const cols = getRebMatrixColumns(prog, periodKey);
+
+    const periodTitle = prog === 'ltc'
+      ? LTC_QUARTER_LABELS[parseInt(periodKey.replace('q', ''), 10) || 1]
+      : DELAY_PERIOD_LABELS[parseInt(periodKey.replace('p', ''), 10) || 1];
+    document.getElementById('rebMatrixTitle').textContent = `${yr}年度 ${periodTitle} 講師鐘點費核銷`;
+
+    const tbl = document.getElementById('rebMatrixTable');
+    if (!tbl) return;
+
+    const headHtml = `
+      <thead>
+        <tr>
+          <th style="width:140px;">講師姓名</th>
+          ${cols.map(c => `<th>${escapeHtml(c.label)}</th>`).join('')}
+          <th style="width:140px;">總計</th>
+        </tr>
+      </thead>
+    `;
+
+    const colTotals = {};
+    cols.forEach(c => { colTotals[c.key] = 0; });
+    let grandTotal = 0;
+
+    const bodyRowsHtml = rebSelectedTeachers.map(instName => {
+      let rowSum = 0;
+      const tds = cols.map(c => {
+        const amt = getCellClaimAmount(instName, prog, periodKey, c);
+        colTotals[c.key] += amt;
+        rowSum += amt;
+        return `
+          <td class="num-col">
+            <input type="text" class="sheet-cell-input" value="${amt > 0 ? fmt(amt) : ''}" placeholder="" onchange="onRebCellAmountChange('${escapeAttr(instName)}', '${prog}', '${periodKey}', '${c.key}', this.value)">
+          </td>
+        `;
+      }).join('');
+      grandTotal += rowSum;
+
+      return `
+        <tr>
+          <td class="name-col">${escapeHtml(instName)}</td>
+          ${tds}
+          <td class="num-col"><strong>${fmt(rowSum)}</strong></td>
+        </tr>
+      `;
+    }).join('');
+
+    const totalRowHtml = `
+      <tr class="total-row">
+        <td></td>
+        ${cols.map(c => `<td class="num-col">${fmt(colTotals[c.key])}</td>`).join('')}
+        <td class="num-col">${fmt(grandTotal)}</td>
+      </tr>
+    `;
+
+    tbl.innerHTML = headHtml + `<tbody>${bodyRowsHtml}${totalRowHtml}</tbody>`;
+  }
+
+  function switchSubView(viewName) {
+    activeSubView = viewName;
+    const isReb = viewName === 'reimburse';
+    document.getElementById('subTabFunding').classList.toggle('active', !isReb);
+    document.getElementById('subTabReimburse').classList.toggle('active', isReb);
+    document.getElementById('viewFunding').style.display = isReb ? 'none' : 'block';
+    document.getElementById('viewReimburse').style.display = isReb ? 'block' : 'none';
+    document.getElementById('mainPageTitle').textContent = isReb ? '2. 講師鐘點費核銷' : '長照與延緩經費收支';
+
+    if (isReb) {
+      loadReimburseContextAndRender();
+    }
+  }
+
+  function saveCurrentActiveViewToDb() {
+    if (activeSubView === 'reimburse') {
+      saveReimburseClaimsToDb();
+    } else {
+      saveFundingToDatabase();
+    }
   }
 
   async function copySheetBlock(containerId, label) {
@@ -790,18 +1243,29 @@
     }
   }
 
-  (function init() {
-    loadAllLocal();
+  (async function init() {
+    try { ltcQuarters = JSON.parse(localStorage.getItem(STORAGE_KEY_LTC_Q) || '[]'); } catch (e) { ltcQuarters = []; }
+    try { delayPeriods = JSON.parse(localStorage.getItem(STORAGE_KEY_DELAY_P) || '[]'); } catch (e) { delayPeriods = []; }
+    try { statsByYear = JSON.parse(localStorage.getItem(STORAGE_KEY_STATS) || '{}'); } catch (e) { statsByYear = {}; }
+
+    populateRebPeriodSelect();
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('plan') === 'delay') {
+      document.getElementById('rebProgramTypeSelect').value = 'delay';
+      populateRebPeriodSelect();
+    }
+
     const yr = getYear();
-    ensureYearData(yr);
+    await loadFundingFromDatabase(yr);
     loadStatsInputsForYear(yr);
     renderQuarterTables();
     recalcStatsAmounts();
+
+    if (params.get('view') === 'reimburse') {
+      switchSubView('reimburse');
+    }
   })();
 </script>
-</body>
-</html>
-</body>
-</html>
 </body>
 </html>
