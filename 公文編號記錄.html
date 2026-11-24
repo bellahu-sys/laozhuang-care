@@ -266,7 +266,6 @@
         <button type="button" class="btn btn-amber" onclick="addRow()">＋ 新增一列</button>
         <input type="text" id="serialRangeInput" placeholder="連號如：115065-69" onkeydown="if(event.key==='Enter'){event.preventDefault();addSerialRangeRows();}" style="width:142px; font-weight:bold;">
         <button type="button" class="btn btn-blue" onclick="addSerialRangeRows()">＋ 新增連號</button>
-        <button type="button" class="btn btn-outline" onclick="loadFromDatabase()">重新從資料庫載入</button>
         <button type="button" class="btn btn-primary" onclick="saveToDatabase()">儲存至資料庫</button>
       </div>
     </div>
@@ -504,7 +503,7 @@
     await loadFromDatabase();
   }
 
-  function addRow() {
+  async function addRow() {
     if (!Array.isArray(records)) records = [];
     const maxSeq = records.reduce((m, r) => {
       const n = parseInt(String(r.seq_no ?? ''), 10);
@@ -516,7 +515,8 @@
       searchEl.value = '';
     }
     renderTable();
-    setStatus(`已新增第 ${maxSeq + 1} 列，請輸入資料後按「儲存至資料庫」`);
+    await saveToDatabase(true);
+    setStatus(`已新增第 ${maxSeq + 1} 列並同步至資料庫`);
   }
 
   function parseSerialRange(rawStr) {
@@ -548,7 +548,7 @@
     return { list, first: list[0], last: list[list.length - 1] };
   }
 
-  function addSerialRangeRows() {
+  async function addSerialRangeRows() {
     const inp = document.getElementById('serialRangeInput');
     const raw = inp ? inp.value : '';
     const parsed = parseSerialRange(raw);
@@ -582,7 +582,17 @@
     }
     if (inp) inp.value = '';
     renderTable();
-    setStatus(`已新增連號 ${parsed.first} ～ ${parsed.last}（共 ${parsed.list.length} 列），請按「儲存至資料庫」`);
+    await saveToDatabase(true);
+    setStatus(`已新增連號 ${parsed.first} ～ ${parsed.last}（共 ${parsed.list.length} 列）並同步至資料庫`);
+  }
+
+  let autoSaveTimer = null;
+  function scheduleAutoSave() {
+    if (!supabaseClient) return;
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      saveToDatabase(true);
+    }, 450);
   }
 
   function onFieldChange(rowId, field, value) {
@@ -594,6 +604,7 @@
     } else {
       row[field] = value;
     }
+    scheduleAutoSave();
   }
 
   async function deleteRow(rowId) {
@@ -621,9 +632,9 @@
     setStatus('已刪除該筆公文號記錄');
   }
 
-  async function saveToDatabase() {
+  async function saveToDatabase(silent = false) {
     if (!supabaseClient) {
-      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      if (!silent) alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
       return;
     }
 
@@ -644,7 +655,7 @@
 
       if (delErr) {
         setStatus('儲存失敗：' + delErr.message, true);
-        alert('儲存至資料庫失敗：' + delErr.message);
+        if (!silent) alert('儲存至資料庫失敗：' + delErr.message);
         return;
       }
 
@@ -669,17 +680,17 @@
 
         if (insErr) {
           setStatus('儲存失敗：' + insErr.message, true);
-          alert('儲存至資料庫失敗：' + insErr.message);
+          if (!silent) alert('儲存至資料庫失敗：' + insErr.message);
           return;
         }
       }
 
       await loadFromDatabase();
       setStatus(`已將 ${currentYear} 年度公文號記錄儲存至資料庫（共 ${nonEmptyRows.length} 筆）`);
-      alert(`已將 ${currentYear} 年度公文號記錄儲存至資料庫！`);
+      if (!silent) alert(`已將 ${currentYear} 年度公文號記錄儲存至資料庫！`);
     } catch (e) {
       setStatus('儲存發生錯誤：' + e.message, true);
-      alert('儲存發生錯誤：' + e.message);
+      if (!silent) alert('儲存發生錯誤：' + e.message);
     }
   }
 
@@ -740,6 +751,13 @@
       </tr>
     `).join('');
   }
+
+  window.addEventListener('beforeunload', () => {
+    if (autoSaveTimer && supabaseClient) {
+      clearTimeout(autoSaveTimer);
+      saveToDatabase(true);
+    }
+  });
 
   (async function init() {
     const rocNow = new Date().getFullYear() - 1911;
