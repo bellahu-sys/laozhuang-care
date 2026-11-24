@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>公文編號記錄 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --amber: #b45309;
+      --amber-dark: #92400e;
+      --amber-bg: #fffbeb;
+      --amber-border: #fde68a;
+      --bg: #eef2f6;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1240px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+    }
+    .page-h1 { margin: 0; font-size: 1.4rem; color: var(--amber-dark); }
+
+    .controls-row {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: var(--amber-bg); border: 1px solid var(--amber-border);
+      padding: 12px 14px; border-radius: 8px; margin-bottom: 16px;
+    }
+    select, input[type="text"], input[type="date"] {
+      padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.92rem; background: #fff;
+    }
+    select:focus, input:focus {
+      outline: 2px solid #fde68a; border-color: var(--amber);
+    }
+
+    .btn {
+      padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-amber { background: var(--amber); color: #fff; }
+    .btn-amber:hover { background: var(--amber-dark); }
+    .btn-blue { background: #0284c7; color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 4px 9px; font-size: 0.82rem; }
+
+    .sheet-title-banner {
+      text-align: center; font-size: 1.32rem; font-weight: bold;
+      color: #0f172a; padding: 8px 0 14px 0; letter-spacing: 1px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table.doc-table {
+      width: 100%; border-collapse: collapse; min-width: 820px;
+      background: #fff; font-size: 0.94rem;
+    }
+    table.doc-table th {
+      background: #fef3c7; color: #78350f; font-weight: bold;
+      border: 1.5px solid #94a3b8; padding: 9px 10px; text-align: center;
+    }
+    table.doc-table td {
+      border: 1px solid #94a3b8; padding: 6px 8px; vertical-align: middle;
+    }
+    table.doc-table tr:hover td { background: #fffdf7; }
+    table.doc-table td.center-col { text-align: center; font-weight: bold; color: #334155; }
+    table.doc-table input {
+      width: 100%; padding: 6px 8px; font-size: 0.92rem;
+      border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;
+    }
+    table.doc-table input:focus {
+      outline: 2px solid #fcd34d; border-color: var(--amber); background: #fffbeb;
+    }
+
+    #dbStatus { font-size: 0.88rem; font-weight: bold; color: #0f766e; }
+
+    @media print {
+      nav.topbar, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card { border: none; box-shadow: none; padding: 0; }
+      table.doc-table input { border: none; padding: 2px; background: transparent; }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar no-print">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="食材費收據管理.html">食材費計算</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照與延緩核銷統計.html?view=reimburse">2. 講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+        <div class="dropdown-divider">其他計畫核銷</div>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <div class="top-bar">
+      <h1 class="page-h1">公文編號記錄</h1>
+      <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span id="dbStatus"></span>
+        <button type="button" class="btn btn-outline" onclick="window.print()">列印</button>
+      </div>
+    </div>
+
+    <div class="controls-row no-print">
+      <label style="font-weight:bold;">年度：</label>
+      <select id="yearSelect" onchange="onYearChange()">
+        <option value="115">115 年</option>
+        <option value="116">116 年</option>
+        <option value="117">117 年</option>
+        <option value="118">118 年</option>
+      </select>
+
+      <label style="font-weight:bold; margin-left:6px;">快速查詢：</label>
+      <input type="text" id="searchInput" placeholder="輸入公文號、使用文件或備註關鍵字..." oninput="renderTable()" style="width:260px;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="clearSearch()">清除篩選</button>
+
+      <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-amber" onclick="addRow()">＋ 新增一列</button>
+        <button type="button" class="btn btn-outline" onclick="loadFromDatabase()">重新從資料庫載入</button>
+        <button type="button" class="btn btn-primary" onclick="saveToDatabase()">儲存至資料庫</button>
+      </div>
+    </div>
+
+    <div class="sheet-title-banner" id="sheetTitleBanner">115年度公文號記錄</div>
+
+    <div class="table-wrap">
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th style="width:8%;">編號</th>
+            <th style="width:24%;">公文號</th>
+            <th style="width:15%;">發文日期</th>
+            <th style="width:26%;">使用文件</th>
+            <th style="width:19%;">備註</th>
+            <th class="no-print" style="width:8%;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="docTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
+  let currentYear = 115;
+  let records = [];
+
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('dbStatus');
+    if (!el) return;
+    el.style.color = isErr ? '#dc2626' : '#0f766e';
+    el.textContent = msg;
+  }
+
+  function escapeAttr(s) {
+    return String(s || '').replace(/"/g, '&quot;');
+  }
+
+  function updateBannerTitle() {
+    const banner = document.getElementById('sheetTitleBanner');
+    if (banner) {
+      banner.textContent = `${currentYear}年度公文號記錄`;
+    }
+    document.title = `${currentYear}年度公文號記錄 - 老庄社區照顧關懷據點`;
+  }
+
+  function createEmptyRow(seqNo) {
+    return {
+      id: 'row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      db_id: null,
+      seq_no: seqNo,
+      doc_number: '',
+      issue_date: '',
+      used_document: '',
+      remark: ''
+    };
+  }
+
+  async function loadFromDatabase() {
+    currentYear = parseInt(document.getElementById('yearSelect').value, 10) || 115;
+    updateBannerTitle();
+    setStatus('正在從資料庫讀取公文號記錄...');
+
+    if (!supabaseClient) {
+      setStatus('尚未連線至 Supabase 資料庫，請確認 config.js 設定', true);
+      if (records.length === 0) records = [createEmptyRow(1)];
+      renderTable();
+      return;
+    }
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('official_document_numbers')
+        .select('*')
+        .eq('roc_year', currentYear)
+        .order('seq_no', { ascending: true })
+        .order('id', { ascending: true });
+
+      if (error) {
+        setStatus('讀取資料庫失敗：' + error.message, true);
+        if (records.length === 0) records = [createEmptyRow(1)];
+        renderTable();
+        return;
+      }
+
+      if (Array.isArray(data) && data.length > 0) {
+        records = data.map((r, idx) => ({
+          id: 'db_' + r.id,
+          db_id: r.id,
+          seq_no: r.seq_no ?? (idx + 1),
+          doc_number: r.doc_number || '',
+          issue_date: r.issue_date || '',
+          used_document: r.used_document || '',
+          remark: r.remark || ''
+        }));
+      } else {
+        records = [createEmptyRow(1)];
+      }
+      renderTable();
+      setStatus(`已載入 ${currentYear} 年度公文號記錄（共 ${data ? data.length : 0} 筆）`);
+    } catch (e) {
+      setStatus('讀取資料庫發生錯誤：' + e.message, true);
+      if (records.length === 0) records = [createEmptyRow(1)];
+      renderTable();
+    }
+  }
+
+  async function onYearChange() {
+    await loadFromDatabase();
+  }
+
+  function addRow() {
+    const maxSeq = records.reduce((m, r) => Math.max(m, Number(r.seq_no) || 0), 0);
+    records.push(createEmptyRow(maxSeq + 1));
+    renderTable();
+  }
+
+  function onFieldChange(rowId, field, value) {
+    const row = records.find(r => r.id === rowId);
+    if (!row) return;
+    if (field === 'seq_no') {
+      const num = parseInt(String(value).trim(), 10);
+      row.seq_no = Number.isFinite(num) ? num : value;
+    } else {
+      row[field] = value;
+    }
+  }
+
+  async function deleteRow(rowId) {
+    const target = records.find(r => r.id === rowId);
+    if (!target) return;
+    if (!confirm(`確定要刪除編號「${target.seq_no}」${target.doc_number ? '（' + target.doc_number + '）' : ''}嗎？`)) return;
+
+    if (target.db_id && supabaseClient) {
+      const { error } = await supabaseClient
+        .from('official_document_numbers')
+        .delete()
+        .eq('id', target.db_id);
+      if (error) {
+        alert('從資料庫刪除失敗：' + error.message);
+        return;
+      }
+    }
+
+    records = records.filter(r => r.id !== rowId);
+    if (records.length === 0) {
+      records = [createEmptyRow(1)];
+    }
+    renderTable();
+    setStatus('已刪除該筆公文號記錄');
+  }
+
+  async function saveToDatabase() {
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+
+    const nonEmptyRows = records.filter(r =>
+      String(r.doc_number || '').trim() !== '' ||
+      String(r.issue_date || '').trim() !== '' ||
+      String(r.used_document || '').trim() !== '' ||
+      String(r.remark || '').trim() !== ''
+    );
+
+    setStatus('正在儲存至資料庫...');
+
+    try {
+      const { error: delErr } = await supabaseClient
+        .from('official_document_numbers')
+        .delete()
+        .eq('roc_year', currentYear);
+
+      if (delErr) {
+        setStatus('儲存失敗：' + delErr.message, true);
+        alert('儲存至資料庫失敗：' + delErr.message);
+        return;
+      }
+
+      if (nonEmptyRows.length > 0) {
+        const payload = nonEmptyRows.map((r, idx) => ({
+          roc_year: currentYear,
+          seq_no: Number(r.seq_no) || (idx + 1),
+          doc_number: String(r.doc_number || '').trim(),
+          issue_date: String(r.issue_date || '').trim() || null,
+          used_document: String(r.used_document || '').trim(),
+          remark: String(r.remark || '').trim(),
+          updated_at: new Date().toISOString()
+        }));
+
+        const { error: insErr } = await supabaseClient
+          .from('official_document_numbers')
+          .insert(payload);
+
+        if (insErr) {
+          setStatus('儲存失敗：' + insErr.message, true);
+          alert('儲存至資料庫失敗：' + insErr.message);
+          return;
+        }
+      }
+
+      await loadFromDatabase();
+      setStatus(`已將 ${currentYear} 年度公文號記錄儲存至資料庫（共 ${nonEmptyRows.length} 筆）`);
+      alert(`已將 ${currentYear} 年度公文號記錄儲存至資料庫！`);
+    } catch (e) {
+      setStatus('儲存發生錯誤：' + e.message, true);
+      alert('儲存發生錯誤：' + e.message);
+    }
+  }
+
+  function clearSearch() {
+    const inp = document.getElementById('searchInput');
+    if (inp) inp.value = '';
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('docTableBody');
+    if (!tbody) return;
+    const kw = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+
+    const filtered = kw
+      ? records.filter(r =>
+          String(r.seq_no || '').toLowerCase().includes(kw) ||
+          String(r.doc_number || '').toLowerCase().includes(kw) ||
+          String(r.issue_date || '').toLowerCase().includes(kw) ||
+          String(r.used_document || '').toLowerCase().includes(kw) ||
+          String(r.remark || '').toLowerCase().includes(kw)
+        )
+      : records;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="center-col" style="padding:18px; color:#64748b;">查無符合「${escapeAttr(kw)}」的公文號記錄</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(r => `
+      <tr>
+        <td class="center-col">
+          <input type="text" value="${escapeAttr(r.seq_no)}" oninput="onFieldChange('${r.id}', 'seq_no', this.value)" style="text-align:center; font-weight:bold;">
+        </td>
+        <td>
+          <input type="text" value="${escapeAttr(r.doc_number)}" placeholder="如：老庄關懷字第1150001號" oninput="onFieldChange('${r.id}', 'doc_number', this.value)">
+        </td>
+        <td>
+          <input type="date" value="${escapeAttr(r.issue_date)}" onchange="onFieldChange('${r.id}', 'issue_date', this.value)">
+        </td>
+        <td>
+          <input type="text" value="${escapeAttr(r.used_document)}" placeholder="輸入使用此公文號的文件名稱" oninput="onFieldChange('${r.id}', 'used_document', this.value)">
+        </td>
+        <td>
+          <input type="text" value="${escapeAttr(r.remark)}" placeholder="備註說明" oninput="onFieldChange('${r.id}', 'remark', this.value)">
+        </td>
+        <td class="center-col no-print">
+          <button type="button" class="btn btn-danger btn-sm" onclick="deleteRow('${r.id}')">刪除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  (async function init() {
+    const rocNow = new Date().getFullYear() - 1911;
+    const yearSel = document.getElementById('yearSelect');
+    if (yearSel && [...yearSel.options].some(o => Number(o.value) === rocNow)) {
+      yearSel.value = String(rocNow);
+    }
+    await loadFromDatabase();
+  })();
+</script>
+
+</body>
+</html>
