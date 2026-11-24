@@ -245,7 +245,8 @@
         <span id="inputDenomTotal">0 元</span>
       </div>
       <button type="button" class="btn-full-save" onclick="saveDenomRecord()">儲存今日現鈔盤點（自動累加並歸零）</button>
-      <div style="text-align:right; margin-top:8px;">
+      <div style="display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button type="button" class="btn btn-sec" style="background:#d97706; font-size:0.82rem; padding:5px 10px;" onclick="clearTodayDenomInputs()">清除本日盤點數額</button>
         <button type="button" class="btn btn-sec" style="font-size:0.82rem; padding:5px 10px;" onclick="resetDenomRecord()">清空本月現鈔盤點重計</button>
       </div>
     </div>
@@ -335,6 +336,25 @@
     recalcInputDenomTotal();
   }
 
+  function getPreviewDenomMap() {
+    const preview = {};
+    DENOMS.forEach(d => {
+      const el = document.getElementById(`in-denom-${d}`);
+      const delta = el ? (parseInt(el.value, 10) || 0) : 0;
+      preview[d] = Math.max(0, (Number(storedDenomMap[d]) || 0) + delta);
+    });
+    return preview;
+  }
+
+  function clearTodayDenomInputs() {
+    renderBlankDenomInputs();
+    const statusEl = document.getElementById('statusText');
+    if (statusEl) {
+      statusEl.style.color = '#166534';
+      statusEl.textContent = '已清除本日尚未儲存的盤點數額';
+    }
+  }
+
   function recalcInputDenomTotal() {
     let total = 0;
     DENOMS.forEach(d => {
@@ -346,6 +366,14 @@
       if (subEl) subEl.textContent = `${sub.toLocaleString()} 元`;
     });
     document.getElementById('inputDenomTotal').textContent = `${total.toLocaleString()} 元`;
+
+    const rocYear = parseInt(document.getElementById('rocYearSelect')?.value, 10) || 115;
+    const month = parseInt(document.getElementById('monthSelect')?.value, 10) || 11;
+    const adYear = rocYear + 1911;
+    const daysInMonth = new Date(adYear, month, 0).getDate();
+    if (document.getElementById('denomReportBody')) {
+      renderReportTables(adYear, month, daysInMonth, getPreviewDenomMap());
+    }
   }
 
   async function loadMonthData() {
@@ -524,7 +552,8 @@
     renderReportTables(adYear, month, new Date(adYear, month, 0).getDate());
   }
 
-  function renderReportTables(adYear, month, daysInMonth) {
+  function renderReportTables(adYear, month, daysInMonth, activeDenomMap = null) {
+    const useDenomMap = activeDenomMap || storedDenomMap;
     let totalIncome = 0;
     let totalExpense = 0;
     const rowsHtml = [];
@@ -567,7 +596,7 @@
 
     let denomGrandTotal = 0;
     const denomRowsHtml = DENOMS.map(d => {
-      const cnt = Number(storedDenomMap[d]) || 0;
+      const cnt = Number(useDenomMap[d]) || 0;
       const amt = d * cnt;
       denomGrandTotal += amt;
       return `
