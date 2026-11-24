@@ -298,7 +298,7 @@
             <span id="feeModeBadge" class="mode-pill-cal">預設：依行事曆代入天數</span>
             <button type="button" class="btn btn-outline btn-sm" id="btnSwitchToManual" onclick="setFeeInputMode('manual')">手動輸入</button>
             <button type="button" class="btn btn-teal btn-sm" id="btnSwitchToCalendar" style="display:none;" onclick="setFeeInputMode('calendar')">依行事曆代入天數</button>
-            <button type="button" class="btn btn-blue btn-sm" onclick="toggleRateConfigPanel()">設定講師不同計畫鐘點費</button>
+            <a href="講師鐘點費設定.html" class="btn btn-blue btn-sm" style="text-decoration:none;">講師鐘點費設定 ➔</a>
           </div>
 
           <!-- 依行事曆代入天數：薪資計算期間 / 算到哪一天 選項 -->
@@ -344,20 +344,7 @@
 
         <div id="calPeriodSummaryBar" style="margin-top:8px; font-size:0.83rem; color:#0f766e; font-weight:bold;"></div>
 
-        <!-- 設定講師不同計畫不同鐘點費面板 -->
-        <div id="rateConfigPanel" style="display:none; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-            <div>
-              <strong style="color:var(--primary); font-size:0.93rem;">設定各講師在不同計畫的鐘點費計算方式</strong>
-              <span style="font-size:0.82rem; color:#475569; margin-left:6px;">（可選「費用/1H」或「費用/1堂（不計時數）」或「無」；儲存後會同步至雲端，家裡與單位電腦皆可讀取）</span>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button type="button" class="btn btn-primary btn-sm" onclick="saveInstructorPlanRates()">儲存設定並套用</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="toggleRateConfigPanel()">關閉</button>
-            </div>
-          </div>
-          <div style="overflow-x:auto;" id="rateConfigTableWrap"></div>
-        </div>
+
       </div>
 
       <div class="sync-hint-banner no-print" id="cloudSyncNotice">

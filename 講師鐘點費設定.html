@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>講師鐘點費設定</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --bg: #eef2f6;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 265px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1440px; margin: 20px auto 50px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 10px; padding: 18px 20px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 14px;
+    }
+    .page-h1 { margin: 0; font-size: 1.35rem; color: var(--primary); }
+
+    .controls-row {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 12px;
+      border-radius: 8px; margin-bottom: 16px;
+    }
+    select, input[type="text"] {
+      padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem;
+    }
+    .btn {
+      padding: 7px 13px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.88rem; transition: background 0.15s; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-red { background: #be123c; color: #fff; }
+    .btn-red:hover { background: #9f1239; }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-sm { padding: 5px 10px; font-size: 0.83rem; }
+
+    .table-section-header {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; padding: 10px 14px; border-radius: 8px 8px 0 0;
+      font-weight: bold; font-size: 1.08rem;
+    }
+    .header-salary {
+      background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; border-bottom: none;
+    }
+    .header-reimburse {
+      background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; border-bottom: none;
+    }
+
+    .excel-table {
+      width: 100%; border-collapse: collapse; font-size: 0.9rem; background: #fff;
+    }
+    .excel-table th {
+      background: #cbd5e1; color: #0f172a; font-weight: bold;
+      border: 1px solid #64748b; padding: 7px 8px; text-align: center;
+    }
+    .excel-table td {
+      border: 1px solid #94a3b8; padding: 6px 8px; vertical-align: middle;
+    }
+    .excel-table td.center-col { text-align: center; }
+    .excel-table input, .excel-table select {
+      padding: 5px 6px; font-size: 0.84rem; border: 1px solid #cbd5e1; border-radius: 4px;
+    }
+    .excel-table input.num-input { text-align: right; }
+    .excel-table input:disabled, .excel-table select:disabled {
+      background: #f1f5f9; color: #94a3b8;
+    }
+
+    @media print {
+      nav.topbar, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card { border: none; box-shadow: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar no-print">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="食材費收據管理.html">食材費計算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="講師鐘點費設定.html">講師鐘點費設定</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <div class="top-bar">
+      <h1 class="page-h1">講師鐘點費設定</h1>
+      <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span id="dbStatusText" style="font-size:0.88rem; font-weight:bold; color:#0f766e;"></span>
+        <a href="講師鐘點費記錄.html" class="btn btn-outline">前往講師鐘點費計算 ➔</a>
+        <button type="button" class="btn btn-outline" onclick="window.print()">列印</button>
+      </div>
+    </div>
+
+    <div class="controls-row no-print">
+      <label style="font-weight:bold;">新增計畫欄位：</label>
+      <input type="text" id="newPlanNameInput" placeholder="如：延緩3期" style="width:150px;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="addPlanColumn()">＋ 新增計畫</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="reloadFromDatabase()">重新從資料庫載入</button>
+      <button type="button" class="btn btn-primary" onclick="saveAllSettingsToDatabase()">全部儲存至資料庫</button>
+    </div>
+
+    <!-- 表格一：鐘點費-薪資 -->
+    <div style="margin-bottom:28px;">
+      <div class="table-section-header header-salary">
+        <span>鐘點費-薪資</span>
+        <button type="button" class="btn btn-blue btn-sm no-print" onclick="saveSalarySettingsToDatabase()">儲存「鐘點費-薪資」至資料庫</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="excel-table" id="salaryRateTable"></table>
+      </div>
+    </div>
+
+    <!-- 表格二：鐘點費-核銷 -->
+    <div>
+      <div class="table-section-header header-reimburse">
+        <span>鐘點費-核銷</span>
+        <button type="button" class="btn btn-red btn-sm no-print" onclick="saveReimburseSettingsToDatabase()">儲存「鐘點費-核銷」至資料庫</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="excel-table" id="reimburseRateTable"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
+  const DEFAULT_PLANS = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
+  const FALLBACK_INSTRUCTORS = [
+    { name: '林熙鈴', status: '服務中' },
+    { name: '張國堂', status: '服務中' },
+    { name: '鄧美續', status: '服務中' },
+    { name: '蔡牡連', status: '服務中' },
+    { name: '吳佩珊', status: '暫停' },
+    { name: '黃仲慧', status: '服務中' },
+    { name: '吳貴英', status: '服務中' },
+    { name: '詹細珍', status: '服務中' },
+    { name: '詹益誠', status: '服務中' }
+  ];
+
+  let instructorsList = [...FALLBACK_INSTRUCTORS];
+  let planColumns = [...DEFAULT_PLANS];
+  let salaryMap = {};     // { [instName]: { [planName]: { mode, rate, hours } } }
+  let reimburseMap = {};  // { [instName]: { [planName]: { mode, rate, hours } } }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function escapeAttr(s) {
+    return String(s || '').replace(/"/g, '&quot;');
+  }
+  function setDbStatus(msg, isErr = false) {
+    const el = document.getElementById('dbStatusText');
+    if (!el) return;
+    el.style.color = isErr ? '#be123c' : '#0f766e';
+    el.textContent = msg;
+  }
+
+  function normalizeRuleObj(raw) {
+    if (!raw) return { mode: 'per_hour', rate: '', hours: 1 };
+    const mode = (raw.mode === 'per_session' || raw.mode === 'none') ? raw.mode : 'per_hour';
+    return {
+      mode,
+      rate: (raw.rate !== null && raw.rate !== undefined && String(raw.rate).trim() !== '') ? Number(raw.rate) : '',
+      hours: (raw.hours !== null && raw.hours !== undefined && String(raw.hours).trim() !== '') ? Number(raw.hours) : 1
+    };
+  }
+
+  function getRule(mapObj, instName, planName) {
+    return normalizeRuleObj((mapObj[instName] || {})[planName]);
+  }
+
+  function addPlanColumn() {
+    const inp = document.getElementById('newPlanNameInput');
+    const val = (inp.value || '').trim();
+    if (!val) return;
+    if (!planColumns.includes(val)) {
+      planColumns.push(val);
+    }
+    inp.value = '';
+    renderBothTables();
+  }
+
+  function onModeChange(selEl) {
+    const td = selEl.closest('td');
+    if (!td) return;
+    const isNone = selEl.value === 'none';
+    const amtInp = td.querySelector('.cfg-amt');
+    const hrsInp = td.querySelector('.cfg-hrs');
+    if (amtInp) {
+      amtInp.disabled = isNone;
+      if (isNone) amtInp.value = '';
+    }
+    if (hrsInp) {
+      hrsInp.disabled = isNone;
+      if (isNone) hrsInp.value = '';
+    }
+  }
+
+  function buildConfigTableHtml(tablePrefix, dataMap) {
+    const headCells = planColumns.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+    const bodyRows = instructorsList.map(inst => {
+      const instName = inst.name;
+      const tds = planColumns.map(plan => {
+        const rule = getRule(dataMap, instName, plan);
+        const isNone = rule.mode === 'none';
+        return `
+          <td style="min-width:165px;">
+            <select class="${tablePrefix}-mode" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" onchange="onModeChange(this)" style="width:100%; margin-bottom:4px;">
+              <option value="per_hour" ${rule.mode === 'per_hour' ? 'selected' : ''}>費用/1H</option>
+              <option value="per_session" ${rule.mode === 'per_session' ? 'selected' : ''}>費用/1堂</option>
+              <option value="none" ${rule.mode === 'none' ? 'selected' : ''}>無</option>
+            </select>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <input type="text" inputmode="decimal" class="num-input cfg-amt ${tablePrefix}-amt" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${isNone ? '' : rule.rate}" placeholder="金額" ${isNone ? 'disabled' : ''} style="width:76px;">
+              <span style="font-size:0.76rem; color:#475569;">時數</span>
+              <input type="text" inputmode="decimal" class="num-input cfg-hrs ${tablePrefix}-hrs" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${isNone ? '' : rule.hours}" placeholder="1" ${isNone ? 'disabled' : ''} style="width:42px;">
+            </div>
+          </td>
+        `;
+      }).join('');
+
+      return `
+        <tr>
+          <td class="center-col" style="font-weight:bold; background:#f8fafc;">
+            <div>${escapeHtml(instName)}</div>
+            <div style="font-size:0.74rem; color:#64748b; font-weight:normal;">(${escapeHtml(inst.status || '服務中')})</div>
+          </td>
+          ${tds}
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <thead>
+        <tr>
+          <th style="width:115px;">講師 \ 計畫</th>
+          ${headCells}
+        </tr>
+      </thead>
+      <tbody>${bodyRows}</tbody>
+    `;
+  }
+
+  function renderBothTables() {
+    document.getElementById('salaryRateTable').innerHTML = buildConfigTableHtml('sal', salaryMap);
+    document.getElementById('reimburseRateTable').innerHTML = buildConfigTableHtml('reb', reimburseMap);
+  }
+
+  function collectTableData(tablePrefix) {
+    const modeMap = new Map();
+    const amtMap = new Map();
+    const hrsMap = new Map();
+
+    document.querySelectorAll(`.${tablePrefix}-mode`).forEach(el => {
+      modeMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value);
+    });
+    document.querySelectorAll(`.${tablePrefix}-amt`).forEach(el => {
+      amtMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, ''));
+    });
+    document.querySelectorAll(`.${tablePrefix}-hrs`).forEach(el => {
+      hrsMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, ''));
+    });
+
+    const resultMap = {};
+    const rowsToUpsert = [];
+
+    modeMap.forEach((mode, key) => {
+      const [inst, plan] = key.split('__');
+      const rawAmt = amtMap.get(key) || '';
+      const rawHrs = hrsMap.get(key) || '1';
+      if (!resultMap[inst]) resultMap[inst] = {};
+
+      if (mode === 'none') {
+        resultMap[inst][plan] = { mode: 'none', rate: '', hours: '' };
+        rowsToUpsert.push({
+          instructor_name: inst,
+          plan_name: plan,
+          pay_mode: 'none',
+          rate: null,
+          hours: null,
+          updated_at: new Date().toISOString()
+        });
+      } else if (rawAmt !== '' && Number.isFinite(Number(rawAmt))) {
+        const hrsNum = (rawHrs !== '' && Number.isFinite(Number(rawHrs))) ? Number(rawHrs) : 1;
+        resultMap[inst][plan] = { mode, rate: Number(rawAmt), hours: hrsNum };
+        rowsToUpsert.push({
+          instructor_name: inst,
+          plan_name: plan,
+          pay_mode: mode,
+          rate: Number(rawAmt),
+          hours: hrsNum,
+          updated_at: new Date().toISOString()
+        });
+      }
+    });
+
+    return { resultMap, rowsToUpsert };
+  }
+
+  async function saveSalarySettingsToDatabase() {
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+    const { resultMap, rowsToUpsert } = collectTableData('sal');
+    salaryMap = resultMap;
+
+    const { error } = await supabaseClient
+      .from('instructor_plan_rate_configs')
+      .upsert(rowsToUpsert, { onConflict: 'instructor_name,plan_name' });
+
+    if (error) {
+      setDbStatus('儲存「鐘點費-薪資」至資料庫失敗：' + error.message, true);
+      alert('儲存「鐘點費-薪資」至資料庫失敗：' + error.message);
+      return;
+    }
+
+    setDbStatus('已將「鐘點費-薪資」儲存至資料庫');
+    alert('已將「鐘點費-薪資」儲存至資料庫！');
+  }
+
+  async function saveReimburseSettingsToDatabase() {
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+    const { resultMap, rowsToUpsert } = collectTableData('reb');
+    reimburseMap = resultMap;
+
+    const { error } = await supabaseClient
+      .from('instructor_reimburse_rate_configs')
+      .upsert(rowsToUpsert, { onConflict: 'instructor_name,plan_name' });
+
+    if (error) {
+      setDbStatus('儲存「鐘點費-核銷」至資料庫失敗：' + error.message, true);
+      alert('儲存「鐘點費-核銷」至資料庫失敗：' + error.message);
+      return;
+    }
+
+    setDbStatus('已將「鐘點費-核銷」儲存至資料庫');
+    alert('已將「鐘點費-核銷」儲存至資料庫！');
+  }
+
+  async function saveAllSettingsToDatabase() {
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+    const sal = collectTableData('sal');
+    const reb = collectTableData('reb');
+    salaryMap = sal.resultMap;
+    reimburseMap = reb.resultMap;
+
+    const [res1, res2] = await Promise.all([
+      supabaseClient.from('instructor_plan_rate_configs').upsert(sal.rowsToUpsert, { onConflict: 'instructor_name,plan_name' }),
+      supabaseClient.from('instructor_reimburse_rate_configs').upsert(reb.rowsToUpsert, { onConflict: 'instructor_name,plan_name' })
+    ]);
+
+    if (res1.error || res2.error) {
+      const errMsg = (res1.error && res1.error.message) || (res2.error && res2.error.message) || '未知錯誤';
+      setDbStatus('儲存失敗：' + errMsg, true);
+      alert('儲存至資料庫失敗：' + errMsg);
+      return;
+    }
+
+    setDbStatus('已將「鐘點費-薪資」與「鐘點費-核銷」全部儲存至資料庫');
+    alert('已將「鐘點費-薪資」與「鐘點費-核銷」全部儲存至資料庫！');
+  }
+
+  async function reloadFromDatabase() {
+    setDbStatus('正在從資料庫讀取設定...');
+    salaryMap = {};
+    reimburseMap = {};
+
+    if (supabaseClient) {
+      try {
+        const instRes = await supabaseClient
+          .from('instructors')
+          .select('staff_number, name, status')
+          .order('staff_number', { ascending: true })
+          .order('id', { ascending: true });
+        if (!instRes.error && Array.isArray(instRes.data) && instRes.data.length > 0) {
+          instructorsList = instRes.data
+            .filter(r => r.name && r.name.trim() !== '')
+            .map(r => ({ name: r.name.trim(), status: r.status || '服務中' }));
+        }
+      } catch (e) {}
+
+      try {
+        const salRes = await supabaseClient
+          .from('instructor_plan_rate_configs')
+          .select('instructor_name, plan_name, pay_mode, rate, hours');
+        if (!salRes.error && Array.isArray(salRes.data)) {
+          salRes.data.forEach(row => {
+            const inst = (row.instructor_name || '').trim();
+            const plan = (row.plan_name || '').trim();
+            if (!inst || !plan) return;
+            if (!planColumns.includes(plan)) planColumns.push(plan);
+            if (!salaryMap[inst]) salaryMap[inst] = {};
+            salaryMap[inst][plan] = {
+              mode: row.pay_mode || 'per_hour',
+              rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
+              hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
+            };
+          });
+        }
+      } catch (e) {}
+
+      try {
+        const rebRes = await supabaseClient
+          .from('instructor_reimburse_rate_configs')
+          .select('instructor_name, plan_name, pay_mode, rate, hours');
+        if (!rebRes.error && Array.isArray(rebRes.data)) {
+          rebRes.data.forEach(row => {
+            const inst = (row.instructor_name || '').trim();
+            const plan = (row.plan_name || '').trim();
+            if (!inst || !plan) return;
+            if (!planColumns.includes(plan)) planColumns.push(plan);
+            if (!reimburseMap[inst]) reimburseMap[inst] = {};
+            reimburseMap[inst][plan] = {
+              mode: row.pay_mode || 'per_hour',
+              rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
+              hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
+            };
+          });
+        }
+      } catch (e) {}
+    }
+
+    renderBothTables();
+    setDbStatus('已同步資料庫最新設定');
+  }
+
+  (async function init() {
+    await reloadFromDatabase();
+  })();
+</script>
+</body>
+</html>
