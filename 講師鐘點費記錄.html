@@ -416,11 +416,14 @@
       <div id="feeTablesContainer"></div>
     </div>
 
-    <!-- 2. 個人所得稅計算-講師 -->
-    <div id="panelTaxInstructor" style="display:none;">
-      <div class="controls-row no-print">
-        <label style="font-weight:bold;">年度：</label>
-        <select id="taxYearSelect" onchange="onTaxContextChange()"ASE_ANON_KEY);
+  </div>
+</div>
+
+<script>
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     } catch (e) {}
   }
 
