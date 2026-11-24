@@ -263,32 +263,12 @@
       <button type="button" class="btn btn-outline btn-sm" onclick="clearSearch()">清除篩選</button>
 
       <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="toggleNumberPoolBox()">據點／協會可用數字</button>
-        <button type="button" class="btn btn-amber" onclick="addRow()">＋ 新增一列</button>
+                <button type="button" class="btn btn-amber" onclick="addRow()">＋ 新增一列</button>
         <button type="button" class="btn btn-outline" onclick="loadFromDatabase()">重新從資料庫載入</button>
         <button type="button" class="btn btn-primary" onclick="saveToDatabase()">儲存至資料庫</button>
       </div>
     </div>
 
-    <!-- 據點與協會可用數字分配區 -->
-    <div class="pool-box no-print" id="numberPoolBox" style="display:none;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <strong style="color:var(--amber-dark); font-size:0.95rem;">據點與協會可用數字分配（點擊數字可一鍵帶入或複製「固定文字＋數字」）</strong>
-        <button type="button" class="btn btn-outline btn-sm" onclick="saveNumberPools()">儲存可用數字設定</button>
-      </div>
-      <div class="pool-grid">
-        <div>
-          <label style="font-size:0.86rem; font-weight:bold; color:#0f766e;">據點可用數字（以逗號或空白分隔，如：115001, 115002）：</label>
-          <input type="text" id="stationPoolInput" placeholder="輸入據點可用數字..." oninput="renderPoolChips()" style="width:100%; margin-top:4px;">
-          <div class="pool-chip-wrap" id="stationPoolChips"></div>
-        </div>
-        <div>
-          <label style="font-size:0.86rem; font-weight:bold; color:#0369a1;">協會可用數字（以逗號或空白分隔，如：115051, 115052）：</label>
-          <input type="text" id="assocPoolInput" placeholder="輸入協會可用數字..." oninput="renderPoolChips()" style="width:100%; margin-top:4px;">
-          <div class="pool-chip-wrap" id="assocPoolChips"></div>
-        </div>
-      </div>
-    </div>
 
     <div class="sheet-title-banner" id="sheetTitleBanner">115年度公文號記錄</div>
 
