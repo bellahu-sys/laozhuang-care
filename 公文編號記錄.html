@@ -489,6 +489,7 @@
       } else {
         records = [createEmptyRow(1)];
       }
+      renumberRecords();
       renderTable();
       setStatus(`已載入 ${currentYear} 年度公文號記錄（共 ${data ? data.length : 0} 筆）`);
     } catch (e) {
@@ -502,13 +503,27 @@
     await loadFromDatabase();
   }
 
+  function renumberRecords() {
+    if (!Array.isArray(records)) records = [];
+    records = records.map((r, idx) => ({
+      ...r,
+      seq_no: idx + 1
+    }));
+  }
+
+  function isRowCompletelyEmpty(r) {
+    return (
+      String(r.doc_number || '').trim() === '' &&
+      String(r.issue_date || '').trim() === '' &&
+      String(r.used_document || '').trim() === '' &&
+      String(r.remark || '').trim() === ''
+    );
+  }
+
   async function addRow() {
     if (!Array.isArray(records)) records = [];
-    const maxSeq = records.reduce((m, r) => {
-      const n = parseInt(String(r.seq_no ?? ''), 10);
-      return Number.isFinite(n) ? Math.max(m, n) : m;
-    }, 0);
-    records.push(createEmptyRow(maxSeq + 1));
+    records.push(createEmptyRow(records.length + 1));
+    renumberRecords();
     const searchEl = document.getElementById('searchInput');
     if (searchEl && searchEl.value.trim() !== '') {
       searchEl.value = '';
@@ -562,18 +577,17 @@
     }
 
     if (!Array.isArray(records)) records = [];
-    let nextSeq = records.reduce((m, r) => {
-      const n = parseInt(String(r.seq_no ?? ''), 10);
-      return Number.isFinite(n) ? Math.max(m, n) : m;
-    }, 0);
+    if (records.every(isRowCompletelyEmpty)) {
+      records = [];
+    }
 
     parsed.list.forEach((docNumStr, idx) => {
-      nextSeq += 1;
-      const row = createEmptyRow(nextSeq);
+      const row = createEmptyRow(records.length + 1);
       row.id = 'row_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).slice(2, 5);
       row.doc_number = docNumStr;
       records.push(row);
     });
+    renumberRecords();
 
     const searchEl = document.getElementById('searchInput');
     if (searchEl && searchEl.value.trim() !== '') {
@@ -623,13 +637,12 @@
       }
     }
 
-    records = records.filter(r => r.id !== rowId);
-    if (records.length === 0) {
-      records = [createEmptyRow(1)];
-    }
+    const nextRecords = records.filter(r => r.id !== rowId);
+    records = nextRecords.length > 0 ? nextRecords : [createEmptyRow(1)];
+    renumberRecords();
     renderTable();
     await saveToDatabase(true);
-    setStatus('已刪除並同步更新資料庫');
+    setStatus(`已刪除並自動重新編號（目前共 ${records.length} 列，從 1 開始）`);
   }
 
   let isSavingToDb = false;
@@ -661,11 +674,13 @@
       const validIds = [];
       for (let idx = 0; idx < nonEmptyRows.length; idx++) {
         const r = nonEmptyRows[idx];
+        const seqVal = idx + 1;
+        r.seq_no = seqVal;
         const numPart = String(r.doc_number || '').trim();
         const storedDocNum = numPart ? `${fixedPrefix}${numPart}` : '';
         const rowPayload = {
           roc_year: currentYear,
-          seq_no: Number(r.seq_no) || (idx + 1),
+          seq_no: seqVal,
           doc_number: storedDocNum,
           issue_date: String(r.issue_date || '').trim() || null,
           used_document: String(r.used_document || '').trim(),
