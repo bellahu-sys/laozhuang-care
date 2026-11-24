@@ -623,20 +623,26 @@
     await saveFundingToDatabase(true);
   }
 
-  async function onStageFieldChange(stageId, field, rawVal) {
+  function updateStageStateOnly(stageId, field, rawVal) {
     const yr = getYear();
     const state = ensureYearFundingData(yr);
     const target = state.stages.find(s => String(s.id) === String(stageId));
     if (!target) return;
     if (field === 'periodTitle' || field === 'sourceLabel') {
-      target[field] = String(rawVal || '');
+      target[field] = String(rawVal ?? '');
     } else if (field === 'order') {
       target.order = Math.max(1, parseInt(rawVal, 10) || 1);
     } else {
       target[field] = parseNumVal(rawVal);
     }
     saveFundingLocalCache();
-    renderQuarterTables();
+  }
+
+  async function onStageFieldChange(stageId, field, rawVal, shouldReRender = true) {
+    updateStageStateOnly(stageId, field, rawVal);
+    if (shouldReRender) {
+      renderQuarterTables();
+    }
     await saveFundingToDatabase(true);
   }
 
@@ -781,27 +787,38 @@
       `;
       const rows = computedList.map(st => {
         const isAct = activeRow && String(st.id) === String(activeRow.id);
+        const sid = escapeAttr(st.id);
         return `
-          <tr style="${isAct ? 'background:#fef9c3;' : ''}" onclick="onFundingStageChange('${escapeAttr(st.id)}')">
+          <tr style="${isAct ? 'background:#fef9c3;' : ''}">
             <td class="td-center">
               <input type="number" class="sheet-cell-input" style="text-align:center; width:56px;" min="1"
-                value="${st.order}" onclick="event.stopPropagation();" onchange="onStageFieldChange('${escapeAttr(st.id)}', 'order', this.value)">
+                value="${st.order}"
+                oninput="updateStageStateOnly('${sid}', 'order', this.value)"
+                onchange="onStageFieldChange('${sid}', 'order', this.value, true)">
             </td>
             <td>
               <input type="text" class="sheet-cell-input" style="text-align:left; font-weight:bold;"
-                value="${escapeAttr(st.periodTitle)}" onclick="event.stopPropagation();" onchange="onStageFieldChange('${escapeAttr(st.id)}', 'periodTitle', this.value)">
+                value="${escapeAttr(st.periodTitle)}"
+                oninput="updateStageStateOnly('${sid}', 'periodTitle', this.value)"
+                onchange="onStageFieldChange('${sid}', 'periodTitle', this.value, true)">
             </td>
             <td class="num-col">
-              <input type="text" class="sheet-cell-input" value="${fmt(st.curBiz)}" onclick="event.stopPropagation();" onchange="onStageFieldChange('${escapeAttr(st.id)}', 'curBiz', this.value)">
+              <input type="text" class="sheet-cell-input"
+                value="${fmt(st.curBiz)}"
+                oninput="updateStageStateOnly('${sid}', 'curBiz', this.value)"
+                onchange="onStageFieldChange('${sid}', 'curBiz', this.value, true)">
             </td>
             <td class="num-col">
-              <input type="text" class="sheet-cell-input" value="${fmt(st.curDelay)}" onclick="event.stopPropagation();" onchange="onStageFieldChange('${escapeAttr(st.id)}', 'curDelay', this.value)">
+              <input type="text" class="sheet-cell-input"
+                value="${fmt(st.curDelay)}"
+                oninput="updateStageStateOnly('${sid}', 'curDelay', this.value)"
+                onchange="onStageFieldChange('${sid}', 'curDelay', this.value, true)">
             </td>
-            <td class="num-col" style="color:#b91c1c; font-weight:bold;">${fmt(st.cumBiz)}</td>
-            <td class="num-col" style="color:#b45309; font-weight:bold;">${fmt(st.cumDelay)}</td>
-            <td class="num-col" style="font-weight:bold;">${fmt(st.remTotal)}</td>
-            <td class="td-center no-print" onclick="event.stopPropagation();">
-              <button type="button" class="btn btn-gray btn-sm" onclick="deleteFundingStage('${escapeAttr(st.id)}')">刪除</button>
+            <td class="num-col" style="color:#b91c1c; font-weight:bold; cursor:pointer;" onclick="onFundingStageChange('${sid}')">${fmt(st.cumBiz)}</td>
+            <td class="num-col" style="color:#b45309; font-weight:bold; cursor:pointer;" onclick="onFundingStageChange('${sid}')">${fmt(st.cumDelay)}</td>
+            <td class="num-col" style="font-weight:bold; cursor:pointer;" onclick="onFundingStageChange('${sid}')">${fmt(st.remTotal)}</td>
+            <td class="td-center no-print">
+              <button type="button" class="btn btn-gray btn-sm" onclick="deleteFundingStage('${sid}')">刪除</button>
             </td>
           </tr>
         `;
