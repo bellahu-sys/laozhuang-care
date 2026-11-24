@@ -84,11 +84,8 @@
     .btn-blue:hover { background: #0369a1; }
     .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
     .btn-outline:hover { background: #e2e8f0; }
-    .btn-danger { background: #dc2626; color: #fff; }
-    .btn-danger:hover { background: #b91c1c; }
     .btn-sm { padding: 4px 9px; font-size: 0.82rem; }
 
-    /* 正式列印與預覽區塊 */
     .printable-sheet {
       background: #fff;
       color: #000;
@@ -134,7 +131,6 @@
       border: 1px dashed #6366f1; background: #fafaff; outline: none; border-radius: 3px;
     }
 
-    /* 課程說明區塊 */
     .course-notes-box {
       margin-top: 16px;
       padding: 12px 14px;
@@ -321,7 +317,6 @@
       </div>
     </div>
 
-    <!-- 正式列印區塊：標題 + 課表 + 課程說明 -->
     <div class="printable-sheet">
       <div class="sheet-title-banner" id="sheetTitleBanner">115年10月老庄社區關懷據點課程活動表</div>
 
@@ -341,7 +336,6 @@
         </table>
       </div>
 
-      <!-- 課程說明區（可直接編輯、儲存至資料庫並隨課表一同列印） -->
       <div class="course-notes-box">
         <div class="course-notes-header">
           <div class="course-notes-label">課程說明：</div>
@@ -372,8 +366,7 @@
     '手作ＤＩＹ：藉平常日常生活可以利用之資源,由勞作與遊戲的方法教導於長輩,讓長輩們可以手腦並用。',
     '運動有夠讚：藉由音樂來帶動唱，有時會配合自己帶的樂器，與手腳動作來達到學習的效果。',
     '手作課程：課程內容讓長輩藉由一些簡單的畫畫或剪貼來動動腦。'
-  ].join('
-');
+  ].join('\n');
 
   function setStatus(msg, isErr = false) {
     const el = document.getElementById('dbStatus');
@@ -593,8 +586,7 @@
     if (!cName || !cName.trim()) return;
     const cDesc = prompt(`請輸入「${cName.trim()}」的課程內容說明：`) || '';
     const line = `${cName.trim()}：${cDesc.trim()}`;
-    courseNotes = courseNotes ? `${courseNotes.replace(/\s+$/, '')}
-${line}` : line;
+    courseNotes = courseNotes ? `${courseNotes.replace(/\s+$/, '')}\n${line}` : line;
     renderNotesTextarea();
     const notesEl = document.getElementById('courseNotesTextarea');
     if (notesEl) notesEl.focus();
