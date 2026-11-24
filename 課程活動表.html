@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>課程活動表 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --indigo: #4338ca;
+      --indigo-dark: #3730a3;
+      --indigo-bg: #eef2ff;
+      --indigo-border: #c7d2fe;
+      --bg: #eef2f6;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1280px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    .top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+    }
+    .page-h1 { margin: 0; font-size: 1.4rem; color: var(--indigo-dark); }
+
+    .controls-row {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: var(--indigo-bg); border: 1px solid var(--indigo-border);
+      padding: 12px 14px; border-radius: 8px; margin-bottom: 16px;
+    }
+    select, input[type="text"] {
+      padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.92rem; background: #fff;
+    }
+    .btn {
+      padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-indigo { background: var(--indigo); color: #fff; }
+    .btn-indigo:hover { background: var(--indigo-dark); }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 4px 9px; font-size: 0.82rem; }
+
+    .sheet-title-banner {
+      text-align: center; font-size: 1.38rem; font-weight: bold;
+      color: #0f172a; padding: 8px 0 14px 0; letter-spacing: 1px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table.act-table {
+      width: 100%; border-collapse: collapse; min-width: 860px;
+      background: #fff; color: #000; font-size: 0.94rem;
+    }
+    table.act-table th {
+      background: #cbd5e1; color: #0f172a; font-weight: bold;
+      border: 1.5px solid #334155; padding: 8px 10px; text-align: center;
+    }
+    table.act-table td {
+      border: 1.2px solid #475569; padding: 5px 7px; vertical-align: middle;
+    }
+    table.act-table td.time-col {
+      text-align: center; font-weight: bold; background: #f8fafc; width: 130px;
+    }
+    table.act-table td.merged-row-cell {
+      text-align: center; font-weight: bold; background: #ffffff;
+    }
+    table.act-table textarea.cell-ta {
+      width: 100%; border: 1px solid transparent; background: transparent;
+      text-align: center; font-size: 0.9rem; font-family: "Microsoft JhengHei", sans-serif;
+      line-height: 1.35; resize: none; overflow: hidden; padding: 2px 4px;
+      color: #000; display: block;
+    }
+    table.act-table textarea.cell-ta:hover, table.act-table textarea.cell-ta:focus {
+      border: 1px dashed #6366f1; background: #fafaff; outline: none; border-radius: 3px;
+    }
+    table.act-table input.time-inp {
+      width: 100%; border: 1px solid transparent; background: transparent;
+      text-align: center; font-weight: bold; font-size: 0.9rem; padding: 2px 4px;
+    }
+    table.act-table input.time-inp:hover, table.act-table input.time-inp:focus {
+      border: 1px dashed #6366f1; background: #fafaff; outline: none; border-radius: 3px;
+    }
+
+    #dbStatus { font-size: 0.88rem; font-weight: bold; color: #0f766e; }
+
+    @media print {
+      nav.topbar, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card { border: none; box-shadow: none; padding: 0; }
+      table.act-table textarea.cell-ta, table.act-table input.time-inp {
+        border: none !important; background: transparent !important; padding: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar no-print">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="食材費收據管理.html">食材費計算</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="課程活動表.html">課程活動表</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照與延緩核銷統計.html?view=reimburse">2. 講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+        <div class="dropdown-divider">其他計畫核銷</div>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <div class="top-bar">
+      <h1 class="page-h1">課程活動表</h1>
+      <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span id="dbStatus"></span>
+        <button type="button" class="btn btn-outline" onclick="window.print()">列印</button>
+      </div>
+    </div>
+
+    <div class="controls-row no-print">
+      <label style="font-weight:bold;">年度：</label>
+      <select id="yearSelect" onchange="onYearMonthChange()">
+        <option value="115">115 年</option>
+        <option value="116">116 年</option>
+        <option value="117">117 年</option>
+        <option value="118">118 年</option>
+      </select>
+
+      <label style="font-weight:bold;">月份：</label>
+      <select id="monthSelect" onchange="onYearMonthChange()">
+        <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
+        <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
+        <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
+        <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+      </select>
+
+      <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-indigo btn-sm" onclick="addActivityRow()">＋ 新增時段列</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="resetDefaultTemplate()">套用預設課表版面</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="loadFromDatabase()">重新從資料庫載入</button>
+        <button type="button" class="btn btn-primary" onclick="saveToDatabase()">儲存至資料庫</button>
+      </div>
+    </div>
+
+    <div class="sheet-title-banner" id="sheetTitleBanner">115年10月老庄社區關懷據點課程活動表</div>
+
+    <div class="table-wrap">
+      <table class="act-table">
+        <thead>
+          <tr>
+            <th style="width:13%;">時間</th>
+            <th style="width:17.4%;">週一</th>
+            <th style="width:17.4%;">週二</th>
+            <th style="width:17.4%;">週三</th>
+            <th style="width:17.4%;">週四</th>
+            <th style="width:17.4%;">週五</th>
+          </tr>
+        </thead>
+        <tbody id="activityTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
+  let currentYear = 115;
+  let currentMonth = 10;
+  let sheetRows = [];
+
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('dbStatus');
+    if (!el) return;
+    el.style.color = isErr ? '#dc2626' : '#0f766e';
+    el.textContent = msg;
+  }
+
+  function escapeAttr(s) {
+    return String(s || '').replace(/"/g, '&quot;');
+  }
+
+  function autoResizeAll() {
+    document.querySelectorAll('textarea.cell-ta').forEach(ta => {
+      ta.style.height = 'auto';
+      ta.style.height = Math.max(24, ta.scrollHeight) + 'px';
+    });
+  }
+
+  function createDefaultRows() {
+    return [
+      {
+        id: 'r_0800',
+        time_label: '08:00~09:30',
+        merged_text: '課程預備、長輩量血壓、額溫',
+        cols: { mon: '', tue: '', wed: '', thu: '', fri: '' }
+      },
+      {
+        id: 'r_0930_a',
+        time_label: '09:30~11:30',
+        merged_text: '',
+        cols: {
+          mon: '肌力訓練',
+          tue: '環境教育',
+          wed: '手作 DIY',
+          thu: '舞蹈運動',
+          fri: '繪畫勞作'
+        }
+      },
+      {
+        id: 'r_0930_b',
+        time_label: '',
+        merged_text: '',
+        cols: {
+          mon: '音樂趣味肌力訓練',
+          tue: '環境教育',
+          wed: '活躍老化',
+          thu: '運動有夠讚',
+          fri: '手作課程'
+        }
+      },
+      {
+        id: 'r_0930_c',
+        time_label: '',
+        merged_text: '',
+        cols: {
+          mon: '林熙鈴講師',
+          tue: '張國堂講師',
+          wed: '鄧美續講師',
+          thu: '蔡牡連講師',
+          fri: '黃仲慧講師'
+        }
+      },
+      {
+        id: 'r_0930_d',
+        time_label: '',
+        merged_text: '',
+        cols: {
+          mon: '08:30-10:30',
+          tue: '9:30-11:30',
+          wed: '9:30-11:30',
+          thu: '9:30-10:30',
+          fri: '9:00-10:00'
+        }
+      },
+      {
+        id: 'r_1130',
+        time_label: '11:30~13:00',
+        merged_text: '環境整理、午餐',
+        cols: { mon: '', tue: '', wed: '', thu: '', fri: '' }
+      },
+      {
+        id: 'r_1300',
+        time_label: '13:00~14:00',
+        merged_text: '午睡小憩、休息時間',
+        cols: { mon: '', tue: '', wed: '', thu: '', fri: '' }
+      },
+      {
+        id: 'r_1400_a',
+        time_label: '14:00~16:00',
+        merged_text: '',
+        cols: {
+          mon: '健康促進',
+          tue: '健康促進',
+          wed: '健康促進',
+          thu: '健康促進',
+          fri: '健康促進'
+        }
+      },
+      {
+        id: 'r_1400_b',
+        time_label: '',
+        merged_text: '',
+        cols: {
+          mon: '桌遊',
+          tue: '桌遊',
+          wed: '桌遊',
+          thu: '桌遊',
+          fri: '桌遊'
+        }
+      },
+      {
+        id: 'r_1610',
+        time_label: '16:10~17:00',
+        merged_text: '休息、茶點時間',
+        cols: { mon: '', tue: '', wed: '', thu: '', fri: '' }
+      }
+    ];
+  }
+
+  function updateBannerTitle() {
+    const titleStr = `${currentYear}年${currentMonth}月老庄社區關懷據點課程活動表`;
+    const banner = document.getElementById('sheetTitleBanner');
+    if (banner) banner.textContent = titleStr;
+    document.title = `${titleStr} - 老庄社區照顧關懷據點`;
+  }
+
+  async function loadFromDatabase() {
+    currentYear = parseInt(document.getElementById('yearSelect').value, 10) || 115;
+    currentMonth = parseInt(document.getElementById('monthSelect').value, 10) || 10;
+    updateBannerTitle();
+    setStatus('正在從資料庫讀取課程活動表...');
+
+    if (!supabaseClient) {
+      sheetRows = createDefaultRows();
+      renderTable();
+      setStatus('尚未連線至 Supabase 資料庫，請確認 config.js 設定', true);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('course_activity_sheets')
+        .select('*')
+        .eq('roc_year', currentYear)
+        .eq('month', currentMonth)
+        .maybeSingle();
+
+      if (error) {
+        sheetRows = createDefaultRows();
+        renderTable();
+        setStatus('讀取資料庫失敗：' + error.message, true);
+        return;
+      }
+
+      if (data && Array.isArray(data.rows_data) && data.rows_data.length > 0) {
+        sheetRows = data.rows_data;
+        setStatus(`已載入 ${currentYear}年${currentMonth}月 課程活動表`);
+      } else {
+        sheetRows = createDefaultRows();
+        setStatus(`${currentYear}年${currentMonth}月 尚未存檔，已載入預設版面`);
+      }
+      renderTable();
+    } catch (e) {
+      sheetRows = createDefaultRows();
+      renderTable();
+      setStatus('讀取發生錯誤：' + e.message, true);
+    }
+  }
+
+  async function onYearMonthChange() {
+    await loadFromDatabase();
+  }
+
+  function addActivityRow() {
+    sheetRows.push({
+      id: 'r_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      time_label: '',
+      merged_text: '',
+      cols: { mon: '', tue: '', wed: '', thu: '', fri: '' }
+    });
+    renderTable();
+  }
+
+  function resetDefaultTemplate() {
+    if (!confirm(`確定要將 ${currentYear}年${currentMonth}月 恢復為預設課表版面嗎？`)) return;
+    sheetRows = createDefaultRows();
+    renderTable();
+    setStatus('已恢復預設課表版面，請按「儲存至資料庫」寫入雲端');
+  }
+
+  function onTimeChange(rowId, val) {
+    const r = sheetRows.find(x => x.id === rowId);
+    if (r) r.time_label = val;
+  }
+
+  function onMergedTextChange(rowId, val) {
+    const r = sheetRows.find(x => x.id === rowId);
+    if (r) r.merged_text = val;
+  }
+
+  function onColTextChange(rowId, colKey, val) {
+    const r = sheetRows.find(x => x.id === rowId);
+    if (r) {
+      if (!r.cols) r.cols = { mon: '', tue: '', wed: '', thu: '', fri: '' };
+      r.cols[colKey] = val;
+    }
+  }
+
+  async function saveToDatabase() {
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+    setStatus('正在儲存課程活動表至資料庫...');
+    try {
+      const { error } = await supabaseClient
+        .from('course_activity_sheets')
+        .upsert({
+          roc_year: currentYear,
+          month: currentMonth,
+          rows_data: sheetRows,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'roc_year,month' });
+
+      if (error) {
+        setStatus('儲存失敗：' + error.message, true);
+        alert('儲存至資料庫失敗：' + error.message);
+        return;
+      }
+      setStatus(`已將 ${currentYear}年${currentMonth}月 課程活動表儲存至資料庫`);
+      alert(`已將 ${currentYear}年${currentMonth}月 課程活動表儲存至資料庫！`);
+    } catch (e) {
+      setStatus('儲存發生錯誤：' + e.message, true);
+      alert('儲存發生錯誤：' + e.message);
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('activityTableBody');
+    if (!tbody) return;
+
+    const timeRowspanMap = new Map();
+    for (let i = 0; i < sheetRows.length; i++) {
+      const t = String(sheetRows[i].time_label || '').trim();
+      if (!t) continue;
+      let span = 1;
+      for (let j = i + 1; j < sheetRows.length; j++) {
+        const nextT = String(sheetRows[j].time_label || '').trim();
+        if (!nextT) span++;
+        else break;
+      }
+      timeRowspanMap.set(i, { text: t, span });
+    }
+
+    const skipTimeIndices = new Set();
+    timeRowspanMap.forEach((info, startIdx) => {
+      for (let k = 1; k < info.span; k++) skipTimeIndices.add(startIdx + k);
+    });
+
+    const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri'];
+
+    tbody.innerHTML = sheetRows.map((r, idx) => {
+      let timeTdHtml = '';
+      if (!skipTimeIndices.has(idx)) {
+        const info = timeRowspanMap.get(idx);
+        const rowspanAttr = (info && info.span > 1) ? ` rowspan="${info.span}"` : '';
+        timeTdHtml = `
+          <td class="time-col"${rowspanAttr}>
+            <input type="text" class="time-inp" value="${escapeAttr(r.time_label || '')}" placeholder="時段" oninput="onTimeChange('${r.id}', this.value)">
+          </td>
+        `;
+      }
+
+      const hasMerged = String(r.merged_text || '').trim() !== '';
+      const allColsEmpty = dayKeys.every(k => !String((r.cols && r.cols[k]) || '').trim());
+
+      if (hasMerged || allColsEmpty) {
+        return `
+          <tr>
+            ${timeTdHtml}
+            <td colspan="5" class="merged-row-cell">
+              <textarea rows="1" class="cell-ta" placeholder="輸入全天／跨欄活動說明（如：課程預備、長輩量血壓、額溫）" oninput="autoResizeAll(); onMergedTextChange('${r.id}', this.value)">${escapeAttr(r.merged_text || '')}</textarea>
+            </td>
+          </tr>
+        `;
+      }
+
+      const colsHtml = dayKeys.map(k => {
+        const val = (r.cols && r.cols[k]) || '';
+        return `
+          <td>
+            <textarea rows="1" class="cell-ta" oninput="autoResizeAll(); onColTextChange('${r.id}', '${k}', this.value)">${escapeAttr(val)}</textarea>
+          </td>
+        `;
+      }).join('');
+
+      return `
+        <tr>
+          ${timeTdHtml}
+          ${colsHtml}
+        </tr>
+      `;
+    }).join('');
+
+    autoResizeAll();
+  }
+
+  (async function init() {
+    const now = new Date();
+    const rocNow = now.getFullYear() - 1911;
+    const mNow = now.getMonth() + 1;
+    const ySel = document.getElementById('yearSelect');
+    const mSel = document.getElementById('monthSelect');
+    if (ySel && [...ySel.options].some(o => Number(o.value) === rocNow)) ySel.value = String(rocNow);
+    if (mSel) mSel.value = String(mNow);
+    await loadFromDatabase();
+  })();
+</script>
+
+</body>
+</html>
