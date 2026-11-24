@@ -632,64 +632,85 @@
     setStatus('已刪除並同步更新資料庫');
   }
 
+  let isSavingToDb = false;
+  let pendingSaveAfterLock = false;
+
   async function saveToDatabase(silent = false) {
     if (!supabaseClient) {
       if (!silent) alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
       return;
     }
 
-    const nonEmptyRows = records.filter(r =>
-      String(r.doc_number || '').trim() !== '' ||
-      String(r.issue_date || '').trim() !== '' ||
-      String(r.used_document || '').trim() !== '' ||
-      String(r.remark || '').trim() !== ''
-    );
+    if (isSavingToDb) {
+      pendingSaveAfterLock = true;
+      return;
+    }
 
-    setStatus('正在儲存至資料庫...');
+    isSavingToDb = true;
+    setStatus('正在同步至雲端資料庫...');
 
     try {
-      const { error: delErr } = await supabaseClient
-        .from('official_document_numbers')
-        .delete()
-        .eq('roc_year', currentYear);
+      const nonEmptyRows = records.filter(r =>
+        String(r.doc_number || '').trim() !== '' ||
+        String(r.issue_date || '').trim() !== '' ||
+        String(r.used_document || '').trim() !== '' ||
+        String(r.remark || '').trim() !== ''
+      );
 
-      if (delErr) {
-        setStatus('儲存失敗：' + delErr.message, true);
-        if (!silent) alert('儲存至資料庫失敗：' + delErr.message);
-        return;
+      // 先寫入最新資料，再刪除多餘或已清空的舊列，避免中途失敗時把資料清空
+      const validIds = [];
+      for (let idx = 0; idx < nonEmptyRows.length; idx++) {
+        const r = nonEmptyRows[idx];
+        const numPart = String(r.doc_number || '').trim();
+        const storedDocNum = numPart ? `${fixedPrefix}${numPart}` : '';
+        const rowPayload = {
+          roc_year: currentYear,
+          seq_no: Number(r.seq_no) || (idx + 1),
+          doc_number: storedDocNum,
+          issue_date: String(r.issue_date || '').trim() || null,
+          used_document: String(r.used_document || '').trim(),
+          remark: String(r.remark || '').trim(),
+          updated_at: new Date().toISOString()
+        };
+
+        if (r.db_id) {
+          const { error: updErr } = await supabaseClient
+            .from('official_document_numbers')
+            .update(rowPayload)
+            .eq('id', r.db_id);
+          if (updErr) throw updErr;
+          validIds.push(r.db_id);
+        } else {
+          const { data: insData, error: insErr } = await supabaseClient
+            .from('official_document_numbers')
+            .insert(rowPayload)
+            .select()
+            .single();
+          if (insErr) throw insErr;
+          if (insData && insData.id) {
+            r.db_id = insData.id;
+            validIds.push(insData.id);
+          }
+        }
       }
 
-      if (nonEmptyRows.length > 0) {
-        const payload = nonEmptyRows.map((r, idx) => {
-          const numPart = String(r.doc_number || '').trim();
-          const storedDocNum = numPart ? `${fixedPrefix}${numPart}` : '';
-          return {
-            roc_year: currentYear,
-            seq_no: Number(r.seq_no) || (idx + 1),
-            doc_number: storedDocNum,
-            issue_date: String(r.issue_date || '').trim() || null,
-            used_document: String(r.used_document || '').trim(),
-            remark: String(r.remark || '').trim(),
-            updated_at: new Date().toISOString()
-          };
-        });
+      // 清理該年度中已不在目前非空清單的舊資料列
+      const { data: existingRows, error: selErr } = await supabaseClient
+        .from('official_document_numbers')
+        .select('id')
+        .eq('roc_year', currentYear);
+      if (selErr) throw selErr;
 
-        const { data: insertedRows, error: insErr } = await supabaseClient
+      const idsToDelete = (existingRows || [])
+        .map(x => x.id)
+        .filter(id => !validIds.includes(id));
+
+      if (idsToDelete.length > 0) {
+        const { error: delErr } = await supabaseClient
           .from('official_document_numbers')
-          .insert(payload)
-          .select();
-
-        if (insErr) {
-          setStatus('儲存失敗：' + insErr.message, true);
-          if (!silent) alert('儲存至資料庫失敗：' + insErr.message);
-          return;
-        }
-
-        if (Array.isArray(insertedRows) && insertedRows.length === nonEmptyRows.length) {
-          nonEmptyRows.forEach((r, idx) => {
-            r.db_id = insertedRows[idx].id;
-          });
-        }
+          .delete()
+          .in('id', idsToDelete);
+        if (delErr) throw delErr;
       }
 
       const now = new Date();
@@ -697,8 +718,14 @@
       setStatus(`已即時存入資料庫（${currentYear} 年度 ${nonEmptyRows.length} 筆，${timeStr}）`);
       if (!silent) alert(`已將 ${currentYear} 年度公文號記錄儲存至資料庫！`);
     } catch (e) {
-      setStatus('儲存發生錯誤：' + e.message, true);
-      if (!silent) alert('儲存發生錯誤：' + e.message);
+      setStatus('儲存發生錯誤：' + (e.message || e), true);
+      if (!silent) alert('儲存發生錯誤：' + (e.message || e));
+    } finally {
+      isSavingToDb = false;
+      if (pendingSaveAfterLock) {
+        pendingSaveAfterLock = false;
+        saveToDatabase(true);
+      }
     }
   }
 
