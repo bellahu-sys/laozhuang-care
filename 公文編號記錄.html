@@ -266,7 +266,6 @@
         <button type="button" class="btn btn-amber" onclick="addRow()">＋ 新增一列</button>
         <input type="text" id="serialRangeInput" placeholder="連號如：115065-69" onkeydown="if(event.key==='Enter'){event.preventDefault();addSerialRangeRows();}" style="width:142px; font-weight:bold;">
         <button type="button" class="btn btn-blue" onclick="addSerialRangeRows()">＋ 新增連號</button>
-        <button type="button" class="btn btn-primary" onclick="saveToDatabase()">儲存至資料庫</button>
       </div>
     </div>
 
@@ -629,7 +628,8 @@
       records = [createEmptyRow(1)];
     }
     renderTable();
-    setStatus('已刪除該筆公文號記錄');
+    await saveToDatabase(true);
+    setStatus('已刪除並同步更新資料庫');
   }
 
   async function saveToDatabase(silent = false) {
@@ -674,19 +674,27 @@
           };
         });
 
-        const { error: insErr } = await supabaseClient
+        const { data: insertedRows, error: insErr } = await supabaseClient
           .from('official_document_numbers')
-          .insert(payload);
+          .insert(payload)
+          .select();
 
         if (insErr) {
           setStatus('儲存失敗：' + insErr.message, true);
           if (!silent) alert('儲存至資料庫失敗：' + insErr.message);
           return;
         }
+
+        if (Array.isArray(insertedRows) && insertedRows.length === nonEmptyRows.length) {
+          nonEmptyRows.forEach((r, idx) => {
+            r.db_id = insertedRows[idx].id;
+          });
+        }
       }
 
-      await loadFromDatabase();
-      setStatus(`已將 ${currentYear} 年度公文號記錄儲存至資料庫（共 ${nonEmptyRows.length} 筆）`);
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      setStatus(`已即時存入資料庫（${currentYear} 年度 ${nonEmptyRows.length} 筆，${timeStr}）`);
       if (!silent) alert(`已將 ${currentYear} 年度公文號記錄儲存至資料庫！`);
     } catch (e) {
       setStatus('儲存發生錯誤：' + e.message, true);
@@ -727,23 +735,23 @@
     tbody.innerHTML = filtered.map(r => `
       <tr>
         <td class="center-col">
-          <input type="text" value="${escapeAttr(r.seq_no)}" oninput="onFieldChange('${r.id}', 'seq_no', this.value)" style="width:100%; text-align:center; font-weight:bold;">
+          <input type="text" value="${escapeAttr(r.seq_no)}" oninput="onFieldChange('${r.id}', 'seq_no', this.value)" onblur="saveToDatabase(true)" style="width:100%; text-align:center; font-weight:bold;">
         </td>
         <td>
           <div class="doc-num-cell">
             <span class="doc-prefix-fixed">${escapeAttr(fixedPrefix)}</span>
-            <input type="text" value="${escapeAttr(r.doc_number)}" placeholder="如：115060" oninput="onFieldChange('${r.id}', 'doc_number', this.value)" style="flex:1; min-width:95px; font-weight:bold;">
+            <input type="text" value="${escapeAttr(r.doc_number)}" placeholder="如：115060" oninput="onFieldChange('${r.id}', 'doc_number', this.value)" onblur="saveToDatabase(true)" style="flex:1; min-width:95px; font-weight:bold;">
             <button type="button" class="btn btn-blue btn-sm no-print" onclick="copyFullDocNumber(this.closest('tr').querySelector('input[placeholder]').value)">複製</button>
           </div>
         </td>
         <td>
-          <input type="text" value="${escapeAttr(r.issue_date)}" placeholder="" onchange="onFieldChange('${r.id}', 'issue_date', this.value)" oninput="onFieldChange('${r.id}', 'issue_date', this.value)" style="width:100%;">
+          <input type="text" value="${escapeAttr(r.issue_date)}" placeholder="例如：115/11/24" onblur="saveToDatabase(true)" onchange="onFieldChange('${r.id}', 'issue_date', this.value)" oninput="onFieldChange('${r.id}', 'issue_date', this.value)" style="width:100%;">
         </td>
         <td>
-          <input type="text" value="${escapeAttr(r.used_document)}" placeholder="輸入使用此公文號的文件名稱" oninput="onFieldChange('${r.id}', 'used_document', this.value)" style="width:100%;">
+          <input type="text" value="${escapeAttr(r.used_document)}" placeholder="輸入使用此公文號的文件名稱" oninput="onFieldChange('${r.id}', 'used_document', this.value)" onblur="saveToDatabase(true)" style="width:100%;">
         </td>
         <td>
-          <input type="text" value="${escapeAttr(r.remark)}" placeholder="備註說明" oninput="onFieldChange('${r.id}', 'remark', this.value)" style="width:100%;">
+          <input type="text" value="${escapeAttr(r.remark)}" placeholder="備註說明" oninput="onFieldChange('${r.id}', 'remark', this.value)" onblur="saveToDatabase(true)" style="width:100%;">
         </td>
         <td class="center-col no-print">
           <button type="button" class="btn btn-danger btn-sm" onclick="deleteRow('${r.id}')">刪除</button>
@@ -752,11 +760,20 @@
     `).join('');
   }
 
-  window.addEventListener('beforeunload', () => {
-    if (autoSaveTimer && supabaseClient) {
+  function flushPendingSave() {
+    if (autoSaveTimer) {
       clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+    if (supabaseClient) {
       saveToDatabase(true);
     }
+  }
+
+  window.addEventListener('beforeunload', flushPendingSave);
+  window.addEventListener('pagehide', flushPendingSave);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) flushPendingSave();
   });
 
   (async function init() {
