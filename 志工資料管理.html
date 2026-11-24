@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>志工資料管理 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root { --primary: #0f766e; --primary-dark: #115e59; --bg: #eef2f6; --border: #cbd5e1; --text: #1e293b; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: #2c5e4f; color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 260px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container {
+      max-width: 1280px; margin: 22px auto 40px auto; background: #fff;
+      padding: 24px; border-radius: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+      border: 1px solid var(--border); border-left: 6px solid var(--primary);
+    }
+    .header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--primary);
+      padding-bottom: 12px; margin-bottom: 18px;
+    }
+    h1 { color: var(--primary-dark); font-size: 1.35rem; margin: 0; }
+    .db-status {
+      font-size: 0.88rem; font-weight: bold; padding: 6px 12px;
+      border-radius: 999px; background: #f0fdfa; color: var(--primary-dark);
+      border: 1px solid #99f6e4;
+    }
+    .db-status.error { background: #fff1f2; color: #9f1239; border-color: #fecdd3; }
+
+    .sub-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+      border-bottom: 1px solid #cbd5e1; padding-bottom: 10px;
+    }
+    .sub-tab-btn {
+      padding: 8px 16px; border-radius: 7px; border: 1px solid #cbd5e1;
+      background: #fff; color: #334155; font-weight: bold; cursor: pointer; font-size: 0.94rem;
+    }
+    .sub-tab-btn.active {
+      background: var(--primary); color: #fff; border-color: var(--primary);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .toolbar {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 14px; background: #f8fafc; padding: 12px;
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+    input[type="text"], input[type="number"], select {
+      padding: 7px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 0.92rem;
+    }
+    button.btn {
+      padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-del { background: #dc2626; color: #fff; padding: 4px 10px; font-size: 0.84rem; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-save-row { background: #0f766e; color: #fff; padding: 4px 10px; font-size: 0.84rem; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; }
+
+    .summary-strip {
+      display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;
+      font-size: 0.9rem; color: #334155; font-weight: bold;
+    }
+    .summary-pill {
+      background: #f0fdfa; border: 1px solid #99f6e4; color: #115e59;
+      padding: 4px 12px; border-radius: 6px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table.data-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    table.data-table th, table.data-table td {
+      border: 1px solid var(--border); padding: 7px 8px; font-size: 0.88rem; vertical-align: middle;
+    }
+    table.data-table th { background: #e6f4f1; color: #115e59; text-align: center; white-space: nowrap; }
+    table.data-table td input, table.data-table td select {
+      width: 100%; padding: 5px 6px; font-size: 0.87rem; border: 1px solid #cbd5e1; border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">人事資料管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="志工資料管理.html">志工資料管理</a>
+        <div class="dropdown-divider">人事記錄</div>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="每日工作檢核表.html">每日工作檢核表</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="食材費收據管理.html">食材費計算</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <h1>志工資料管理（Excel 匯入直接寫入資料庫）</h1>
+    <div id="dbStatus" class="db-status">連線資料庫中...</div>
+  </div>
+
+  <div class="toolbar">
+    <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleDirectExcelImport(event)">
+    <button type="button" class="btn btn-amber" onclick="document.getElementById('excelFileInput').click()">
+      📥 匯入志工 Excel（直接存入資料庫，不暫存）
+    </button>
+    <button type="button" class="btn btn-blue" onclick="exportVolunteersExcel()">
+      📤 匯出志工與證書 Excel
+    </button>
+    <button type="button" class="btn btn-primary" onclick="loadAllFromDb()">
+      🔄 從資料庫重新讀取
+    </button>
+  </div>
+
+  <div class="sub-tabs" role="tablist">
+    <button type="button" class="sub-tab-btn active" onclick="switchSubTab('roster', this)">志工基本名冊</button>
+    <button type="button" class="sub-tab-btn" onclick="switchSubTab('certs', this)">基礎與特殊訓練證書記錄</button>
+  </div>
+
+  <!-- 分頁 1：志工基本名冊 -->
+  <div id="panel-roster" class="tab-panel active">
+    <div class="toolbar">
+      <input type="text" id="searchVolunteer" placeholder="搜尋姓名、身分證、出生日期或備註..." oninput="renderVolunteers()" style="flex:1; min-width:220px;">
+      <button type="button" class="btn btn-primary" onclick="addVolunteerRow()">＋ 新增志工（直接存檔）</button>
+    </div>
+    <div class="summary-strip">
+      <span class="summary-pill" id="volCountPill">志工總數：0 人</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:65px;">序號</th>
+            <th style="width:110px;">姓名</th>
+            <th style="width:75px;">性別</th>
+            <th style="width:130px;">身分證字號</th>
+            <th style="width:115px;">出生日期</th>
+            <th style="width:120px;">紀錄冊號</th>
+            <th style="width:105px;">服務狀態</th>
+            <th>備註</th>
+            <th style="width:120px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="volunteerTbody">
+          <tr><td colspan="9" style="text-align:center; padding:20px;">讀取資料庫中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 分頁 2：證書資訊 -->
+  <div id="panel-certs" class="tab-panel">
+    <div class="toolbar">
+      <input type="text" id="searchCert" placeholder="搜尋姓名、課程名稱、訓練單位或核定字號..." oninput="renderCerts()" style="flex:1; min-width:220px;">
+      <button type="button" class="btn btn-primary" onclick="addCertRow()">＋ 新增證書記錄（直接存檔）</button>
+    </div>
+    <div class="summary-strip">
+      <span class="summary-pill" id="certCountPill">證書紀錄：0 筆</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width:60px;">序號</th>
+            <th style="width:95px;">姓名</th>
+            <th style="width:95px;">證書上傳</th>
+            <th style="width:190px;">課程名稱</th>
+            <th style="width:180px;">訓練單位</th>
+            <th style="width:105px;">訓練起日</th>
+            <th style="width:105px;">訓練訖日</th>
+            <th style="width:75px;">領域</th>
+            <th style="width:70px;">時數</th>
+            <th style="width:105px;">核定日期</th>
+            <th style="width:170px;">核定字號</th>
+            <th style="width:120px;">備註</th>
+            <th style="width:120px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="certTbody">
+          <tr><td colspan="13" style="text-align:center; padding:20px;">讀取資料庫中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const supabaseClient = (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined')
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  let volunteersData = [];
+  let certsData = [];
+
+  function setDbStatus(msg, isError = false) {
+    const el = document.getElementById('dbStatus');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = isError ? 'db-status error' : 'db-status';
+  }
+
+  function switchSubTab(tabKey, btnEl) {
+    document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    const panel = document.getElementById('panel-' + tabKey);
+    if (panel) panel.classList.add('active');
+  }
+
+  function escapeAttr(val) {
+    return String(val ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  async function loadAllFromDb() {
+    if (!supabaseClient) {
+      setDbStatus('未設定 Supabase 連線', true);
+      return;
+    }
+    setDbStatus('正在從資料庫讀取志工資料...');
+    try {
+      const [volRes, certRes] = await Promise.all([
+        supabaseClient.from('volunteers').select('*').order('seq_no', { ascending: true }).order('id', { ascending: true }),
+        supabaseClient.from('volunteer_certificates').select('*').order('seq_no', { ascending: true }).order('id', { ascending: true })
+      ]);
+
+      if (volRes.error) throw volRes.error;
+      if (certRes.error) throw certRes.error;
+
+      volunteersData = volRes.data || [];
+      certsData = certRes.data || [];
+
+      renderVolunteers();
+      renderCerts();
+      setDbStatus(`已連線資料庫（志工 ${volunteersData.length} 人／證書 ${certsData.length} 筆）`);
+    } catch (e) {
+      setDbStatus('資料庫讀取失敗：' + (e.message || e), true);
+      document.getElementById('volunteerTbody').innerHTML = `<tr><td colspan="9" style="text-align:center;color:#9f1239;padding:18px;">請先至 Supabase 執行「建立並匯入志工資料.sql」建立 volunteers 與 volunteer_certificates 資料表（${escapeAttr(e.message || e)}）</td></tr>`;
+      document.getElementById('certTbody').innerHTML = `<tr><td colspan="13" style="text-align:center;color:#9f1239;padding:18px;">尚未建立 volunteer_certificates 資料表</td></tr>`;
+    }
+  }
+
+  function renderVolunteers() {
+    const kw = (document.getElementById('searchVolunteer')?.value || '').trim().toLowerCase();
+    const list = volunteersData.filter(v => {
+      if (!kw) return true;
+      return [v.name, v.id_number, v.birth_date, v.record_book_no, v.remark].some(x => String(x || '').toLowerCase().includes(kw));
+    });
+
+    document.getElementById('volCountPill').textContent = `志工總數：${list.length} 人（資料庫共 ${volunteersData.length} 人）`;
+    const tbody = document.getElementById('volunteerTbody');
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:18px; color:#64748b;">目前資料庫無志工資料</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map((v, idx) => `
+      <tr data-id="${v.id}">
+        <td><input type="number" class="v-seq" value="${v.seq_no ?? (idx + 1)}" style="text-align:center;"></td>
+        <td><input type="text" class="v-name" value="${escapeAttr(v.name)}"></td>
+        <td>
+          <select class="v-gender">
+            <option value="" ${!v.gender ? 'selected' : ''}></option>
+            <option value="男" ${v.gender === '男' ? 'selected' : ''}>男</option>
+            <option value="女" ${v.gender === '女' ? 'selected' : ''}>女</option>
+          </select>
+        </td>
+        <td><input type="text" class="v-id" value="${escapeAttr(v.id_number)}"></td>
+        <td><input type="text" class="v-birth" value="${escapeAttr(v.birth_date)}"></td>
+        <td><input type="text" class="v-book" value="${escapeAttr(v.record_book_no)}"></td>
+        <td>
+          <select class="v-status">
+            <option value="服務中" ${v.status === '服務中' ? 'selected' : ''}>服務中</option>
+            <option value="暫停" ${v.status === '暫停' ? 'selected' : ''}>暫停</option>
+            <option value="已退出" ${v.status === '已退出' ? 'selected' : ''}>已退出</option>
+          </select>
+        </td>
+        <td><input type="text" class="v-remark" value="${escapeAttr(v.remark)}"></td>
+        <td style="text-align:center; white-space:nowrap;">
+          <button type="button" class="btn-save-row" onclick="saveVolunteerRow(${v.id}, this)">存檔</button>
+          <button type="button" class="btn-del" onclick="deleteVolunteerRow(${v.id})">刪除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderCerts() {
+    const kw = (document.getElementById('searchCert')?.value || '').trim().toLowerCase();
+    const list = certsData.filter(c => {
+      if (!kw) return true;
+      return [c.volunteer_name, c.course_name, c.training_org, c.domain, c.approval_no, c.remark].some(x => String(x || '').toLowerCase().includes(kw));
+    });
+
+    document.getElementById('certCountPill').textContent = `證書紀錄：${list.length} 筆（資料庫共 ${certsData.length} 筆）`;
+    const tbody = document.getElementById('certTbody');
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:18px; color:#64748b;">目前資料庫無證書紀錄</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map((c, idx) => `
+      <tr data-id="${c.id}">
+        <td><input type="number" class="c-seq" value="${c.seq_no ?? (idx + 1)}" style="text-align:center;"></td>
+        <td><input type="text" class="c-name" value="${escapeAttr(c.volunteer_name)}"></td>
+        <td><input type="text" class="c-up" value="${escapeAttr(c.cert_uploaded)}"></td>
+        <td><input type="text" class="c-course" value="${escapeAttr(c.course_name)}"></td>
+        <td><input type="text" class="c-org" value="${escapeAttr(c.training_org)}"></td>
+        <td><input type="text" class="c-start" value="${escapeAttr(c.start_date)}"></td>
+        <td><input type="text" class="c-end" value="${escapeAttr(c.end_date)}"></td>
+        <td><input type="text" class="c-domain" value="${escapeAttr(c.domain)}"></td>
+        <td><input type="number" step="0.5" class="c-hours" value="${c.hours ?? ''}"></td>
+        <td><input type="text" class="c-appdate" value="${escapeAttr(c.approval_date)}"></td>
+        <td><input type="text" class="c-appno" value="${escapeAttr(c.approval_no)}"></td>
+        <td><input type="text" class="c-remark" value="${escapeAttr(c.remark)}"></td>
+        <td style="text-align:center; white-space:nowrap;">
+          <button type="button" class="btn-save-row" onclick="saveCertRow(${c.id}, this)">存檔</button>
+          <button type="button" class="btn-del" onclick="deleteCertRow(${c.id})">刪除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function addVolunteerRow() {
+    if (!supabaseClient) return;
+    const nextSeq = volunteersData.reduce((m, r) => Math.max(m, Number(r.seq_no) || 0), 0) + 1;
+    setDbStatus('正在新增志工至資料庫...');
+    const { error } = await supabaseClient.from('volunteers').insert({
+      seq_no: nextSeq,
+      name: '新志工',
+      gender: '',
+      id_number: '',
+      birth_date: '',
+      status: '服務中',
+      remark: ''
+    });
+    if (error) {
+      setDbStatus('新增失敗：' + error.message, true);
+      alert('新增失敗：' + error.message);
+      return;
+    }
+    await loadAllFromDb();
+  }
+
+  async function saveVolunteerRow(id, btnEl) {
+    if (!supabaseClient) return;
+    const tr = btnEl.closest('tr');
+    const payload = {
+      seq_no: parseInt(tr.querySelector('.v-seq').value, 10) || null,
+      name: tr.querySelector('.v-name').value.trim(),
+      gender: tr.querySelector('.v-gender').value.trim(),
+      id_number: tr.querySelector('.v-id').value.trim(),
+      birth_date: tr.querySelector('.v-birth').value.trim(),
+      record_book_no: tr.querySelector('.v-book').value.trim(),
+      status: tr.querySelector('.v-status').value.trim() || '服務中',
+      remark: tr.querySelector('.v-remark').value.trim(),
+      updated_at: new Date().toISOString()
+    };
+    setDbStatus('正在更新志工資料至資料庫...');
+    const { error } = await supabaseClient.from('volunteers').update(payload).eq('id', id);
+    if (error) {
+      setDbStatus('更新失敗：' + error.message, true);
+      alert('更新失敗：' + error.message);
+      return;
+    }
+    await loadAllFromDb();
+    setDbStatus(`已更新志工「${payload.name}」並存入資料庫`);
+  }
+
+  async function deleteVolunteerRow(id) {
+    if (!supabaseClient) return;
+    if (!confirm('確定要從資料庫刪除此筆志工資料嗎？')) return;
+    const { error } = await supabaseClient.from('volunteers').delete().eq('id', id);
+    if (error) {
+      alert('刪除失敗：' + error.message);
+      return;
+    }
+    await loadAllFromDb();
+  }
+
+  async function addCertRow() {
+    if (!supabaseClient) return;
+    const nextSeq = certsData.reduce((m, r) => Math.max(m, Number(r.seq_no) || 0), 0) + 1;
+    setDbStatus('正在新增證書紀錄至資料庫...');
+    const { error } = await supabaseClient.from('volunteer_certificates').insert({
+      seq_no: nextSeq,
+      volunteer_name: '',
+      cert_uploaded: '完成',
+      course_name: '',
+      training_org: '',
+      domain: '社福',
+      hours: 6
+    });
+    if (error) {
+      setDbStatus('新增失敗：' + error.message, true);
+      alert('新增失敗：' + error.message);
+      return;
+    }
+    await loadAllFromDb();
+  }
+
+  async function saveCertRow(id, btnEl) {
+    if (!supabaseClient) return;
+    const tr = btnEl.closest('tr');
+    const hrsRaw = tr.querySelector('.c-hours').value.trim();
+    const payload = {
+      seq_no: parseInt(tr.querySelector('.c-seq').value, 10) || null,
+      volunteer_name: tr.querySelector('.c-name').value.trim(),
+      cert_uploaded: tr.querySelector('.c-up').value.trim(),
+      course_name: tr.querySelector('.c-course').value.trim(),
+      training_org: tr.querySelector('.c-org').value.trim(),
+      start_date: tr.querySelector('.c-start').value.trim(),
+      end_date: tr.querySelector('.c-end').value.trim(),
+      domain: tr.querySelector('.c-domain').value.trim(),
+      hours: hrsRaw === '' ? null : Number(hrsRaw),
+      approval_date: tr.querySelector('.c-appdate').value.trim(),
+      approval_no: tr.querySelector('.c-appno').value.trim(),
+      remark: tr.querySelector('.c-remark').value.trim(),
+      updated_at: new Date().toISOString()
+    };
+    setDbStatus('正在更新證書紀錄至資料庫...');
+    const { error } = await supabaseClient.from('volunteer_certificates').update(payload).eq('id', id);
+    if (error) {
+      setDbStatus('更新失敗：' + error.message, true);
+      alert('更新失敗：' + error.message);
+      return;
+    }
+    await loadAllFromDb();
+    setDbStatus(`已更新「${payload.volunteer_name}」證書紀錄並存入資料庫`);
+  }
+
+  async function deleteCertRow(id) {
+    if (!supabaseClient) return;
+    if (!confirm('確定要從資料庫刪除此筆證書紀錄嗎？')) return;
+    const { error } = await supabaseClient.from('volunteer_certificates').delete().eq('id', id);
+    if (error) {
+      alert('刪除失敗：' + error.message);
+      return;
+    }
+    await loadAllFromDb();
+  }
+
+  // 直接解析上傳的 Excel 檔並寫入 Supabase 資料庫（不暫存）
+  async function handleDirectExcelImport(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+
+    setDbStatus(`正在解析「${file.name}」並直接寫入資料庫...`);
+
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+
+      const parsedCerts = [];
+      const parsedVolunteersMap = new Map();
+
+      wb.SheetNames.forEach(sheetName => {
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (!rows || rows.length === 0) return;
+
+        // 尋找標題列
+        let headerRowIdx = -1;
+        let headers = [];
+        for (let i = 0; i < Math.min(rows.length, 10); i++) {
+          const line = rows[i].map(x => String(x || '').trim());
+          if (line.includes('姓名') && (line.includes('課程名稱') || line.includes('身分證字號') || line.includes('出生日期'))) {
+            headerRowIdx = i;
+            headers = line;
+            break;
+          }
+        }
+        if (headerRowIdx === -1) return;
+
+        const colIdx = (name) => headers.indexOf(name);
+        const isCertSheet = headers.includes('課程名稱') || headers.includes('訓練單位');
+        const isRosterSheet = headers.includes('身分證字號') || headers.includes('出生日期');
+
+        for (let r = headerRowIdx + 1; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row || row.every(v => String(v || '').trim() === '')) continue;
+
+          const nameVal = colIdx('姓名') >= 0 ? String(row[colIdx('姓名')] || '').trim() : '';
+          if (!nameVal) continue;
+
+          if (isRosterSheet) {
+            const genderVal = colIdx('性別') >= 0 ? String(row[colIdx('性別')] || '').trim() : '';
+            const idVal = colIdx('身分證字號') >= 0 ? String(row[colIdx('身分證字號')] || '').trim() : '';
+            const birthVal = colIdx('出生日期') >= 0 ? String(row[colIdx('出生日期')] || '').trim() : '';
+            const remVal = colIdx('備註') >= 0 ? String(row[colIdx('備註')] || '').trim() : '';
+            if (!parsedVolunteersMap.has(nameVal)) {
+              parsedVolunteersMap.set(nameVal, {
+                name: nameVal,
+                gender: genderVal,
+                id_number: idVal,
+                birth_date: birthVal,
+                record_book_no: '',
+                status: '服務中',
+                remark: remVal
+              });
+            }
+          }
+
+          if (isCertSheet) {
+            if (!parsedVolunteersMap.has(nameVal)) {
+              parsedVolunteersMap.set(nameVal, {
+                name: nameVal,
+                gender: '',
+                id_number: '',
+                birth_date: '',
+                record_book_no: colIdx('平台紀錄冊號') >= 0 ? String(row[colIdx('平台紀錄冊號')] || '').trim() : '',
+                status: '服務中',
+                remark: ''
+              });
+            }
+            const hrsRaw = colIdx('時數') >= 0 ? String(row[colIdx('時數')] || '').trim() : '';
+            parsedCerts.push({
+              seq_no: parsedCerts.length + 1,
+              volunteer_name: nameVal,
+              record_book_no: colIdx('平台紀錄冊號') >= 0 ? String(row[colIdx('平台紀錄冊號')] || '').trim() : '',
+              cert_uploaded: colIdx('證書上傳') >= 0 ? String(row[colIdx('證書上傳')] || '').trim() : '',
+              course_name: colIdx('課程名稱') >= 0 ? String(row[colIdx('課程名稱')] || '').trim() : '',
+              training_org: colIdx('訓練單位') >= 0 ? String(row[colIdx('訓練單位')] || '').trim() : '',
+              training_course: colIdx('訓練課程') >= 0 ? String(row[colIdx('訓練課程')] || '').trim() : '',
+              start_date: colIdx('課程訓練日期-起') >= 0 ? String(row[colIdx('課程訓練日期-起')] || '').trim() : '',
+              end_date: colIdx('課程訓練日期-訖') >= 0 ? String(row[colIdx('課程訓練日期-訖')] || '').trim() : '',
+              domain: colIdx('課程領域') >= 0 ? String(row[colIdx('課程領域')] || '').trim() : '',
+              hours: hrsRaw === '' || Number.isNaN(Number(hrsRaw)) ? null : Number(hrsRaw),
+              approval_date: colIdx('核定日期') >= 0 ? String(row[colIdx('核定日期')] || '').trim() : '',
+              approval_no: colIdx('核定字號') >= 0 ? String(row[colIdx('核定字號')] || '').trim() : '',
+              remark: colIdx('備註') >= 0 ? String(row[colIdx('備註')] || '').trim() : ''
+            });
+          }
+        }
+      });
+
+      const finalVolunteers = Array.from(parsedVolunteersMap.values()).map((v, idx) => ({
+        seq_no: idx + 1,
+        ...v
+      }));
+
+      if (finalVolunteers.length === 0 && parsedCerts.length === 0) {
+        setDbStatus('未在 Excel 中偵測到可匯入的志工或證書資料', true);
+        alert('未在 Excel 中偵測到可匯入的志工或證書資料，請確認檔案格式。');
+        return;
+      }
+
+      // 直接寫入資料庫：先更新/插入，再清理不在最新匯入清單中的舊列
+      const volIds = [];
+      for (const v of finalVolunteers) {
+        const { data: existing } = await supabaseClient
+          .from('volunteers')
+          .select('id')
+          .eq('name', v.name)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          const { error: updErr } = await supabaseClient
+            .from('volunteers')
+            .update({ ...v, updated_at: new Date().toISOString() })
+            .eq('id', existing[0].id);
+          if (updErr) throw updErr;
+          volIds.push(existing[0].id);
+        } else {
+          const { data: insData, error: insErr } = await supabaseClient
+            .from('volunteers')
+            .insert({ ...v, updated_at: new Date().toISOString() })
+            .select()
+            .single();
+          if (insErr) throw insErr;
+          if (insData && insData.id) volIds.push(insData.id);
+        }
+      }
+
+      const { data: allVolRows } = await supabaseClient.from('volunteers').select('id');
+      const volDelIds = (allVolRows || []).map(x => x.id).filter(id => !volIds.includes(id));
+      if (volDelIds.length > 0) {
+        await supabaseClient.from('volunteers').delete().in('id', volDelIds);
+      }
+
+      if (parsedCerts.length > 0) {
+        const { error: delCertErr } = await supabaseClient.from('volunteer_certificates').delete().neq('id', 0);
+        if (delCertErr) throw delCertErr;
+        const { error: insCertErr } = await supabaseClient.from('volunteer_certificates').insert(parsedCerts);
+        if (insCertErr) throw insCertErr;
+      }
+
+      await loadAllFromDb();
+      setDbStatus(`已直接匯入資料庫（志工 ${finalVolunteers.length} 人／證書 ${parsedCerts.length} 筆）`);
+      alert(`已將「${file.name}」直接存入資料庫（志工 ${finalVolunteers.length} 人、證書 ${parsedCerts.length} 筆）！`);
+    } catch (e) {
+      setDbStatus('匯入資料庫失敗：' + (e.message || e), true);
+      alert('匯入資料庫失敗：' + (e.message || e));
+    }
+  }
+
+  function exportVolunteersExcel() {
+    const wb = XLSX.utils.book_new();
+    const volSheetData = volunteersData.map(v => ({
+      '序號': v.seq_no ?? '',
+      '姓名': v.name || '',
+      '性別': v.gender || '',
+      '身分證字號': v.id_number || '',
+      '出生日期': v.birth_date || '',
+      '紀錄冊號': v.record_book_no || '',
+      '服務狀態': v.status || '',
+      '備註': v.remark || ''
+    }));
+    const certSheetData = certsData.map(c => ({
+      '序號': c.seq_no ?? '',
+      '姓名': c.volunteer_name || '',
+      '平台紀錄冊號': c.record_book_no || '',
+      '證書上傳': c.cert_uploaded || '',
+      '課程名稱': c.course_name || '',
+      '訓練單位': c.training_org || '',
+      '訓練課程': c.training_course || '',
+      '課程訓練日期-起': c.start_date || '',
+      '課程訓練日期-訖': c.end_date || '',
+      '課程領域': c.domain || '',
+      '時數': c.hours ?? '',
+      '核定日期': c.approval_date || '',
+      '核定字號': c.approval_no || '',
+      '備註': c.remark || ''
+    }));
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(volSheetData), '志工基本名冊');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(certSheetData), '證書資訊輸入');
+    XLSX.writeFile(wb, '志工資料管理匯出.xlsx');
+  }
+
+  loadAllFromDb();
+</script>
+
+</body>
+</html>
