@@ -291,7 +291,7 @@
         <input type="text" id="cfgNewPlanNameInput" placeholder="如：延緩3期" style="width:150px;">
         <button type="button" class="btn btn-outline btn-sm" onclick="cfgAddPlanColumn()">＋ 新增計畫</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="cfgReloadFromDatabase()">重新從資料庫載入</button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="cfgSaveAllSettingsToDatabase()">全部儲存至資料庫</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="cfgSaveSalarySettingsToDatabase()">儲存至資料庫</button>
       </div>
 
       <!-- 表格一：鐘點費-薪資 -->
@@ -311,22 +311,7 @@
         </div>
       </div>
 
-      <!-- 表格二：鐘點費-核銷 -->
-      <div>
-        <div class="table-section-header header-reimburse">
-          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span>鐘點費-核銷</span>
-            <div class="picker-dropdown-wrap no-print">
-              <button type="button" class="btn btn-outline btn-sm" id="rebTeacherPickerBtn" onclick="togglePickerPanel('rebTeacherPickerPanel')">勾選顯示講師 ▾</button>
-              <div class="picker-panel" id="rebTeacherPickerPanel"></div>
-            </div>
-          </div>
-          <button type="button" class="btn btn-red btn-sm no-print" onclick="cfgSaveReimburseSettingsToDatabase()">儲存「鐘點費-核銷」至資料庫</button>
-        </div>
-        <div style="overflow-x:auto;">
-          <table class="excel-table" id="reimburseRateTable"></table>
-        </div>
-      </div>
+
     </div>
 
     <!-- 1. 鐘點費計算 -->

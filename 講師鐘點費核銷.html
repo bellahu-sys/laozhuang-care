@@ -234,9 +234,32 @@
 
   <!-- 切換分頁：包含原本「長照與延緩經費收支」連結 + 「2. 講師鐘點費核銷」 + 移入的「個人所得稅計算-講師」與「個人所得稅計算_臨時人員」 -->
   <div class="sub-page-tabs no-print">
-    <button type="button" class="sub-page-tab active" id="subTabReimburse" onclick="switchSubPage('reimburse')">2. 講師鐘點費核銷</button>
-    <button type="button" class="sub-page-tab" id="subTabTaxInst" onclick="switchSubPage('taxInst')">個人所得稅計算-講師</button>
-    <button type="button" class="sub-page-tab" id="subTabTaxTemp" onclick="switchSubPage('taxTemp')">個人所得稅計算_臨時人員</button>
+    <button type="button" class="sub-tab-btn" id="subTabReimburseSetting" onclick="switchSubPage('reimburseSetting')">核銷鐘點費設定</button>
+    <button type="button" class="sub-tab-btn active" id="subTabReimburse" onclick="switchSubPage('reimburse')">2. 講師鐘點費核銷</button>
+    <button type="button" class="sub-tab-btn" id="subTabTaxInst" onclick="switchSubPage('taxInst')">個人所得稅計算-講師</button>
+    <button type="button" class="sub-tab-btn" id="subTabTaxTemp" onclick="switchSubPage('taxTemp')">個人所得稅計算_臨時人員</button>
+  </div>
+
+  <!-- 分頁 1（新增於 2. 講師鐘點費核銷 前）：核銷鐘點費設定（由講師鐘點費記錄搬移之「鐘點費-核銷」表格） -->
+  <div id="panelReimburseSetting" style="display:none;">
+    <div class="controls-row no-print">
+      <label style="font-weight:bold;">新增計畫欄位：</label>
+      <input type="text" id="rebCfgNewPlanNameInput" placeholder="如：延緩3期" style="width:150px;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="rebCfgAddPlanColumn()">＋ 新增計畫</button>
+      <button type="button" class="btn btn-teal btn-sm" onclick="rebCfgReloadFromDatabase()">重新從資料庫載入</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="rebCfgSaveToDatabase()">儲存「鐘點費-核銷」至資料庫</button>
+    </div>
+
+    <div class="sheet-title-banner">鐘點費-核銷</div>
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;" class="no-print">
+      <div class="picker-dropdown-wrap">
+        <button type="button" class="btn btn-outline btn-sm" id="rebSettingTeacherBtn" onclick="togglePickerPanel('rebSettingTeacherPanel')">勾選顯示講師 ▾</button>
+        <div class="picker-panel" id="rebSettingTeacherPanel"></div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="excel-table" id="reimburseRateTable"></table>
+    </div>
   </div>
 
   <!-- 分頁 2：2. 講師鐘點費核銷 -->
@@ -392,15 +415,19 @@
   });
 
   function switchSubPage(key) {
+    document.getElementById('subTabReimburseSetting').classList.toggle('active', key === 'reimburseSetting');
     document.getElementById('subTabReimburse').classList.toggle('active', key === 'reimburse');
     document.getElementById('subTabTaxInst').classList.toggle('active', key === 'taxInst');
     document.getElementById('subTabTaxTemp').classList.toggle('active', key === 'taxTemp');
 
+    document.getElementById('panelReimburseSetting').style.display = (key === 'reimburseSetting') ? 'block' : 'none';
     document.getElementById('panelReimburse').style.display = (key === 'reimburse') ? 'block' : 'none';
     document.getElementById('panelTaxInstructor').style.display = (key === 'taxInst') ? 'block' : 'none';
     document.getElementById('panelTaxTemp').style.display = (key === 'taxTemp') ? 'block' : 'none';
 
-    if (key === 'reimburse') {
+    if (key === 'reimburseSetting') {
+      rebCfgReloadFromDatabase();
+    } else if (key === 'reimburse') {
       document.getElementById('rebYearSelect').value = String(currentYear);
       onRebContextChange();
     } else if (key === 'taxInst') {
@@ -1344,6 +1371,197 @@
 
 
 
+
+
+  let rebCfgPlans = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
+  let rebCfgMap = {};
+  let rebCfgTeachers = [];
+  const REB_CFG_TEACHERS_KEY = 'lz_rate_cfg_reb_teachers';
+
+  function rebCfgSortByMaster(arr) {
+    const orderMap = new Map(masterInstructors.map((m, idx) => [m.name, idx]));
+    return [...new Set(arr)].sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
+  }
+
+  function rebCfgAddPlanColumn() {
+    const inp = document.getElementById('rebCfgNewPlanNameInput');
+    const val = (inp?.value || '').trim();
+    if (!val) return;
+    rebCfgCollectFromDom();
+    if (!rebCfgPlans.includes(val)) rebCfgPlans.push(val);
+    inp.value = '';
+    rebCfgRenderTable();
+  }
+
+  function rebCfgOnTeacherToggle(instName, isChecked) {
+    rebCfgCollectFromDom();
+    if (isChecked) {
+      if (!rebCfgTeachers.includes(instName)) rebCfgTeachers.push(instName);
+    } else {
+      rebCfgTeachers = rebCfgTeachers.filter(n => n !== instName);
+    }
+    rebCfgTeachers = rebCfgSortByMaster(rebCfgTeachers);
+    localStorage.setItem(REB_CFG_TEACHERS_KEY, JSON.stringify(rebCfgTeachers));
+    rebCfgRenderTeacherPicker();
+    rebCfgRenderTable();
+  }
+
+  function rebCfgRenderTeacherPicker() {
+    const panel = document.getElementById('rebSettingTeacherPanel');
+    const btn = document.getElementById('rebSettingTeacherBtn');
+    if (panel) {
+      panel.innerHTML = masterInstructors.map(inst => {
+        const checked = rebCfgTeachers.includes(inst.name);
+        return `
+          <label class="picker-item">
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="rebCfgOnTeacherToggle('${escapeAttr(inst.name)}', this.checked)">
+            <span>${escapeHtml(inst.name)}</span>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(${escapeHtml(inst.status || '服務中')})</span>
+          </label>
+        `;
+      }).join('');
+    }
+    if (btn) btn.textContent = `勾選顯示講師 (${rebCfgTeachers.length}) ▾`;
+  }
+
+  function rebCfgCollectFromDom() {
+    const amtMap = new Map();
+    const hrsMap = new Map();
+    document.querySelectorAll('.reb-amt').forEach(el => {
+      amtMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, ''));
+    });
+    document.querySelectorAll('.reb-hrs').forEach(el => {
+      hrsMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, ''));
+    });
+
+    const rowsToUpsert = [];
+    amtMap.forEach((rawAmt, key) => {
+      const [inst, plan] = key.split('__');
+      const rawHrs = hrsMap.get(key) || '1';
+      if (!rebCfgMap[inst]) rebCfgMap[inst] = {};
+      if (rawAmt !== '' && Number.isFinite(Number(rawAmt))) {
+        const hrsNum = (rawHrs !== '' && Number.isFinite(Number(rawHrs))) ? Number(rawHrs) : 1;
+        rebCfgMap[inst][plan] = { rate: Number(rawAmt), hours: hrsNum };
+        rowsToUpsert.push({
+          instructor_name: inst,
+          plan_name: plan,
+          pay_mode: 'per_hour',
+          rate: Number(rawAmt),
+          hours: hrsNum,
+          updated_at: new Date().toISOString()
+        });
+      } else {
+        rebCfgMap[inst][plan] = { rate: '', hours: 1 };
+      }
+    });
+    return rowsToUpsert;
+  }
+
+  function rebCfgRenderTable() {
+    const tbl = document.getElementById('reimburseRateTable');
+    if (!tbl) return;
+    const list = rebCfgTeachers.map(name => masterInstructors.find(m => m.name === name) || { name, status: '服務中' });
+    if (list.length === 0) {
+      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:18px; color:#64748b;">請點選上方「勾選顯示講師 ▾」選擇要設定的講師</td></tr></tbody>';
+      return;
+    }
+
+    const headCells = rebCfgPlans.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+    const bodyRows = list.map(inst => {
+      const instName = inst.name;
+      const tds = rebCfgPlans.map(plan => {
+        const rule = (rebCfgMap[instName] && rebCfgMap[instName][plan]) ? rebCfgMap[instName][plan] : { rate: '', hours: 1 };
+        const rateDisp = (rule.rate !== '' && rule.rate !== undefined && rule.rate !== null) ? rule.rate : '';
+        const hrsDisp = (rule.hours !== '' && rule.hours !== undefined && rule.hours !== null) ? rule.hours : 1;
+        return `
+          <td style="min-width:165px;">
+            <div style="display:flex; gap:4px; align-items:center; justify-content:center;">
+              <input type="text" inputmode="decimal" class="num-input reb-amt" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${rateDisp}" placeholder="費用" style="width:76px;">
+              <span style="font-size:0.76rem; color:#475569;">時數</span>
+              <input type="text" inputmode="decimal" class="num-input reb-hrs" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${hrsDisp}" placeholder="1" style="width:42px;">
+            </div>
+          </td>
+        `;
+      }).join('');
+
+      return `
+        <tr>
+          <td class="center-col" style="font-weight:bold; background:#f8fafc;">
+            <div>${escapeHtml(instName)}</div>
+            <div style="font-size:0.74rem; color:#64748b; font-weight:normal;">(${escapeHtml(inst.status || '服務中')})</div>
+          </td>
+          ${tds}
+        </tr>
+      `;
+    }).join('');
+
+    tbl.innerHTML = `<thead><tr><th style="width:115px;">講師 \ 計畫</th>${headCells}</tr></thead><tbody>${bodyRows}</tbody>`;
+  }
+
+  async function rebCfgSaveToDatabase() {
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+    const rowsToUpsert = rebCfgCollectFromDom();
+    if (rowsToUpsert.length === 0) {
+      alert('目前無已填寫費用的「鐘點費-核銷」資料可儲存');
+      return;
+    }
+    const { error } = await supabaseClient
+      .from('instructor_reimburse_rate_configs')
+      .upsert(rowsToUpsert, { onConflict: 'instructor_name,plan_name' });
+    if (error) {
+      alert('儲存「鐘點費-核銷」至資料庫失敗：' + error.message);
+      return;
+    }
+    setStatus('已將「鐘點費-核銷」儲存至資料庫');
+    alert('已將「鐘點費-核銷」儲存至資料庫！');
+  }
+
+  async function rebCfgReloadFromDatabase() {
+    setStatus('正在從資料庫讀取「鐘點費-核銷」設定...');
+    rebCfgMap = {};
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('instructor_reimburse_rate_configs')
+          .select('instructor_name, plan_name, rate, hours');
+        if (!error && Array.isArray(data)) {
+          data.forEach(row => {
+            const inst = (row.instructor_name || '').trim();
+            const plan = (row.plan_name || '').trim();
+            if (!inst || !plan) return;
+            if (!rebCfgPlans.includes(plan)) rebCfgPlans.push(plan);
+            if (!rebCfgMap[inst]) rebCfgMap[inst] = {};
+            rebCfgMap[inst][plan] = {
+              rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
+              hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
+            };
+          });
+        }
+      } catch (e) {}
+    }
+
+    const activeNames = masterInstructors.filter(i => i.status === '服務中').map(i => i.name);
+    const dbNames = Object.keys(rebCfgMap);
+    const savedT = localStorage.getItem(REB_CFG_TEACHERS_KEY);
+    if (savedT) {
+      try {
+        const arr = JSON.parse(savedT);
+        rebCfgTeachers = Array.isArray(arr) ? rebCfgSortByMaster(arr) : [];
+      } catch (e) {
+        rebCfgTeachers = rebCfgSortByMaster(dbNames.length > 0 ? dbNames : activeNames);
+      }
+    } else {
+      rebCfgTeachers = rebCfgSortByMaster(dbNames.length > 0 ? dbNames : activeNames);
+      localStorage.setItem(REB_CFG_TEACHERS_KEY, JSON.stringify(rebCfgTeachers));
+    }
+
+    rebCfgRenderTeacherPicker();
+    rebCfgRenderTable();
+    setStatus('已同步資料庫「鐘點費-核銷」設定');
+  }
 
   (async function init() {
     await loadInstructorsFromHr();
