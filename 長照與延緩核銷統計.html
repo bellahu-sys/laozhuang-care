@@ -463,33 +463,36 @@
     }
     isSavingFunding = true;
 
-    if (!supabaseClient) {
-      if (!silent) alert(`已儲存 ${yr} 年度長照與延緩經費收支至本機`);
-      return;
-    }
-
-    const payload = [
-      {
-        roc_year: yrNum,
-        section_key: 'funding_stages_v3',
-        payload: state,
-        updated_at: new Date().toISOString()
+    try {
+      if (!supabaseClient) {
+        if (!silent) alert(`已儲存 ${yr} 年度長照與延緩經費收支至本機`);
+        return;
       }
-    ];
 
-    const { error } = await supabaseClient
-      .from('ltc_delay_funding_records')
-      .upsert(payload, { onConflict: 'roc_year,section_key' });
+      const payload = [
+        {
+          roc_year: yrNum,
+          section_key: 'funding_stages_v3',
+          payload: state,
+          updated_at: new Date().toISOString()
+        }
+      ];
 
-    if (error) {
-      setSyncStatus('儲存至資料庫失敗：' + error.message, true);
-      if (!silent) alert('儲存至資料庫失敗：' + error.message);
-      return;
-    }
-    const now = new Date();
-    const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-    setSyncStatus(`已即時存入資料庫（${yr} 年度，${tStr}）`);
-    if (!silent) alert(`已將 ${yr} 年度長照與延緩經費收支儲存至資料庫！`);
+      const { error } = await supabaseClient
+        .from('ltc_delay_funding_records')
+        .upsert(payload, { onConflict: 'roc_year,section_key' });
+
+      if (error) {
+        setSyncStatus('儲存至資料庫失敗：' + error.message, true);
+        if (!silent) alert('儲存至資料庫失敗：' + error.message);
+        return;
+      }
+      const now = new Date();
+      const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      setSyncStatus(`已即時存入資料庫（${yr} 年度，${tStr}）`);
+      if (!silent) alert(`已將 ${yr} 年度長照與延緩經費收支儲存至資料庫！`);
+    } catch (e) {
+      setSyncStatus('儲存發生例外：' + (e.message || e), true);
     } finally {
       isSavingFunding = false;
       if (queuedFundingSave) {
@@ -1157,6 +1160,14 @@
     if (params.get('view') === 'reimburse') {
       switchSubView('reimburse');
     }
+
+    // Bind explicit click handlers safely as backup
+    const sampleBtn = document.querySelector('button[onclick*="loadSampleSequence115"]');
+    if (sampleBtn) sampleBtn.addEventListener('click', (e) => { e.preventDefault(); loadSampleSequence115(); });
+    const addStageBtn = document.querySelector('button[onclick*="addFundingStage"]');
+    if (addStageBtn) addStageBtn.addEventListener('click', (e) => { e.preventDefault(); addFundingStage(); });
+    const copyFundingBtn = document.querySelector('button[onclick*="copySheetBlock(\'fundingOfficialWrap\'"]');
+    if (copyFundingBtn) copyFundingBtn.addEventListener('click', (e) => { e.preventDefault(); copySheetBlock('fundingOfficialWrap', '補助經費收支明細表'); });
   })();
 </script>
 </body>
