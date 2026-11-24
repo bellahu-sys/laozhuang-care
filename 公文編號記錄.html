@@ -412,7 +412,8 @@
   }
 
   async function copyFullDocNumber(numStr) {
-    const cleanNum = String(numStr || '').replace(new RegExp('^' + fixedPrefix.replace(/[.*+?^${}()|[\]\]/g, '\$&')), '').trim();
+    const escapedPrefix = fixedPrefix.replace(/[-/\\^$*+?.()[\]{}]/g, '\\$&');
+    const cleanNum = String(numStr || '').replace(new RegExp('^' + escapedPrefix), '').trim();
     const fullText = `${fixedPrefix}${cleanNum}`;
     try {
       await navigator.clipboard.writeText(fullText);
@@ -502,9 +503,18 @@
   }
 
   function addRow() {
-    const maxSeq = records.reduce((m, r) => Math.max(m, Number(r.seq_no) || 0), 0);
+    if (!Array.isArray(records)) records = [];
+    const maxSeq = records.reduce((m, r) => {
+      const n = parseInt(String(r.seq_no ?? ''), 10);
+      return Number.isFinite(n) ? Math.max(m, n) : m;
+    }, 0);
     records.push(createEmptyRow(maxSeq + 1));
+    const searchEl = document.getElementById('searchInput');
+    if (searchEl && searchEl.value.trim() !== '') {
+      searchEl.value = '';
+    }
     renderTable();
+    setStatus(`已新增第 ${maxSeq + 1} 列，請輸入資料後按「儲存至資料庫」`);
   }
 
   function onFieldChange(rowId, field, value) {
