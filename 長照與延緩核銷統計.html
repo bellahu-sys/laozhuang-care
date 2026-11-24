@@ -260,7 +260,6 @@
           <option value="116">116 年</option>
           <option value="117">117 年</option>
         </select>
-        <button type="button" class="btn btn-primary" onclick="saveCurrentActiveViewToDb()">儲存至資料庫</button>
         <button type="button" class="btn btn-gray" onclick="window.print()">列印</button>
       </div>
     </div>
@@ -278,7 +277,6 @@
         <span>一、年度共用核定額度與核銷順序設定</span>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button type="button" class="btn btn-amber btn-sm" onclick="loadSampleSequence115()">載入範例（1-3月長照➔4-6月長照➔延緩第1期）</button>
-          <button type="button" class="btn btn-primary btn-sm" onclick="saveFundingToDatabase()">儲存至資料庫</button>
         </div>
       </h2>
       <div class="controls-bar" style="margin-bottom:0;">
@@ -450,11 +448,20 @@
     } catch (e) {}
   }
 
-  async function saveFundingToDatabase(silent = false) {
+  let isSavingFunding = false;
+  let queuedFundingSave = false;
+
+  async function saveFundingToDatabase(silent = true) {
     const yr = getYear();
     const yrNum = parseInt(yr, 10) || 115;
     const state = ensureYearFundingData(yr);
     saveFundingLocalCache();
+
+    if (isSavingFunding) {
+      queuedFundingSave = true;
+      return;
+    }
+    isSavingFunding = true;
 
     if (!supabaseClient) {
       if (!silent) alert(`已儲存 ${yr} 年度長照與延緩經費收支至本機`);
@@ -479,8 +486,17 @@
       if (!silent) alert('儲存至資料庫失敗：' + error.message);
       return;
     }
-    setSyncStatus(`已將 ${yr} 年度長照與延緩經費收支儲存至資料庫`);
+    const now = new Date();
+    const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    setSyncStatus(`已即時存入資料庫（${yr} 年度，${tStr}）`);
     if (!silent) alert(`已將 ${yr} 年度長照與延緩經費收支儲存至資料庫！`);
+    } finally {
+      isSavingFunding = false;
+      if (queuedFundingSave) {
+        queuedFundingSave = false;
+        saveFundingToDatabase(true);
+      }
+    }
   }
 
   function computeStagesWithCumulative(yr) {
@@ -537,24 +553,26 @@
     ).join('');
   }
 
-  function onFundingStageChange(stageId) {
+  async function onFundingStageChange(stageId) {
     const yr = getYear();
     const state = ensureYearFundingData(yr);
     state.activeStageId = stageId;
     saveFundingLocalCache();
     renderQuarterTables();
+    await saveFundingToDatabase(true);
   }
 
-  function onSharedBudgetChange() {
+  async function onSharedBudgetChange() {
     const yr = getYear();
     const state = ensureYearFundingData(yr);
     state.budgetBiz = parseNumVal(document.getElementById('sharedBudgetBiz').value);
     state.budgetDelay = parseNumVal(document.getElementById('sharedBudgetDelay').value);
     saveFundingLocalCache();
     renderQuarterTables();
+    await saveFundingToDatabase(true);
   }
 
-  function onStageFieldChange(stageId, field, rawVal) {
+  async function onStageFieldChange(stageId, field, rawVal) {
     const yr = getYear();
     const state = ensureYearFundingData(yr);
     const target = state.stages.find(s => String(s.id) === String(stageId));
@@ -568,6 +586,7 @@
     }
     saveFundingLocalCache();
     renderQuarterTables();
+    await saveFundingToDatabase(true);
   }
 
   async function addFundingStage() {
@@ -608,7 +627,6 @@
 
   async function loadSampleSequence115() {
     const yr = getYear();
-    if (!confirm(`要將 ${yr} 年度載入示範順序：1-3月長照(120,000) ➔ 4-6月長照(120,000) ➔ 延緩第1期(28,800) 嗎？`)) return;
     const stages = createDefaultStagesForYear(yr);
     fundingStagesByYear[yr] = {
       budgetBiz: 480000,
@@ -619,6 +637,7 @@
     saveFundingLocalCache();
     renderQuarterTables();
     await saveFundingToDatabase(true);
+    setSyncStatus(`已載入 ${yr} 年度範例順序（1-3月長照➔4-6月長照➔延緩第1期）並即時存入資料庫`);
   }
 
   function renderQuarterTables() {
@@ -1107,6 +1126,13 @@
       });
     }
   }
+
+  window.addEventListener('beforeunload', () => {
+    if (activeSubView === 'funding') saveFundingToDatabase(true);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && activeSubView === 'funding') saveFundingToDatabase(true);
+  });
 
   (async function init() {
     try { ltcQuarters = JSON.parse(localStorage.getItem(STORAGE_KEY_LTC_Q) || '[]'); } catch (e) { ltcQuarters = []; }
