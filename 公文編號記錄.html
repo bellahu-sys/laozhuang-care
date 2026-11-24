@@ -262,8 +262,10 @@
       <input type="text" id="searchInput" placeholder="輸入數字、公文號、使用文件或備註..." oninput="renderTable()" style="width:220px;">
       <button type="button" class="btn btn-outline btn-sm" onclick="clearSearch()">清除篩選</button>
 
-      <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
-                <button type="button" class="btn btn-amber" onclick="addRow()">＋ 新增一列</button>
+      <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <button type="button" class="btn btn-amber" onclick="addRow()">＋ 新增一列</button>
+        <input type="text" id="serialRangeInput" placeholder="連號如：115065-69" onkeydown="if(event.key==='Enter'){event.preventDefault();addSerialRangeRows();}" style="width:142px; font-weight:bold;">
+        <button type="button" class="btn btn-blue" onclick="addSerialRangeRows()">＋ 新增連號</button>
         <button type="button" class="btn btn-outline" onclick="loadFromDatabase()">重新從資料庫載入</button>
         <button type="button" class="btn btn-primary" onclick="saveToDatabase()">儲存至資料庫</button>
       </div>
@@ -515,6 +517,72 @@
     }
     renderTable();
     setStatus(`已新增第 ${maxSeq + 1} 列，請輸入資料後按「儲存至資料庫」`);
+  }
+
+  function parseSerialRange(rawStr) {
+    const clean = String(rawStr || '').trim().replace(/[～~—–－至]/g, '-');
+    const parts = clean.split('-').map(s => s.trim()).filter(Boolean);
+    if (parts.length !== 2) return null;
+    const [startStr, endStr] = parts;
+    if (!/^\d+$/.test(startStr) || !/^\d+$/.test(endStr)) return null;
+
+    const startVal = parseInt(startStr, 10);
+    let endVal = parseInt(endStr, 10);
+
+    // 支援簡寫尾碼，例如 115065-69 自動展開為 115065 ~ 115069
+    if (endStr.length < startStr.length) {
+      const prefixLen = startStr.length - endStr.length;
+      const expandedStr = startStr.slice(0, prefixLen) + endStr;
+      endVal = parseInt(expandedStr, 10);
+    }
+
+    if (!Number.isFinite(startVal) || !Number.isFinite(endVal) || endVal < startVal) return null;
+    if (endVal - startVal > 200) return { error: '一次最多新增 200 筆連號' };
+
+    const padWidth = startStr.length;
+    const list = [];
+    for (let n = startVal; n <= endVal; n++) {
+      const s = String(n);
+      list.push(s.length < padWidth ? s.padStart(padWidth, '0') : s);
+    }
+    return { list, first: list[0], last: list[list.length - 1] };
+  }
+
+  function addSerialRangeRows() {
+    const inp = document.getElementById('serialRangeInput');
+    const raw = inp ? inp.value : '';
+    const parsed = parseSerialRange(raw);
+    if (!parsed) {
+      alert('請輸入正確的連號格式，例如：115065-69 或 115065-115069');
+      if (inp) inp.focus();
+      return;
+    }
+    if (parsed.error) {
+      alert(parsed.error);
+      return;
+    }
+
+    if (!Array.isArray(records)) records = [];
+    let nextSeq = records.reduce((m, r) => {
+      const n = parseInt(String(r.seq_no ?? ''), 10);
+      return Number.isFinite(n) ? Math.max(m, n) : m;
+    }, 0);
+
+    parsed.list.forEach((docNumStr, idx) => {
+      nextSeq += 1;
+      const row = createEmptyRow(nextSeq);
+      row.id = 'row_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).slice(2, 5);
+      row.doc_number = docNumStr;
+      records.push(row);
+    });
+
+    const searchEl = document.getElementById('searchInput');
+    if (searchEl && searchEl.value.trim() !== '') {
+      searchEl.value = '';
+    }
+    if (inp) inp.value = '';
+    renderTable();
+    setStatus(`已新增連號 ${parsed.first} ～ ${parsed.last}（共 ${parsed.list.length} 列），請按「儲存至資料庫」`);
   }
 
   function onFieldChange(rowId, field, value) {
