@@ -379,6 +379,54 @@
 
   const STORAGE_KEY_FUNDING_STAGES = 'laozhuang_ltc_delay_stages_v3';
 
+  let activeSubView = 'funding';
+  let masterInstructors = [];
+  let rebSelectedTeachers = [];
+  let reimburseRateConfigs = {};
+  let yearSchedules = [];
+  let rebClaimOverrides = {};
+  const LTC_QUARTER_LABELS = {
+    1: '第1季 1-3月',
+    2: '第2季 4-6月',
+    3: '第3季 7-9月',
+    4: '第4季 10-12月'
+  };
+  const LTC_QUARTER_MONTHS = {
+    1: [1, 2, 3],
+    2: [4, 5, 6],
+    3: [7, 8, 9],
+    4: [10, 11, 12]
+  };
+  const DELAY_PERIOD_LABELS = {
+    1: '延緩1期',
+    2: '延緩2期',
+    3: '延緩3期'
+  };
+
+  function fmt(num) {
+    const n = Math.round(Number(num) || 0);
+    return n.toLocaleString('en-US');
+  }
+  function parseNumVal(val) {
+    const n = parseFloat(String(val ?? '').replace(/[,，\s$元]/g, ''));
+    return Number.isFinite(n) ? Math.round(n) : 0;
+  }
+  function getYear() {
+    return (document.getElementById('cfgYear')?.value || '115').trim();
+  }
+  function setSyncStatus(msg, isErr = false) {
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    el.style.color = isErr ? '#be123c' : '#0f766e';
+    el.textContent = msg;
+  }
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function escapeAttr(s) {
+    return String(s || '').replace(/"/g, '&quot;');
+  }
+
   let fundingStagesByYear = {}; // { [yr]: { budgetBiz, budgetDelay, activeStageId, stages: [...] } }
 
   function createDefaultStagesForYear(yr) {
@@ -1138,9 +1186,6 @@
   });
 
   (async function init() {
-    try { ltcQuarters = JSON.parse(localStorage.getItem(STORAGE_KEY_LTC_Q) || '[]'); } catch (e) { ltcQuarters = []; }
-    try { delayPeriods = JSON.parse(localStorage.getItem(STORAGE_KEY_DELAY_P) || '[]'); } catch (e) { delayPeriods = []; }
-    try { statsByYear = JSON.parse(localStorage.getItem(STORAGE_KEY_STATS) || '{}'); } catch (e) { statsByYear = {}; }
 
     populateRebPeriodSelect();
 
