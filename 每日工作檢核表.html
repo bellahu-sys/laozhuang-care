@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>每日工作檢核表 ｜ 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --accent: #b45309;
+      --accent-dark: #92400e;
+      --accent-bg: #fffbeb;
+      --accent-border: #fde68a;
+      --bg: #eef2f6;
+      --border: #cbd5e1;
+      --text: #1e293b;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.12rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 6px 12px; border-radius: 5px;
+      font-size: 0.92rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 260px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 8px 14px; color: #1e293b; text-decoration: none;
+      font-size: 0.9rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.76rem; color: #64748b; padding: 4px 14px 2px 14px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1280px; margin: 20px auto 50px auto; padding: 0 16px; }
+    .page-card {
+      background: #fff; border-radius: 10px; padding: 18px 22px;
+      border: 1px solid var(--border); border-left: 6px solid var(--accent);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 18px;
+    }
+    .page-header {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+    }
+    .page-title { margin: 0; font-size: 1.3rem; color: var(--accent-dark); }
+    .page-sub { margin: 4px 0 0 0; font-size: 0.88rem; color: var(--muted); }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .toolbar label { font-size: 0.9rem; font-weight: bold; color: #334155; display: inline-flex; align-items: center; gap: 5px; }
+    .toolbar input[type="number"], .toolbar input[type="date"], .toolbar select {
+      padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.92rem; background: #fff;
+    }
+    .btn {
+      padding: 7px 14px; border-radius: 6px; border: 1px solid transparent;
+      font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: all 0.14s;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-accent:hover { background: var(--accent-dark); }
+    .btn-outline { background: #fff; color: #334155; border-color: #cbd5e1; }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-sm { padding: 4px 10px; font-size: 0.82rem; }
+
+    .status-msg { font-size: 0.88rem; font-weight: bold; margin-left: auto; }
+    .status-ok { color: #0f766e; }
+    .status-warn { color: #b45309; }
+    .status-err { color: #be123c; }
+
+    /* 模式切換頁籤 */
+    .mode-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+    }
+    .mode-tab {
+      padding: 8px 16px; border-radius: 7px; border: 1px solid #cbd5e1;
+      background: #fff; color: #334155; font-weight: bold; font-size: 0.93rem; cursor: pointer;
+    }
+    .mode-tab.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+
+    /* 摘要統計列 */
+    .summary-strip {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px; margin-bottom: 16px;
+    }
+    .summary-box {
+      background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+    }
+    .summary-label { font-size: 0.82rem; color: var(--muted); font-weight: bold; }
+    .summary-val { font-size: 1.25rem; font-weight: bold; color: var(--primary-dark); margin-top: 4px; }
+    .summary-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    /* 每日工作檢核卡片區 */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .daily-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px;
+    }
+    .group-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+      overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .group-head {
+      background: var(--accent-bg); border-bottom: 1px solid var(--accent-border);
+      padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .group-title { font-weight: bold; font-size: 0.98rem; color: var(--accent-dark); }
+    .group-count { font-size: 0.8rem; font-weight: bold; color: #78350f; background: #fef3c7; padding: 2px 8px; border-radius: 999px; }
+    .group-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+    .check-row {
+      display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px;
+      border: 1px solid #e2e8f0; border-radius: 7px; background: #fff; transition: background 0.12s;
+    }
+    .check-row.done { background: #f0fdfa; border-color: #99f6e4; }
+    .check-row input[type="checkbox"] {
+      width: 18px; height: 18px; margin-top: 2px; cursor: pointer; accent-color: #0f766e; flex-shrink: 0;
+    }
+    .check-content { flex: 1; min-width: 0; }
+    .check-label { font-size: 0.94rem; font-weight: bold; color: #1e293b; cursor: pointer; display: block; }
+    .check-row.done .check-label { color: #0f766e; }
+    .check-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .check-note-input {
+      width: 100%; margin-top: 6px; padding: 4px 8px; font-size: 0.82rem;
+      border: 1px solid #cbd5e1; border-radius: 5px; color: #334155; background: #f8fafc;
+    }
+
+    /* 1-12 月固定工作檢核矩陣（清晰分組、避免擠成一團） */
+    .monthly-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .monthly-card-title {
+      font-size: 1rem; font-weight: bold; color: var(--primary-dark);
+      margin: 0 0 10px 0; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+    .table-wrap { overflow-x: auto; }
+    table.matrix-table {
+      width: 100%; border-collapse: collapse; font-size: 0.86rem; min-width: 780px;
+    }
+    table.matrix-table th, table.matrix-table td {
+      border: 1px solid #cbd5e1; padding: 6px 6px; text-align: center;
+    }
+    table.matrix-table thead th {
+      background: #f1f5f9; color: #1e293b; font-weight: bold; position: sticky; top: 0;
+    }
+    table.matrix-table td.task-col {
+      text-align: left; font-weight: bold; padding-left: 10px; background: #fff; min-width: 210px;
+    }
+    table.matrix-table td.note-col {
+      font-size: 0.78rem; color: #475569; min-width: 130px; text-align: left; padding-left: 8px;
+    }
+    .m-check {
+      width: 17px; height: 17px; cursor: pointer; accent-color: #0f766e; vertical-align: middle;
+    }
+
+    /* 自訂檢核項目管理區 */
+    .custom-box {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 18px; margin-top: 14px;
+    }
+    .custom-title { font-size: 0.98rem; font-weight: bold; color: #334155; margin: 0 0 10px 0; }
+    .custom-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+    .custom-form input, .custom-form select {
+      padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.88rem;
+    }
+    .custom-list { display: flex; flex-direction: column; gap: 6px; }
+    .custom-item {
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+      padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; font-size: 0.88rem;
+    }
+    .badge-cat {
+      font-size: 0.75rem; font-weight: bold; padding: 2px 8px; border-radius: 999px;
+      background: #e0e7ff; color: #3730a3;
+    }
+    .badge-cat.daily { background: #fef3c7; color: #92400e; }
+    .badge-cat.monthly { background: #ccfbf1; color: #0f766e; }
+
+    .sql-box {
+      background: #0f172a; color: #e2e8f0; padding: 12px 14px; border-radius: 8px;
+      font-family: Consolas, monospace; font-size: 0.8rem; overflow-x: auto; margin-top: 8px;
+      white-space: pre;
+    }
+
+    @media print {
+      nav.topbar, .toolbar, .mode-tabs, .custom-box, .no-print { display: none !important; }
+      body { background: #fff; }
+      .page-card, .group-card, .monthly-card { box-shadow: none; border-color: #94a3b8; }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 每日工作檢核表</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="每日工作檢核表.html">每日工作檢核表</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="食材費收據管理.html">食材費計算</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <a href="長照與延緩核銷統計.html">長照與延緩經費收支</a>
+        <a href="長照講師核銷記錄.html">長照核銷統計</a>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="課程活動表.html">課程活動表</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-card">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">每日工作檢核表</h1>
+        <p class="page-sub">彙整每日行政、簽到與收支記錄，以及 1–12 月課程核銷、個案簽到、行政單據與期程米糧固定工作；勾選後直接存入 Supabase 雲端資料庫（不使用暫存）。</p>
+      </div>
+      <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" onclick="window.print()">列印檢核表</button>
+        <button type="button" class="btn btn-primary" onclick="saveAllToCloud()">儲存至雲端資料庫</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <label>
+        檢核日期：
+        <input type="date" id="checkDateInput" onchange="onDateChange()">
+      </label>
+      <label>
+        檢核年度（民國）：
+        <input type="number" id="rocYearInput" style="width:86px;" min="110" max="150" onchange="onYearChange()">
+      </label>
+      <button type="button" class="btn btn-outline btn-sm" onclick="setToday()">回到今天</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="toggleSqlGuide()">Supabase 建表 SQL</button>
+      <span id="cloudStatus" class="status-msg status-warn">正在連線雲端資料庫...</span>
+    </div>
+
+    <div id="sqlGuideBox" style="display:none;margin-top:10px;">
+      <div style="font-size:0.84rem;color:#475569;font-weight:bold;">若尚未建立 <code>daily_work_checklists</code> 資料表，請至 Supabase SQL Editor 執行以下語法：</div>
+      <div class="sql-box" id="sqlScriptText"></div>
+    </div>
+  </div>
+
+  <div class="summary-strip">
+    <div class="summary-box">
+      <div class="summary-label">當日固定工作完成進度</div>
+      <div class="summary-val" id="sumDailyRatio">0 / 0</div>
+      <div class="summary-sub" id="sumDailyDateText">檢核日期：-</div>
+    </div>
+    <div class="summary-box">
+      <div class="summary-label">當月固定工作完成進度</div>
+      <div class="summary-val" id="sumMonthRatio">0 / 0</div>
+      <div class="summary-sub" id="sumMonthText">年度月份：-</div>
+    </div>
+    <div class="summary-box">
+      <div class="summary-label">全年度（1–12月）月度檢核率</div>
+      <div class="summary-val" id="sumYearPercent">0%</div>
+      <div class="summary-sub" id="sumYearDetail">已完成 0 / 0 格</div>
+    </div>
+    <div class="summary-box">
+      <div class="summary-label">雲端儲存狀態</div>
+      <div class="summary-val" id="sumSaveState" style="font-size:1rem;">即時勾選＋雲端同步</div>
+      <div class="summary-sub" id="sumLastSaved">尚未儲存異動</div>
+    </div>
+  </div>
+
+  <div class="mode-tabs">
+    <button type="button" class="mode-tab active" id="tabDailyBtn" onclick="switchMode('daily')">一、每日固定工作檢核</button>
+    <button type="button" class="mode-tab" id="tabMonthlyBtn" onclick="switchMode('monthly')">二、1–12 月固定工作檢核總表</button>
+  </div>
+
+  <!-- 模式一：每日固定工作 -->
+  <div id="panelDaily" class="panel active">
+    <div class="daily-grid" id="dailyGroupsContainer"></div>
+  </div>
+
+  <!-- 模式二：1–12 月固定工作（分組呈現，清楚不擁擠） -->
+  <div id="panelMonthly" class="panel">
+    <div class="monthly-card">
+      <h2 class="monthly-card-title">
+        <span>甲、課程登錄與長照／行事曆核銷（以長照講師核銷領據時間為主）</span>
+        <span style="font-size:0.82rem;color:#64748b;font-weight:normal;">勾選即同步更新雲端</span>
+      </h2>
+      <div class="table-wrap">
+        <table class="matrix-table" id="tblGroupA"></table>
+      </div>
+    </div>
+
+    <div class="monthly-card">
+      <h2 class="monthly-card-title">
+        <span>乙、個案簽到表列印</span>
+        <span style="font-size:0.82rem;color:#64748b;font-weight:normal;">勾選即同步更新雲端</span>
+      </h2>
+      <div class="table-wrap">
+        <table class="matrix-table" id="tblGroupB"></table>
+      </div>
+    </div>
+
+    <div class="monthly-card">
+      <h2 class="monthly-card-title">
+        <span>丙、人員簽到、餐費零用金、日期輸入與長輩健康登記</span>
+        <span style="font-size:0.82rem;color:#64748b;font-weight:normal;">勾選即同步更新雲端</span>
+      </h2>
+      <div class="table-wrap">
+        <table class="matrix-table" id="tblGroupC"></table>
+      </div>
+    </div>
+
+    <div class="monthly-card">
+      <h2 class="monthly-card-title">
+        <span>丁、電話問安、期程表與米糧需求表</span>
+        <span style="font-size:0.82rem;color:#64748b;font-weight:normal;">勾選即同步更新雲端</span>
+      </h2>
+      <div class="table-wrap">
+        <table class="matrix-table" id="tblGroupD"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自訂檢核項目管理 -->
+  <div class="custom-box">
+    <h3 class="custom-title">新增／管理固定檢核項目（存入雲端，避免日後新增工作遺忘）</h3>
+    <div class="custom-form">
+      <select id="newTaskCat">
+        <option value="daily">每日固定工作</option>
+        <option value="monthly_a">每月：課程與長照核銷</option>
+        <option value="monthly_b">每月：個案簽到表列印</option>
+        <option value="monthly_c">每月：簽到／零用金／健康登記</option>
+        <option value="monthly_d">每月：電話問安／期程／米糧</option>
+      </select>
+      <input type="text" id="newTaskName" placeholder="輸入固定工作名稱（例如：月底零用金結算）" style="min-width:240px;">
+      <input type="text" id="newTaskNote" placeholder="提醒說明（選填）" style="min-width:180px;">
+      <button type="button" class="btn btn-accent btn-sm" onclick="addCustomTask()">新增檢核項目</button>
+    </div>
+    <div class="custom-list" id="customTaskList"></div>
+  </div>
+</div>
+
+<script>
+  const SQL_CREATE_TABLE = `CREATE TABLE IF NOT EXISTS daily_work_checklists (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  roc_year INTEGER NOT NULL,
+  scope_type TEXT NOT NULL, -- 'daily' | 'monthly' | 'custom_tasks'
+  scope_key TEXT NOT NULL,  -- daily: 'YYYY-MM-DD' | monthly: 'M01'~'M12' | custom_tasks: 'items'
+  task_key TEXT NOT NULL,
+  task_label TEXT NOT NULL,
+  is_done BOOLEAN NOT NULL DEFAULT FALSE,
+  note TEXT DEFAULT '',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (roc_year, scope_type, scope_key, task_key)
+);
+ALTER TABLE daily_work_checklists DISABLE ROW LEVEL SECURITY;`;
+
+  document.getElementById('sqlScriptText').textContent = SQL_CREATE_TABLE;
+
+  const DEFAULT_DAILY_GROUPS = [
+    {
+      groupName: '每日開站與出勤記錄',
+      items: [
+        { key: 'd_staff_sign', label: '專職人員簽到', note: '每日上班簽到記錄' },
+        { key: 'd_temp_sign', label: '臨時人員簽到', note: '主廚／助手出勤簽到' },
+        { key: 'd_vol_sign', label: '志工簽到', note: '當日協助志工簽到' },
+        { key: 'd_case_sign', label: '長輩／個案簽到', note: '據點與課程參與簽到' }
+      ]
+    },
+    {
+      groupName: '供餐、菜單與食材費記錄',
+      items: [
+        { key: 'd_menu_in', label: '每日菜單登錄', note: '登錄菜色與供餐人數' },
+        { key: 'd_meal_fee', label: '便當／餐費收據與零用金記錄', note: '餐費收入、支出與零用金單據' },
+        { key: 'd_food_receipt', label: '食材費收據整理', note: '關懷／長照食材費單據留存' }
+      ]
+    },
+    {
+      groupName: '關懷問安、課程與收尾',
+      items: [
+        { key: 'd_phone_care', label: '電話問安／關懷追蹤', note: '視當日排程進行電訪或問安記錄' },
+        { key: 'd_course_check', label: '課程／活動排程核對', note: '核對當日課程、講師與時數' },
+        { key: 'd_daily_close', label: '每日收尾與資料確認', note: '確認當日表單與雲端資料已存檔' }
+      ]
+    }
+  ];
+
+  const DEFAULT_MONTHLY_ITEMS = [
+    // 甲組：對應截圖 B 欄
+    { group: 'monthly_a', key: 'm_platform_course', label: '平台課程登錄', note: '課程以長照講師核銷領據時間為主' },
+    { group: 'monthly_a', key: 'm_ltc_class_sheet', label: '長照核銷課表', note: '課程以長照講師核銷領據時間為主' },
+    { group: 'monthly_a', key: 'm_ltc_lec_receipt', label: '長照核銷講師領據', note: '課程以長照講師核銷領據時間為主' },
+    { group: 'monthly_a', key: 'm_platform_cal', label: '平台行事曆', note: '課程以長照講師核銷領據時間為主' },
+    // 乙組：對應截圖 D 欄
+    { group: 'monthly_b', key: 'm_case_signin_print', label: '個案簽到表列印', note: '每月個案簽到表套印與列印' },
+    // 丙組：對應截圖 F 欄
+    { group: 'monthly_c', key: 'm_fulltime_signin', label: '專職人員簽到表', note: '每月專職出勤紀錄表' },
+    { group: 'monthly_c', key: 'm_temp_signin', label: '臨時人員簽到表', note: '每月臨時人員簽到表' },
+    { group: 'monthly_c', key: 'm_vol_signin', label: '志工簽到表', note: '每月志工值班簽到表' },
+    { group: 'monthly_c', key: 'm_lunch_fee_rec', label: '便當收費記錄表', note: '每月餐費收支核對' },
+    { group: 'monthly_c', key: 'm_petty_slip', label: '零用金小紙條', note: '零用金支出憑證與盤點小紙條' },
+    { group: 'monthly_c', key: 'm_date_input', label: '日期輸入', note: '各表單日期與期程確認輸入' },
+    { group: 'monthly_c', key: 'm_elder_health', label: '長輩健康登記表', note: '每月長輩健康與量測記錄' },
+    // 丁組：對應截圖 H 欄
+    { group: 'monthly_d', key: 'm_phone_visit', label: '電話問安', note: '每月電話問安記錄彙整' },
+    { group: 'monthly_d', key: 'm_schedule_sheet', label: '期程表', note: '當月／下一期課程與活動期程表' },
+    { group: 'monthly_d', key: 'm_rice_grain', label: '米糧需求表', note: '每月白米與主副食米糧估算需求' }
+  ];
+
+  let sbClient = null;
+  let cloudReady = false;
+  let currentDateStr = '';
+  let currentRocYear = 115;
+  let currentMonth = 11;
+
+  // 狀態結構：
+  // dailyState[dateStr][taskKey] = { done: boolean, note: string }
+  // monthlyState[rocYear][monthNum][taskKey] = { done: boolean, note: string }
+  // customTasks[rocYear] = [{ id, group, label, note }]
+  let dailyState = {};
+  let monthlyState = {};
+  let customTasksByYear = {};
+
+  function toDateStr(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function calcRocYearFromDateStr(dateStr) {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return 115;
+    return parseInt(parts[0], 10) - 1911;
+  }
+
+  function calcMonthFromDateStr(dateStr) {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return 1;
+    return parseInt(parts[1], 10);
+  }
+
+  function initSupabase() {
+    if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+      sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+  }
+
+  function setStatus(text, type = 'ok') {
+    const el = document.getElementById('cloudStatus');
+    el.textContent = text;
+    el.className = 'status-msg ' + (type === 'ok' ? 'status-ok' : type === 'err' ? 'status-err' : 'status-warn');
+  }
+
+  function toggleSqlGuide() {
+    const box = document.getElementById('sqlGuideBox');
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function switchMode(mode) {
+    document.getElementById('tabDailyBtn').classList.toggle('active', mode === 'daily');
+    document.getElementById('tabMonthlyBtn').classList.toggle('active', mode === 'monthly');
+    document.getElementById('panelDaily').classList.toggle('active', mode === 'daily');
+    document.getElementById('panelMonthly').classList.toggle('active', mode === 'monthly');
+  }
+
+  function setToday() {
+    const today = new Date();
+    const ds = toDateStr(today);
+    document.getElementById('checkDateInput').value = ds;
+    currentDateStr = ds;
+    currentRocYear = calcRocYearFromDateStr(ds);
+    currentMonth = calcMonthFromDateStr(ds);
+    document.getElementById('rocYearInput').value = currentRocYear;
+    loadYearData(currentRocYear);
+  }
+
+  function onDateChange() {
+    const ds = document.getElementById('checkDateInput').value;
+    if (!ds) return;
+    currentDateStr = ds;
+    currentMonth = calcMonthFromDateStr(ds);
+    const y = calcRocYearFromDateStr(ds);
+    document.getElementById('rocYearInput').value = y;
+    if (y !== currentRocYear) {
+      currentRocYear = y;
+      loadYearData(currentRocYear);
+    } else {
+      renderAll();
+    }
+  }
+
+  function onYearChange() {
+    const y = parseInt(document.getElementById('rocYearInput').value, 10);
+    if (!y || y < 100 || y > 200) return;
+    currentRocYear = y;
+    loadYearData(currentRocYear);
+  }
+
+  function getCustomTasks(year) {
+    if (!customTasksByYear[year]) customTasksByYear[year] = [];
+    return customTasksByYear[year];
+  }
+
+  function getDailyGroupsForYear(year) {
+    const base = DEFAULT_DAILY_GROUPS.map(g => ({
+      groupName: g.groupName,
+      items: g.items.map(it => ({ ...it }))
+    }));
+    const customs = getCustomTasks(year).filter(t => t.group === 'daily');
+    if (customs.length > 0) {
+      base.push({
+        groupName: '自訂每日固定工作',
+        items: customs.map(t => ({
+          key: t.id,
+          label: t.label,
+          note: t.note || '自訂每日項目',
+          isCustom: true
+        }))
+      });
+    }
+    return base;
+  }
+
+  function getMonthlyItemsForYear(year) {
+    const customs = getCustomTasks(year)
+      .filter(t => t.group && t.group.startsWith('monthly_'))
+      .map(t => ({
+        group: t.group,
+        key: t.id,
+        label: t.label,
+        note: t.note || '自訂每月項目',
+        isCustom: true
+      }));
+    return [...DEFAULT_MONTHLY_ITEMS, ...customs];
+  }
+
+  function ensureDailyEntry(dateStr, key) {
+    if (!dailyState[dateStr]) dailyState[dateStr] = {};
+    if (!dailyState[dateStr][key]) dailyState[dateStr][key] = { done: false, note: '' };
+    return dailyState[dateStr][key];
+  }
+
+  function ensureMonthlyEntry(year, month, key) {
+    if (!monthlyState[year]) monthlyState[year] = {};
+    if (!monthlyState[year][month]) monthlyState[year][month] = {};
+    if (!monthlyState[year][month][key]) monthlyState[year][month][key] = { done: false, note: '' };
+    return monthlyState[year][month][key];
+  }
+
+  async function loadYearData(year) {
+    if (!sbClient) {
+      setStatus('未設定 Supabase 連線設定（config.js）', 'err');
+      renderAll();
+      return;
+    }
+    setStatus(`正在讀取民國 ${year} 年雲端檢核資料...`, 'warn');
+    try {
+      const { data, error } = await sbClient
+        .from('daily_work_checklists')
+        .select('*')
+        .eq('roc_year', year);
+
+      if (error) {
+        cloudReady = false;
+        setStatus('雲端尚未建立 daily_work_checklists 資料表（請點「Supabase 建表 SQL」執行）', 'err');
+        renderAll();
+        return;
+      }
+
+      cloudReady = true;
+      monthlyState[year] = {};
+      for (let m = 1; m <= 12; m++) monthlyState[year][m] = {};
+      customTasksByYear[year] = [];
+
+      (data || []).forEach(row => {
+        if (row.scope_type === 'daily') {
+          if (!dailyState[row.scope_key]) dailyState[row.scope_key] = {};
+          dailyState[row.scope_key][row.task_key] = {
+            done: !!row.is_done,
+            note: row.note || ''
+          };
+        } else if (row.scope_type === 'monthly') {
+          const mNum = parseInt(String(row.scope_key).replace(/^M/i, ''), 10);
+          if (mNum >= 1 && mNum <= 12) {
+            if (!monthlyState[year][mNum]) monthlyState[year][mNum] = {};
+            monthlyState[year][mNum][row.task_key] = {
+              done: !!row.is_done,
+              note: row.note || ''
+            };
+          }
+        } else if (row.scope_type === 'custom_tasks' && row.scope_key === 'items') {
+          try {
+            const parsed = JSON.parse(row.note || '[]');
+            if (Array.isArray(parsed)) customTasksByYear[year] = parsed;
+          } catch (_) {}
+        }
+      });
+
+      setStatus(`已載入民國 ${year} 年雲端檢核紀錄`, 'ok');
+      renderAll();
+    } catch (err) {
+      setStatus('讀取雲端資料發生錯誤：' + (err.message || err), 'err');
+      renderAll();
+    }
+  }
+
+  async function upsertRowToCloud(rowObj) {
+    if (!sbClient || !cloudReady) return false;
+    const payload = {
+      roc_year: currentRocYear,
+      scope_type: rowObj.scope_type,
+      scope_key: String(rowObj.scope_key),
+      task_key: String(rowObj.task_key),
+      task_label: String(rowObj.task_label || ''),
+      is_done: !!rowObj.is_done,
+      note: rowObj.note || '',
+      updated_at: new Date().toISOString()
+    };
+    const { error } = await sbClient
+      .from('daily_work_checklists')
+      .upsert(payload, { onConflict: 'roc_year,scope_type,scope_key,task_key' });
+
+    if (error) {
+      setStatus('儲存失敗：' + error.message, 'err');
+      return false;
+    }
+    const now = new Date();
+    document.getElementById('sumLastSaved').textContent =
+      `已同步：${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    setStatus('已即時儲存至雲端資料庫', 'ok');
+    return true;
+  }
+
+  async function saveAllToCloud() {
+    if (!sbClient) {
+      alert('尚未連線 Supabase 資料庫');
+      return;
+    }
+    if (!cloudReady) {
+      alert('請先點擊上方「Supabase 建表 SQL」至 Supabase 執行建表語法。');
+      return;
+    }
+    setStatus('正在批次儲存當日與全年度檢核紀錄...', 'warn');
+    const rows = [];
+
+    // 1. 當日每日工作
+    getDailyGroupsForYear(currentRocYear).forEach(grp => {
+      grp.items.forEach(it => {
+        const st = ensureDailyEntry(currentDateStr, it.key);
+        rows.push({
+          roc_year: currentRocYear,
+          scope_type: 'daily',
+          scope_key: currentDateStr,
+          task_key: it.key,
+          task_label: it.label,
+          is_done: !!st.done,
+          note: st.note || '',
+          updated_at: new Date().toISOString()
+        });
+      });
+    });
+
+    // 2. 全年 1-12 月工作
+    const mItems = getMonthlyItemsForYear(currentRocYear);
+    for (let m = 1; m <= 12; m++) {
+      const mKey = 'M' + String(m).padStart(2, '0');
+      mItems.forEach(it => {
+        const st = ensureMonthlyEntry(currentRocYear, m, it.key);
+        rows.push({
+          roc_year: currentRocYear,
+          scope_type: 'monthly',
+          scope_key: mKey,
+          task_key: it.key,
+          task_label: it.label,
+          is_done: !!st.done,
+          note: st.note || '',
+          updated_at: new Date().toISOString()
+        });
+      });
+    }
+
+    // 3. 自訂項目清單
+    rows.push({
+      roc_year: currentRocYear,
+      scope_type: 'custom_tasks',
+      scope_key: 'items',
+      task_key: 'custom_list',
+      task_label: '自訂固定檢核項目清單',
+      is_done: true,
+      note: JSON.stringify(getCustomTasks(currentRocYear)),
+      updated_at: new Date().toISOString()
+    });
+
+    const { error } = await sbClient
+      .from('daily_work_checklists')
+      .upsert(rows, { onConflict: 'roc_year,scope_type,scope_key,task_key' });
+
+    if (error) {
+      setStatus('批次儲存失敗：' + error.message, 'err');
+      alert('儲存失敗：' + error.message);
+      return;
+    }
+
+    const now = new Date();
+    document.getElementById('sumLastSaved').textContent =
+      `已全部儲存：${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    setStatus(`民國 ${currentRocYear} 年檢核表已全部存入雲端資料庫`, 'ok');
+  }
+
+  async function onDailyToggle(key, label, checked) {
+    const st = ensureDailyEntry(currentDateStr, key);
+    st.done = checked;
+    updateSummary();
+    renderDailyGroups();
+    await upsertRowToCloud({
+      scope_type: 'daily',
+      scope_key: currentDateStr,
+      task_key: key,
+      task_label: label,
+      is_done: st.done,
+      note: st.note
+    });
+  }
+
+  async function onDailyNoteBlur(key, label, noteVal) {
+    const st = ensureDailyEntry(currentDateStr, key);
+    if (st.note === noteVal) return;
+    st.note = noteVal;
+    await upsertRowToCloud({
+      scope_type: 'daily',
+      scope_key: currentDateStr,
+      task_key: key,
+      task_label: label,
+      is_done: st.done,
+      note: st.note
+    });
+  }
+
+  async function onMonthlyToggle(monthNum, key, label, checked) {
+    const st = ensureMonthlyEntry(currentRocYear, monthNum, key);
+    st.done = checked;
+    updateSummary();
+    await upsertRowToCloud({
+      scope_type: 'monthly',
+      scope_key: 'M' + String(monthNum).padStart(2, '0'),
+      task_key: key,
+      task_label: label,
+      is_done: st.done,
+      note: st.note
+    });
+  }
+
+  async function addCustomTask() {
+    const cat = document.getElementById('newTaskCat').value;
+    const nameInput = document.getElementById('newTaskName');
+    const noteInput = document.getElementById('newTaskNote');
+    const label = nameInput.value.trim();
+    const note = noteInput.value.trim();
+
+    if (!label) {
+      alert('請先輸入固定工作名稱');
+      nameInput.focus();
+      return;
+    }
+
+    const list = getCustomTasks(currentRocYear);
+    const id = 'custom_' + Date.now();
+    list.push({ id, group: cat, label, note });
+
+    nameInput.value = '';
+    noteInput.value = '';
+    renderAll();
+
+    await upsertRowToCloud({
+      scope_type: 'custom_tasks',
+      scope_key: 'items',
+      task_key: 'custom_list',
+      task_label: '自訂固定檢核項目清單',
+      is_done: true,
+      note: JSON.stringify(list)
+    });
+  }
+
+  async function deleteCustomTask(taskId) {
+    if (!confirm('確定要移除這項自訂檢核項目嗎？')) return;
+    const list = getCustomTasks(currentRocYear).filter(t => t.id !== taskId);
+    customTasksByYear[currentRocYear] = list;
+    renderAll();
+
+    if (sbClient && cloudReady) {
+      await upsertRowToCloud({
+        scope_type: 'custom_tasks',
+        scope_key: 'items',
+        task_key: 'custom_list',
+        task_label: '自訂固定檢核項目清單',
+        is_done: true,
+        note: JSON.stringify(list)
+      });
+      await sbClient
+        .from('daily_work_checklists')
+        .delete()
+        .eq('roc_year', currentRocYear)
+        .eq('task_key', taskId);
+    }
+  }
+
+  function renderDailyGroups() {
+    const container = document.getElementById('dailyGroupsContainer');
+    const groups = getDailyGroupsForYear(currentRocYear);
+    let html = '';
+
+    groups.forEach(grp => {
+      const doneCnt = grp.items.filter(it => ensureDailyEntry(currentDateStr, it.key).done).length;
+      html += `<div class="group-card">
+        <div class="group-head">
+          <span class="group-title">${escapeHtml(grp.groupName)}</span>
+          <span class="group-count">${doneCnt} / ${grp.items.length} 完成</span>
+        </div>
+        <div class="group-body">`;
+
+      grp.items.forEach(it => {
+        const st = ensureDailyEntry(currentDateStr, it.key);
+        const inputId = `d_${it.key}`;
+        html += `<div class="check-row ${st.done ? 'done' : ''}">
+          <input type="checkbox" id="${inputId}" ${st.done ? 'checked' : ''}
+            onchange="onDailyToggle('${escapeAttr(it.key)}', '${escapeAttr(it.label)}', this.checked)">
+          <div class="check-content">
+            <label for="${inputId}" class="check-label">${escapeHtml(it.label)}</label>
+            ${it.note ? `<div class="check-meta">${escapeHtml(it.note)}</div>` : ''}
+            <input type="text" class="check-note-input" placeholder="備註或完成時間（選填）"
+              value="${escapeAttr(st.note || '')}"
+              onblur="onDailyNoteBlur('${escapeAttr(it.key)}', '${escapeAttr(it.label)}', this.value)">
+          </div>
+        </div>`;
+      });
+
+      html += `</div></div>`;
+    });
+
+    container.innerHTML = html;
+  }
+
+  function renderMonthlyTable(tableId, groupKey, showNoteCol) {
+    const tbl = document.getElementById(tableId);
+    const items = getMonthlyItemsForYear(currentRocYear).filter(it => it.group === groupKey);
+
+    let thead = '<tr><th>固定工作項目</th>';
+    for (let m = 1; m <= 12; m++) {
+      thead += `<th>${m}月</th>`;
+    }
+    if (showNoteCol) thead += '<th>提醒／重點說明</th>';
+    thead += '</tr>';
+
+    let tbody = '';
+    if (items.length === 0) {
+      tbody = `<tr><td colspan="${12 + (showNoteCol ? 2 : 1)}" style="color:#64748b;padding:12px;">此分類目前無項目</td></tr>`;
+    } else {
+      items.forEach(it => {
+        tbody += `<tr><td class="task-col">${escapeHtml(it.label)}</td>`;
+        for (let m = 1; m <= 12; m++) {
+          const st = ensureMonthlyEntry(currentRocYear, m, it.key);
+          tbody += `<td>
+            <input type="checkbox" class="m-check" ${st.done ? 'checked' : ''}
+              title="${m}月 - ${escapeAttr(it.label)}"
+              onchange="onMonthlyToggle(${m}, '${escapeAttr(it.key)}', '${escapeAttr(it.label)}', this.checked)">
+          </td>`;
+        }
+        if (showNoteCol) {
+          tbody += `<td class="note-col">${escapeHtml(it.note || '')}</td>`;
+        }
+        tbody += '</tr>';
+      });
+    }
+
+    tbl.innerHTML = `<thead>${thead}</thead><tbody>${tbody}</tbody>`;
+  }
+
+  function renderCustomList() {
+    const listEl = document.getElementById('customTaskList');
+    const list = getCustomTasks(currentRocYear);
+    if (list.length === 0) {
+      listEl.innerHTML = '<div style="font-size:0.84rem;color:#64748b;">尚未新增自訂檢核項目。</div>';
+      return;
+    }
+    const catMap = {
+      daily: { text: '每日固定工作', cls: 'daily' },
+      monthly_a: { text: '每月：課程與長照核銷', cls: 'monthly' },
+      monthly_b: { text: '每月：個案簽到表列印', cls: 'monthly' },
+      monthly_c: { text: '每月：簽到／零用金／健康登記', cls: 'monthly' },
+      monthly_d: { text: '每月：電話問安／期程／米糧', cls: 'monthly' }
+    };
+    listEl.innerHTML = list.map(t => {
+      const c = catMap[t.group] || { text: t.group, cls: 'monthly' };
+      return `<div class="custom-item">
+        <div>
+          <span class="badge-cat ${c.cls}">${escapeHtml(c.text)}</span>
+          <strong style="margin-left:6px;">${escapeHtml(t.label)}</strong>
+          ${t.note ? `<span style="color:#64748b;font-size:0.82rem;margin-left:8px;">（${escapeHtml(t.note)}）</span>` : ''}
+        </div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="deleteCustomTask('${escapeAttr(t.id)}')">刪除</button>
+      </div>`;
+    }).join('');
+  }
+
+  function updateSummary() {
+    // 1. 當日每日工作
+    const dailyGroups = getDailyGroupsForYear(currentRocYear);
+    let dTotal = 0, dDone = 0;
+    dailyGroups.forEach(g => {
+      g.items.forEach(it => {
+        dTotal++;
+        if (ensureDailyEntry(currentDateStr, it.key).done) dDone++;
+      });
+    });
+    document.getElementById('sumDailyRatio').textContent = `${dDone} / ${dTotal}`;
+    document.getElementById('sumDailyDateText').textContent = `檢核日期：${currentDateStr}`;
+
+    // 2. 當月每月工作
+    const mItems = getMonthlyItemsForYear(currentRocYear);
+    const mTotal = mItems.length;
+    let mDone = 0;
+    mItems.forEach(it => {
+      if (ensureMonthlyEntry(currentRocYear, currentMonth, it.key).done) mDone++;
+    });
+    document.getElementById('sumMonthRatio').textContent = `${mDone} / ${mTotal}`;
+    document.getElementById('sumMonthText').textContent = `民國 ${currentRocYear} 年 ${currentMonth} 月`;
+
+    // 3. 全年 1-12 月總率
+    const yearTotalCells = mTotal * 12;
+    let yearDoneCells = 0;
+    for (let m = 1; m <= 12; m++) {
+      mItems.forEach(it => {
+        if (ensureMonthlyEntry(currentRocYear, m, it.key).done) yearDoneCells++;
+      });
+    }
+    const pct = yearTotalCells > 0 ? Math.round((yearDoneCells / yearTotalCells) * 100) : 0;
+    document.getElementById('sumYearPercent').textContent = `${pct}%`;
+    document.getElementById('sumYearDetail').textContent = `已完成 ${yearDoneCells} / ${yearTotalCells} 格`;
+  }
+
+  function renderAll() {
+    renderDailyGroups();
+    renderMonthlyTable('tblGroupA', 'monthly_a', true);
+    renderMonthlyTable('tblGroupB', 'monthly_b', false);
+    renderMonthlyTable('tblGroupC', 'monthly_c', false);
+    renderMonthlyTable('tblGroupD', 'monthly_d', true);
+    renderCustomList();
+    updateSummary();
+  }
+
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function escapeAttr(str) {
+    return String(str || '')
+      .replace(/\/g, '\\')
+      .replace(/'/g, "\'")
+      .replace(/"/g, '&quot;');
+  }
+
+  // 初始化
+  (function init() {
+    initSupabase();
+    const today = new Date();
+    const ds = toDateStr(today);
+    currentDateStr = ds;
+    currentRocYear = calcRocYearFromDateStr(ds);
+    currentMonth = calcMonthFromDateStr(ds);
+    document.getElementById('checkDateInput').value = ds;
+    document.getElementById('rocYearInput').value = currentRocYear;
+    renderAll();
+    loadYearData(currentRocYear);
+  })();
+</script>
+
+</body>
+</html>
