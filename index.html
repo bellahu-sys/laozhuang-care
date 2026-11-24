@@ -256,6 +256,26 @@
       padding: 2px 9px; border-radius: 10px; align-self: flex-start;
     }
 
+    /* 區塊一：人事資料分頁切換樣式 */
+    .personnel-tabs {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--sec1-border);
+    }
+    .personnel-tab-btn {
+      padding: 8px 16px; border-radius: 7px; font-size: 0.94rem; font-weight: bold;
+      border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .personnel-tab-btn:hover {
+      background: var(--sec1-bg); border-color: var(--sec1-main); color: var(--sec1-dark);
+    }
+    .personnel-tab-btn.active {
+      background: var(--sec1-main); color: #ffffff; border-color: var(--sec1-main);
+      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.22);
+    }
+    .personnel-panel { display: none; }
+    .personnel-panel.active { display: block; }
+
     .course-print-tabs {
       display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
       padding-bottom: 12px; border-bottom: 1px solid var(--sec3-border);
@@ -316,15 +336,15 @@
     <div class="nav-item">
       <button type="button" class="nav-btn">人事資料 ▾</button>
       <div class="dropdown-content">
-        <div class="dropdown-divider">長輩個案管理</div>
+        <div class="dropdown-divider">人事資料管理</div>
         <a href="個案資料管理.html">個案資料管理</a>
         <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <div class="dropdown-divider">人事記錄</div>
         <a href="電話問安管理.html">電話問安記錄</a>
         <a href="延緩前測管理.html">延緩課程前測記錄</a>
         <a href="聯絡電話.html">聯絡電話</a>
-        <div class="dropdown-divider">工作人員與師資</div>
-        <a href="講師資料.html">講師資料管理</a>
-        <a href="臨時人員資料.html">臨時人員資料管理</a>
       </div>
     </div>
     <div class="nav-item">
@@ -343,7 +363,6 @@
         <a href="月報表套印中心.html">簽到表套印</a>
         <a href="個案基本資料表套印.html">個案基本資料表套印</a>
         <a href="健康管理表套印.html">長輩健康管理表套印</a>
-        <a href="常來名冊報表.html">常來個案名冊與報表</a>
         <a href="常來名冊報表.html">常來個案名冊與報表</a>
       </div>
     </div>
@@ -395,56 +414,70 @@
       <span>一、人事資料</span>
       <span class="section-tag">翡翠綠專區</span>
     </h2>
-    <div class="card-grid">
-      <a href="個案資料管理.html" class="module-card">
-        <div>
-          <div class="module-name">個案資料管理</div>
-          <div class="module-desc">單頁翻閱、新增與編輯長輩基本資料及底部服務狀況記錄。</div>
-        </div>
-        <span class="module-badge">人事資料</span>
-      </a>
-      <a href="個案清單.html" class="module-card">
-        <div>
-          <div class="module-name">個案名冊查詢與服務狀況</div>
-          <div class="module-desc">查詢服務中／結案個案、篩選狀態與匯入匯出名冊。</div>
-        </div>
-        <span class="module-badge">人事資料</span>
-      </a>
-      <a href="電話問安管理.html" class="module-card highlight-fee">
-        <div>
-          <div class="module-name">電話問安記錄</div>
-          <div class="module-desc">篩選常來長輩一筆一筆登錄每月電訪（目標每月 20 位以上），一鍵匯出政府平台上傳 Excel 範本。</div>
-        </div>
-        <span class="module-badge fee-badge">每月電訪 ＋ 政府範本匯出</span>
-      </a>
-      <a href="延緩前測管理.html" class="module-card highlight-fee">
-        <div>
-          <div class="module-name">延緩課程前測記錄</div>
-          <div class="module-desc">管理每年 2–3 期延緩失能課程前測名單（ICOPE／SPPB／MNA），支援重複套用既有前測紀錄。</div>
-        </div>
-        <span class="module-badge fee-badge">分期前測 ＋ 重複套用</span>
-      </a>
-      <a href="講師資料.html" class="module-card">
-        <div>
-          <div class="module-name">講師資料管理</div>
-          <div class="module-desc">維護授課講師基本資料、聯絡方式與服務狀態。</div>
-        </div>
-        <span class="module-badge">師資管理</span>
-      </a>
-      <a href="臨時人員資料.html" class="module-card">
-        <div>
-          <div class="module-name">臨時人員資料管理</div>
-          <div class="module-desc">維護廚房主廚與助手等臨時人員基本資料。</div>
-        </div>
-        <span class="module-badge">人員管理</span>
-      </a>
-      <a href="聯絡電話.html" class="module-card">
-        <div>
-          <div class="module-name">聯絡電話</div>
-          <div class="module-desc">政府各計畫承辦與非政府機關／其它聯絡電話總表、翻閱本與新增。</div>
-        </div>
-        <span class="module-badge">人事資料</span>
-      </a>
+    <div class="personnel-tabs" role="tablist">
+      <button type="button" class="personnel-tab-btn active" onclick="switchPersonnelTab('mgmt', this)">人事資料管理</button>
+      <button type="button" class="personnel-tab-btn" onclick="switchPersonnelTab('records', this)">人事記錄</button>
+    </div>
+
+    <!-- 1. 人事資料管理 -->
+    <div id="tab-personnel-mgmt" class="personnel-panel active">
+      <div class="card-grid">
+        <a href="個案資料管理.html" class="module-card">
+          <div>
+            <div class="module-name">個案資料管理</div>
+            <div class="module-desc">單頁翻閱、新增與編輯長輩基本資料及底部服務狀況記錄。</div>
+          </div>
+          <span class="module-badge">人事資料管理</span>
+        </a>
+        <a href="個案清單.html" class="module-card">
+          <div>
+            <div class="module-name">個案名冊查詢與服務狀況</div>
+            <div class="module-desc">查詢服務中／結案個案、篩選狀態與匯入匯出名冊。</div>
+          </div>
+          <span class="module-badge">人事資料管理</span>
+        </a>
+        <a href="講師資料.html" class="module-card">
+          <div>
+            <div class="module-name">講師資料管理</div>
+            <div class="module-desc">維護授課講師基本資料、聯絡方式與服務狀態。</div>
+          </div>
+          <span class="module-badge">人事資料管理</span>
+        </a>
+        <a href="臨時人員資料.html" class="module-card">
+          <div>
+            <div class="module-name">臨時人員資料管理</div>
+            <div class="module-desc">維護廚房主廚與助手等臨時人員基本資料。</div>
+          </div>
+          <span class="module-badge">人事資料管理</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 2. 人事記錄 -->
+    <div id="tab-personnel-records" class="personnel-panel">
+      <div class="card-grid">
+        <a href="電話問安管理.html" class="module-card highlight-fee">
+          <div>
+            <div class="module-name">電話問安記錄</div>
+            <div class="module-desc">篩選常來長輩一筆一筆登錄每月電訪（目標每月 20 位以上），一鍵匯出政府平台上傳 Excel 範本。</div>
+          </div>
+          <span class="module-badge fee-badge">每月電訪 ＋ 政府範本匯出</span>
+        </a>
+        <a href="延緩前測管理.html" class="module-card highlight-fee">
+          <div>
+            <div class="module-name">延緩課程前測記錄</div>
+            <div class="module-desc">管理每年 2–3 期延緩失能課程前測名單（ICOPE／SPPB／MNA），支援重複套用既有前測紀錄。</div>
+          </div>
+          <span class="module-badge fee-badge">分期前測 ＋ 重複套用</span>
+        </a>
+        <a href="聯絡電話.html" class="module-card">
+          <div>
+            <div class="module-name">聯絡電話</div>
+            <div class="module-desc">政府各計畫承辦與非政府機關／其它聯絡電話總表、翻閱本與新增。</div>
+          </div>
+          <span class="module-badge">人事記錄</span>
+        </a>
+      </div>
     </div>
   </div>
 
@@ -673,6 +706,14 @@
 </div>
 
 <script>
+  function switchPersonnelTab(tabKey, btnEl) {
+    document.querySelectorAll('.personnel-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.personnel-panel').forEach(panel => panel.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    const target = document.getElementById('tab-personnel-' + tabKey);
+    if (target) target.classList.add('active');
+  }
+
   function switchCoursePrintTab(tabKey, btnEl) {
     document.querySelectorAll('.course-print-tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.course-print-panel').forEach(panel => panel.classList.remove('active'));
