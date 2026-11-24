@@ -1035,8 +1035,8 @@ ALTER TABLE daily_work_checklists DISABLE ROW LEVEL SECURITY;`;
 
   function escapeAttr(str) {
     return String(str || '')
-      .replace(/\/g, '\\')
-      .replace(/'/g, "\'")
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
       .replace(/"/g, '&quot;');
   }
 
