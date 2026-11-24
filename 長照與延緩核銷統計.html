@@ -240,7 +240,6 @@
         <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
         <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
         <a href="長照講師核銷記錄.html">3. 長照核銷統計</a>
-        <a href="長照與延緩核銷統計.html?plan=delay">4. 延緩核銷統計</a>
       </div>
     </div>
   </div>
@@ -263,40 +262,34 @@
         <button type="button" class="btn btn-gray" onclick="window.print()">列印</button>
       </div>
     </div>
-
-    <div class="sub-tabs no-print">
-      <button type="button" class="sub-tab-btn active" id="subTabFunding" onclick="switchSubView('funding')">1. 長照與延緩經費收支</button>
-    </div>
   </div>
 
-  <!-- 子頁面 1：1. 長照與延緩經費收支（跨期累計＋一鍵複製核銷明細表） -->
   <div id="viewFunding">
     <div class="card no-print">
       <h2>
         <span>一、年度共用核定額度與核銷順序設定</span>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" class="btn btn-amber btn-sm" onclick="loadSampleSequence115()">載入範例（1-3月長照➔4-6月長照➔延緩第1期）</button>
+          <button type="button" class="btn btn-amber btn-sm" id="btnLoadSample">載入範例（1-3月長照➔4-6月長照➔延緩第1期）</button>
         </div>
       </h2>
       <div class="controls-bar" style="margin-bottom:0;">
         <label style="font-weight:bold;">
           核定業務費（長照）：
-          <input type="text" id="sharedBudgetBiz" class="sheet-cell-input" style="width:125px; margin-left:4px;" value="480,000" onchange="onSharedBudgetChange()">
+          <input type="text" id="sharedBudgetBiz" class="sheet-cell-input" style="width:125px; margin-left:4px;" value="480,000">
         </label>
         <label style="font-weight:bold;">
           核定預防及延緩失能服務：
-          <input type="text" id="sharedBudgetDelay" class="sheet-cell-input" style="width:125px; margin-left:4px;" value="108,000" onchange="onSharedBudgetChange()">
+          <input type="text" id="sharedBudgetDelay" class="sheet-cell-input" style="width:125px; margin-left:4px;" value="108,000">
         </label>
         <label style="font-weight:bold;">
           送核銷階段／順序：
-          <select id="fundingStageSelect" onchange="onFundingStageChange(this.value)" style="font-weight:bold; margin-left:4px;"></select>
+          <select id="fundingStageSelect" style="font-weight:bold; margin-left:4px;"></select>
         </label>
-        <button type="button" class="btn btn-outline btn-sm" onclick="addFundingStage()">＋ 新增送核銷階段</button>
-        <button type="button" class="btn btn-blue btn-sm" onclick="copySheetBlock('fundingOfficialWrap', '補助經費收支明細表')">一鍵複製收支明細表</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btnAddStage">＋ 新增送核銷階段</button>
+        <button type="button" class="btn btn-blue btn-sm" id="btnCopyFunding">一鍵複製收支明細表</button>
       </div>
     </div>
 
-    <!-- 官方格式：接受衛生福利部長照服務發展基金補助經費收支明細表 -->
     <div class="card">
       <h2>
         <span id="officialSheetHeading">接受衛生福利部長照服務發展基金補助經費收支明細表</span>
@@ -321,7 +314,6 @@
       </div>
     </div>
 
-    <!-- 各送核銷階段累計總覽表（清楚對照每次送件順序的累計金額） -->
     <div class="card">
       <h2>
         <span>各送核銷階段累計總覽（點選任一列可切換上方明細表）</span>
@@ -332,7 +324,6 @@
       </div>
     </div>
   </div>
-
 </div>
 
 <script>
@@ -344,30 +335,9 @@
   }
 
   const STORAGE_KEY_FUNDING_STAGES = 'laozhuang_ltc_delay_stages_v3';
-
-  let activeSubView = 'funding';
-  let masterInstructors = [];
-  let rebSelectedTeachers = [];
-  let reimburseRateConfigs = {};
-  let yearSchedules = [];
-  let rebClaimOverrides = {};
-  const LTC_QUARTER_LABELS = {
-    1: '第1季 1-3月',
-    2: '第2季 4-6月',
-    3: '第3季 7-9月',
-    4: '第4季 10-12月'
-  };
-  const LTC_QUARTER_MONTHS = {
-    1: [1, 2, 3],
-    2: [4, 5, 6],
-    3: [7, 8, 9],
-    4: [10, 11, 12]
-  };
-  const DELAY_PERIOD_LABELS = {
-    1: '延緩1期',
-    2: '延緩2期',
-    3: '延緩3期'
-  };
+  let fundingStagesByYear = {};
+  let isSavingFunding = false;
+  let queuedFundingSave = false;
 
   function fmt(num) {
     const n = Math.round(Number(num) || 0);
@@ -393,34 +363,11 @@
     return String(s || '').replace(/"/g, '&quot;');
   }
 
-  let fundingStagesByYear = {}; // { [yr]: { budgetBiz, budgetDelay, activeStageId, stages: [...] } }
-
   function createDefaultStagesForYear(yr) {
     return [
-      {
-        id: `st_${yr}_1`,
-        order: 1,
-        sourceLabel: '衛生福利部補助款',
-        periodTitle: '1-3月份 核銷',
-        curBiz: 120000,
-        curDelay: 0
-      },
-      {
-        id: `st_${yr}_2`,
-        order: 2,
-        sourceLabel: '衛生福利部補助款',
-        periodTitle: '4-6月份 核銷',
-        curBiz: 120000,
-        curDelay: 0
-      },
-      {
-        id: `st_${yr}_3`,
-        order: 3,
-        sourceLabel: '衛生福利部補助款',
-        periodTitle: '第 1 期預防及延緩失能服務費核銷',
-        curBiz: 0,
-        curDelay: 28800
-      }
+      { id: `st_${yr}_1`, order: 1, sourceLabel: '衛生福利部補助款', periodTitle: '1-3月份 核銷', curBiz: 120000, curDelay: 0 },
+      { id: `st_${yr}_2`, order: 2, sourceLabel: '衛生福利部補助款', periodTitle: '4-6月份 核銷', curBiz: 120000, curDelay: 0 },
+      { id: `st_${yr}_3`, order: 3, sourceLabel: '衛生福利部補助款', periodTitle: '第 1 期預防及延緩失能服務費核銷', curBiz: 0, curDelay: 28800 }
     ];
   }
 
@@ -438,7 +385,9 @@
   }
 
   function saveFundingLocalCache() {
-    localStorage.setItem(STORAGE_KEY_FUNDING_STAGES, JSON.stringify(fundingStagesByYear));
+    try {
+      localStorage.setItem(STORAGE_KEY_FUNDING_STAGES, JSON.stringify(fundingStagesByYear));
+    } catch (e) {}
   }
 
   async function loadFundingFromDatabase(yr) {
@@ -456,14 +405,10 @@
           fundingStagesByYear[yr] = stagesRec.payload;
           saveFundingLocalCache();
           setSyncStatus(`已載入 ${yr} 年度長照與延緩經費收支`);
-          return;
         }
       }
     } catch (e) {}
   }
-
-  let isSavingFunding = false;
-  let queuedFundingSave = false;
 
   async function saveFundingToDatabase(silent = true) {
     const yr = getYear();
@@ -478,33 +423,24 @@
     isSavingFunding = true;
 
     try {
-      if (!supabaseClient) {
-        if (!silent) alert(`已儲存 ${yr} 年度長照與延緩經費收支至本機`);
-        return;
-      }
-
-      const payload = [
-        {
-          roc_year: yrNum,
-          section_key: 'funding_stages_v3',
-          payload: state,
-          updated_at: new Date().toISOString()
-        }
-      ];
-
+      if (!supabaseClient) return;
+      const payload = [{
+        roc_year: yrNum,
+        section_key: 'funding_stages_v3',
+        payload: state,
+        updated_at: new Date().toISOString()
+      }];
       const { error } = await supabaseClient
         .from('ltc_delay_funding_records')
         .upsert(payload, { onConflict: 'roc_year,section_key' });
 
       if (error) {
         setSyncStatus('儲存至資料庫失敗：' + error.message, true);
-        if (!silent) alert('儲存至資料庫失敗：' + error.message);
         return;
       }
       const now = new Date();
       const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
       setSyncStatus(`已即時存入資料庫（${yr} 年度，${tStr}）`);
-      if (!silent) alert(`已將 ${yr} 年度長照與延緩經費收支儲存至資料庫！`);
     } catch (e) {
       setSyncStatus('儲存發生例外：' + (e.message || e), true);
     } finally {
@@ -606,9 +542,7 @@
 
   async function onStageFieldChange(stageId, field, rawVal, shouldReRender = true) {
     updateStageStateOnly(stageId, field, rawVal);
-    if (shouldReRender) {
-      renderQuarterTables();
-    }
+    if (shouldReRender) renderQuarterTables();
     await saveFundingToDatabase(true);
   }
 
@@ -699,29 +633,27 @@
       <tr>
         <td colspan="7" style="background:#f8fafc; font-weight:bold;">
           總支出明細：
-          <input type="text" class="sheet-cell-input" style="width:290px; text-align:left; font-weight:bold; color:#0369a1;"
-            value="${escapeAttr(periodTitleVal)}"
-            onchange="onStageFieldChange('${stageIdAttr}', 'periodTitle', this.value)">
+          <input type="text" id="offPeriodTitleInp" class="sheet-cell-input" style="width:290px; text-align:left; font-weight:bold; color:#0369a1;"
+            value="${escapeAttr(periodTitleVal)}">
         </td>
       </tr>
       <tr>
         <td rowspan="3" class="td-center">
-          <input type="text" class="sheet-cell-input" style="text-align:center; font-weight:bold;"
-            value="${escapeAttr(srcLabelVal)}"
-            onchange="onStageFieldChange('${stageIdAttr}', 'sourceLabel', this.value)">
+          <input type="text" id="offSourceLabelInp" class="sheet-cell-input" style="text-align:center; font-weight:bold;"
+            value="${escapeAttr(srcLabelVal)}">
         </td>
         <td class="td-center">業務費</td>
-        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(budgetBiz)}" onchange="onSharedBudgetChange()"></td>
+        <td class="td-right"><input type="text" class="sheet-cell-input off-budget-inp" value="${fmt(budgetBiz)}"></td>
         <td class="td-center">業務費</td>
-        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cBiz)}" onchange="onStageFieldChange('${stageIdAttr}', 'curBiz', this.value)"></td>
+        <td class="td-right"><input type="text" id="offCurBizInp" class="sheet-cell-input" value="${fmt(cBiz)}"></td>
         <td class="td-right"><strong>${fmt(cumBiz)}</strong></td>
         <td class="td-right">${fmt(remBiz)}</td>
       </tr>
       <tr>
         <td class="td-center">預防及延緩失能服務</td>
-        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(budgetDelay)}" onchange="onSharedBudgetChange()"></td>
+        <td class="td-right"><input type="text" class="sheet-cell-input off-budget-inp" value="${fmt(budgetDelay)}"></td>
         <td class="td-center">預防及延緩失能服務</td>
-        <td class="td-right"><input type="text" class="sheet-cell-input" value="${fmt(cDel)}" onchange="onStageFieldChange('${stageIdAttr}', 'curDelay', this.value)"></td>
+        <td class="td-right"><input type="text" id="offCurDelayInp" class="sheet-cell-input" value="${fmt(cDel)}"></td>
         <td class="td-right"><strong>${fmt(cumDelay)}</strong></td>
         <td class="td-right">${fmt(remDelay)}</td>
       </tr>
@@ -734,6 +666,18 @@
         <td class="td-total-bold">${fmt(remTotal)}</td>
       </tr>
     `;
+
+    const pTitleInp = document.getElementById('offPeriodTitleInp');
+    if (pTitleInp) pTitleInp.addEventListener('change', (e) => onStageFieldChange(stageIdAttr, 'periodTitle', e.target.value, true));
+    const sLblInp = document.getElementById('offSourceLabelInp');
+    if (sLblInp) sLblInp.addEventListener('change', (e) => onStageFieldChange(stageIdAttr, 'sourceLabel', e.target.value, true));
+    const cBizInp = document.getElementById('offCurBizInp');
+    if (cBizInp) cBizInp.addEventListener('change', (e) => onStageFieldChange(stageIdAttr, 'curBiz', e.target.value, true));
+    const cDelInp = document.getElementById('offCurDelayInp');
+    if (cDelInp) cDelInp.addEventListener('change', (e) => onStageFieldChange(stageIdAttr, 'curDelay', e.target.value, true));
+    document.querySelectorAll('.off-budget-inp').forEach(inp => {
+      inp.addEventListener('change', onSharedBudgetChange);
+    });
 
     const ovTbl = document.getElementById('fundingStagesOverviewTable');
     if (ovTbl) {
@@ -755,376 +699,55 @@
         const isAct = activeRow && String(st.id) === String(activeRow.id);
         const sid = escapeAttr(st.id);
         return `
-          <tr style="${isAct ? 'background:#fef9c3;' : ''}">
+          <tr class="ov-stage-row" data-sid="${sid}" style="${isAct ? 'background:#fef9c3;' : ''}">
             <td class="td-center">
-              <input type="number" class="sheet-cell-input" style="text-align:center; width:56px;" min="1"
-                value="${st.order}"
-                oninput="updateStageStateOnly('${sid}', 'order', this.value)"
-                onchange="onStageFieldChange('${sid}', 'order', this.value, true)">
+              <input type="number" class="sheet-cell-input ov-order-inp" data-sid="${sid}" style="text-align:center; width:56px;" min="1" value="${st.order}">
             </td>
             <td>
-              <input type="text" class="sheet-cell-input" style="text-align:left; font-weight:bold;"
-                value="${escapeAttr(st.periodTitle)}"
-                oninput="updateStageStateOnly('${sid}', 'periodTitle', this.value)"
-                onchange="onStageFieldChange('${sid}', 'periodTitle', this.value, true)">
+              <input type="text" class="sheet-cell-input ov-title-inp" data-sid="${sid}" style="text-align:left; font-weight:bold;" value="${escapeAttr(st.periodTitle)}">
             </td>
             <td class="num-col">
-              <input type="text" class="sheet-cell-input"
-                value="${fmt(st.curBiz)}"
-                oninput="updateStageStateOnly('${sid}', 'curBiz', this.value)"
-                onchange="onStageFieldChange('${sid}', 'curBiz', this.value, true)">
+              <input type="text" class="sheet-cell-input ov-biz-inp" data-sid="${sid}" value="${fmt(st.curBiz)}">
             </td>
             <td class="num-col">
-              <input type="text" class="sheet-cell-input"
-                value="${fmt(st.curDelay)}"
-                oninput="updateStageStateOnly('${sid}', 'curDelay', this.value)"
-                onchange="onStageFieldChange('${sid}', 'curDelay', this.value, true)">
+              <input type="text" class="sheet-cell-input ov-del-inp" data-sid="${sid}" value="${fmt(st.curDelay)}">
             </td>
-            <td class="num-col" style="color:#b91c1c; font-weight:bold; cursor:pointer;" onclick="onFundingStageChange('${sid}')">${fmt(st.cumBiz)}</td>
-            <td class="num-col" style="color:#b45309; font-weight:bold; cursor:pointer;" onclick="onFundingStageChange('${sid}')">${fmt(st.cumDelay)}</td>
-            <td class="num-col" style="font-weight:bold; cursor:pointer;" onclick="onFundingStageChange('${sid}')">${fmt(st.remTotal)}</td>
+            <td class="num-col" style="color:#b91c1c; font-weight:bold;">${fmt(st.cumBiz)}</td>
+            <td class="num-col" style="color:#b45309; font-weight:bold;">${fmt(st.cumDelay)}</td>
+            <td class="num-col" style="font-weight:bold;">${fmt(st.remTotal)}</td>
             <td class="td-center no-print">
-              <button type="button" class="btn btn-gray btn-sm" onclick="deleteFundingStage('${sid}')">刪除</button>
+              <button type="button" class="btn btn-gray btn-sm ov-del-btn" data-sid="${sid}">刪除</button>
             </td>
           </tr>
         `;
       }).join('');
       ovTbl.innerHTML = head + `<tbody>${rows}</tbody>`;
-    }
-  }
 
-  // ==================== 2. 講師鐘點費核銷 ====================
-  function populateRebPeriodSelect() {
-    const prog = document.getElementById('rebProgramTypeSelect').value;
-    const sel = document.getElementById('rebPeriodSelect');
-    const lbl = document.getElementById('rebPeriodLabel');
-    if (prog === 'ltc') {
-      lbl.textContent = '長照季別：';
-      sel.innerHTML = [1, 2, 3, 4].map(q => `<option value="q${q}">${LTC_QUARTER_LABELS[q]}</option>`).join('');
-    } else {
-      lbl.textContent = '延緩期別：';
-      sel.innerHTML = [1, 2, 3].map(p => `<option value="p${p}">${DELAY_PERIOD_LABELS[p]}</option>`).join('');
-    }
-  }
-
-  function toggleRebInstPanel() {
-    const p = document.getElementById('rebInstFilterPanel');
-    if (p) p.classList.toggle('open');
-  }
-
-  document.addEventListener('click', (ev) => {
-    if (!ev.target.closest('.picker-dropdown-wrap')) {
-      document.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('open'));
-    }
-  });
-
-  function renderRebInstFilterPanel() {
-    const panel = document.getElementById('rebInstFilterPanel');
-    const btn = document.getElementById('rebInstFilterBtn');
-    if (!panel) return;
-    panel.innerHTML = masterInstructors.map(inst => {
-      const checked = rebSelectedTeachers.includes(inst.name);
-      return `
-        <label class="picker-item">
-          <input type="checkbox" ${checked ? 'checked' : ''} onchange="onRebInstCheckToggle('${escapeAttr(inst.name)}', this.checked)">
-          <span>${escapeHtml(inst.name)}</span>
-        </label>
-      `;
-    }).join('');
-    if (btn) btn.textContent = `勾選顯示講師 (${rebSelectedTeachers.length}) ▾`;
-  }
-
-  function onRebInstCheckToggle(name, checked) {
-    if (checked) {
-      if (!rebSelectedTeachers.includes(name)) rebSelectedTeachers.push(name);
-    } else {
-      rebSelectedTeachers = rebSelectedTeachers.filter(n => n !== name);
-    }
-    renderRebInstFilterPanel();
-    renderRebMatrixTable();
-  }
-
-  function resolveReimbursePlanRate(instName, prog, periodKey) {
-    const instRates = reimburseRateConfigs[instName] || {};
-    const candidatePlans = prog === 'ltc'
-      ? ['長照課程', '關懷課程', '樂齡-活躍老化']
-      : (periodKey === 'p1' ? ['延緩1期', '延緩課程'] : periodKey === 'p2' ? ['延緩2期', '延緩課程'] : ['延緩3期', '延緩課程']);
-
-    for (const pName of candidatePlans) {
-      if (instRates[pName] && instRates[pName].rate !== '' && Number(instRates[pName].rate) > 0) {
-        const hrs = Number(instRates[pName].hours) > 0 ? Number(instRates[pName].hours) : 1;
-        return Number(instRates[pName].rate) * hrs;
-      }
-    }
-    for (const [, cfg] of Object.entries(instRates)) {
-      if (cfg && cfg.rate !== '' && Number(cfg.rate) > 0) {
-        const hrs = Number(cfg.hours) > 0 ? Number(cfg.hours) : 1;
-        return Number(cfg.rate) * hrs;
-      }
-    }
-    return 0;
-  }
-
-  function computeAutoAmountForCell(instName, prog, periodKey, colMonth) {
-    const perSessionFee = resolveReimbursePlanRate(instName, prog, periodKey);
-    if (!perSessionFee) return 0;
-
-    const matchingSchedules = yearSchedules.filter(s => {
-      if ((s.instructor_name || '').trim() !== instName) return false;
-      const dStr = String(s.course_date || '').slice(0, 10);
-      const m = parseInt((dStr.split('-')[1] || '0'), 10);
-      if (colMonth && m !== Number(colMonth)) return false;
-      const combined = `${s.plan_name || ''} ${s.course_name || ''}`;
-      if (prog === 'ltc') {
-        return LTC_QUARTER_MONTHS[Number(periodKey.replace('q', ''))]?.includes(m);
-      }
-      if (periodKey === 'p1') return combined.includes('延緩1') || combined.includes('延緩一');
-      if (periodKey === 'p2') return combined.includes('延緩2') || combined.includes('延緩二');
-      if (periodKey === 'p3') return combined.includes('延緩3') || combined.includes('延緩三');
-      return false;
-    });
-
-    return Math.round(matchingSchedules.length * perSessionFee);
-  }
-
-  async function loadReimburseContextAndRender() {
-    const yr = getYear();
-    const yrNum = parseInt(yr, 10) || 115;
-    const adYear = yrNum + 1911;
-    setSyncStatus('載入「鐘點費-核銷」設定與排課資料...');
-
-    if (supabaseClient) {
-      try {
-        const [instRes, rebCfgRes, schedRes, claimRes] = await Promise.all([
-          supabaseClient.from('instructors').select('staff_number, name, status').order('staff_number', { ascending: true }),
-          supabaseClient.from('instructor_reimburse_rate_configs').select('instructor_name, plan_name, rate, hours'),
-          supabaseClient.from('course_schedules').select('*').gte('course_date', `${adYear}-01-01`).lte('course_date', `${adYear}-12-31`),
-          supabaseClient.from('instructor_reimburse_claims').select('*').eq('roc_year', yrNum)
-        ]);
-
-        if (!instRes.error && Array.isArray(instRes.data) && instRes.data.length > 0) {
-          masterInstructors = instRes.data.filter(r => r.name && r.name.trim() !== '').map(r => ({
-            name: r.name.trim(),
-            status: r.status || '服務中'
-          }));
-        }
-
-        reimburseRateConfigs = {};
-        if (!rebCfgRes.error && Array.isArray(rebCfgRes.data)) {
-          rebCfgRes.data.forEach(row => {
-            const inst = (row.instructor_name || '').trim();
-            const plan = (row.plan_name || '').trim();
-            if (!inst || !plan) return;
-            if (!reimburseRateConfigs[inst]) reimburseRateConfigs[inst] = {};
-            reimburseRateConfigs[inst][plan] = {
-              rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
-              hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
-            };
-          });
-        }
-
-        yearSchedules = (!schedRes.error && Array.isArray(schedRes.data)) ? schedRes.data : [];
-
-        if (!claimRes.error && Array.isArray(claimRes.data)) {
-          claimRes.data.forEach(rec => {
-            const key = `${yr}__${rec.program_type}__${rec.period_key}__${rec.instructor_name}__${rec.col_key}`;
-            rebClaimOverrides[key] = Number(rec.amount || 0);
-          });
-        }
-      } catch (e) {}
-    }
-
-    if (masterInstructors.length === 0) {
-      masterInstructors = [
-        { name: '張國堂', status: '服務中' },
-        { name: '鄧美續', status: '服務中' },
-        { name: '蔡牡連', status: '服務中' },
-        { name: '吳佩珊', status: '服務中' },
-        { name: '黃仲慧', status: '服務中' }
-      ];
-    }
-
-    if (rebSelectedTeachers.length === 0) {
-      const dbNames = Object.keys(reimburseRateConfigs);
-      rebSelectedTeachers = (dbNames.length > 0 ? dbNames : masterInstructors.map(m => m.name));
-    }
-
-    renderRebInstFilterPanel();
-    renderRebMatrixTable();
-    setSyncStatus(`已同步 ${yr} 年度「鐘點費-核銷」設定`);
-  }
-
-  async function syncReimburseFromScheduleAndConfig() {
-    const yr = getYear();
-    const prog = document.getElementById('rebProgramTypeSelect').value;
-    const periodKey = document.getElementById('rebPeriodSelect').value;
-    const cols = getRebMatrixColumns(prog, periodKey);
-
-    masterInstructors.forEach(inst => {
-      cols.forEach(col => {
-        const autoAmt = computeAutoAmountForCell(inst.name, prog, periodKey, col.month);
-        const key = `${yr}__${prog}__${periodKey}__${inst.name}__${col.key}`;
-        rebClaimOverrides[key] = autoAmt;
-      });
-    });
-
-    renderRebMatrixTable();
-    setSyncStatus('已依排課與「鐘點費-核銷」重新帶入金額');
-  }
-
-  function getRebMatrixColumns(prog, periodKey) {
-    if (prog === 'ltc') {
-      const qNum = parseInt(periodKey.replace('q', ''), 10) || 1;
-      const months = LTC_QUARTER_MONTHS[qNum] || [1, 2, 3];
-      return months.map(m => ({ key: `m${m}`, month: m, label: `${m}月講師` }));
-    }
-    return [{ key: periodKey, month: null, label: `${DELAY_PERIOD_LABELS[parseInt(periodKey.replace('p', ''), 10) || 1]}講師` }];
-  }
-
-  function getCellClaimAmount(instName, prog, periodKey, col) {
-    const yr = getYear();
-    const key = `${yr}__${prog}__${periodKey}__${instName}__${col.key}`;
-    if (Object.prototype.hasOwnProperty.call(rebClaimOverrides, key)) {
-      return Number(rebClaimOverrides[key] || 0);
-    }
-    return computeAutoAmountForCell(instName, prog, periodKey, col.month);
-  }
-
-  function onRebCellAmountChange(instName, prog, periodKey, colKey, rawVal) {
-    const yr = getYear();
-    const key = `${yr}__${prog}__${periodKey}__${instName}__${colKey}`;
-    rebClaimOverrides[key] = parseNumVal(rawVal);
-    renderRebMatrixTable();
-  }
-
-  async function saveReimburseClaimsToDb() {
-    const yr = getYear();
-    const yrNum = parseInt(yr, 10) || 115;
-    const prog = document.getElementById('rebProgramTypeSelect').value;
-    const periodKey = document.getElementById('rebPeriodSelect').value;
-    const cols = getRebMatrixColumns(prog, periodKey);
-
-    if (!supabaseClient) {
-      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
-      return;
-    }
-
-    const rowsToUpsert = [];
-    rebSelectedTeachers.forEach(instName => {
-      cols.forEach(col => {
-        const amt = getCellClaimAmount(instName, prog, periodKey, col);
-        rowsToUpsert.push({
-          roc_year: yrNum,
-          program_type: prog,
-          period_key: periodKey,
-          col_key: col.key,
-          instructor_name: instName,
-          amount: amt,
-          updated_at: new Date().toISOString()
+      ovTbl.querySelectorAll('.ov-stage-row').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('input, button')) return;
+          onFundingStageChange(tr.dataset.sid);
         });
       });
-    });
-
-    const { error } = await supabaseClient
-      .from('instructor_reimburse_claims')
-      .upsert(rowsToUpsert, { onConflict: 'roc_year,program_type,period_key,col_key,instructor_name' });
-
-    if (error) {
-      setSyncStatus('儲存核銷統計失敗：' + error.message, true);
-      alert('儲存核銷統計失敗：' + error.message);
-      return;
-    }
-    setSyncStatus(`已將 ${yr} 年度講師鐘點費核銷統計儲存至資料庫`);
-    alert(`已將 ${yr} 年度講師鐘點費核銷統計儲存至資料庫！`);
-  }
-
-  function onRebFilterChange() {
-    renderRebMatrixTable();
-  }
-
-  function renderRebMatrixTable() {
-    const yr = getYear();
-    const prog = document.getElementById('rebProgramTypeSelect').value;
-    const periodKey = document.getElementById('rebPeriodSelect').value;
-    const cols = getRebMatrixColumns(prog, periodKey);
-
-    const periodTitle = prog === 'ltc'
-      ? LTC_QUARTER_LABELS[parseInt(periodKey.replace('q', ''), 10) || 1]
-      : DELAY_PERIOD_LABELS[parseInt(periodKey.replace('p', ''), 10) || 1];
-    document.getElementById('rebMatrixTitle').textContent = `${yr}年度 ${periodTitle} 講師鐘點費核銷`;
-
-    const tbl = document.getElementById('rebMatrixTable');
-    if (!tbl) return;
-
-    const headHtml = `
-      <thead>
-        <tr>
-          <th style="width:140px;">講師姓名</th>
-          ${cols.map(c => `<th>${escapeHtml(c.label)}</th>`).join('')}
-          <th style="width:140px;">總計</th>
-        </tr>
-      </thead>
-    `;
-
-    const colTotals = {};
-    cols.forEach(c => { colTotals[c.key] = 0; });
-    let grandTotal = 0;
-
-    const bodyRowsHtml = rebSelectedTeachers.map(instName => {
-      let rowSum = 0;
-      const tds = cols.map(c => {
-        const amt = getCellClaimAmount(instName, prog, periodKey, c);
-        colTotals[c.key] += amt;
-        rowSum += amt;
-        return `
-          <td class="num-col">
-            <input type="text" class="sheet-cell-input" value="${amt > 0 ? fmt(amt) : ''}" placeholder="" onchange="onRebCellAmountChange('${escapeAttr(instName)}', '${prog}', '${periodKey}', '${c.key}', this.value)">
-          </td>
-        `;
-      }).join('');
-      grandTotal += rowSum;
-
-      return `
-        <tr>
-          <td class="name-col">${escapeHtml(instName)}</td>
-          ${tds}
-          <td class="num-col"><strong>${fmt(rowSum)}</strong></td>
-        </tr>
-      `;
-    }).join('');
-
-    const totalRowHtml = `
-      <tr class="total-row">
-        <td></td>
-        ${cols.map(c => `<td class="num-col">${fmt(colTotals[c.key])}</td>`).join('')}
-        <td class="num-col">${fmt(grandTotal)}</td>
-      </tr>
-    `;
-
-    tbl.innerHTML = headHtml + `<tbody>${bodyRowsHtml}${totalRowHtml}</tbody>`;
-  }
-
-  function switchSubView(viewName) {
-    activeSubView = viewName;
-    const isReb = viewName === 'reimburse';
-    const fTab = document.getElementById('subTabFunding');
-    if (fTab) fTab.classList.toggle('active', !isReb);
-    const rTab = document.getElementById('subTabReimburse');
-    if (rTab) rTab.classList.toggle('active', isReb);
-    document.getElementById('viewFunding').style.display = isReb ? 'none' : 'block';
-    document.getElementById('viewReimburse').style.display = isReb ? 'block' : 'none';
-    document.getElementById('mainPageTitle').textContent = isReb ? '2. 講師鐘點費核銷' : '長照與延緩經費收支';
-
-    if (isReb) {
-      loadReimburseContextAndRender();
-    }
-  }
-
-  function saveCurrentActiveViewToDb() {
-    if (activeSubView === 'reimburse') {
-      saveReimburseClaimsToDb();
-    } else {
-      saveFundingToDatabase();
+      ovTbl.querySelectorAll('.ov-order-inp').forEach(inp => {
+        inp.addEventListener('input', (e) => updateStageStateOnly(e.target.dataset.sid, 'order', e.target.value));
+        inp.addEventListener('change', (e) => onStageFieldChange(e.target.dataset.sid, 'order', e.target.value, true));
+      });
+      ovTbl.querySelectorAll('.ov-title-inp').forEach(inp => {
+        inp.addEventListener('input', (e) => updateStageStateOnly(e.target.dataset.sid, 'periodTitle', e.target.value));
+        inp.addEventListener('change', (e) => onStageFieldChange(e.target.dataset.sid, 'periodTitle', e.target.value, true));
+      });
+      ovTbl.querySelectorAll('.ov-biz-inp').forEach(inp => {
+        inp.addEventListener('input', (e) => updateStageStateOnly(e.target.dataset.sid, 'curBiz', e.target.value));
+        inp.addEventListener('change', (e) => onStageFieldChange(e.target.dataset.sid, 'curBiz', e.target.value, true));
+      });
+      ovTbl.querySelectorAll('.ov-del-inp').forEach(inp => {
+        inp.addEventListener('input', (e) => updateStageStateOnly(e.target.dataset.sid, 'curDelay', e.target.value));
+        inp.addEventListener('change', (e) => onStageFieldChange(e.target.dataset.sid, 'curDelay', e.target.value, true));
+      });
+      ovTbl.querySelectorAll('.ov-del-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); deleteFundingStage(e.target.dataset.sid); });
+      });
     }
   }
 
@@ -1163,41 +786,34 @@
     }
   }
 
-  window.addEventListener('beforeunload', () => {
-    if (activeSubView === 'funding') saveFundingToDatabase(true);
-  });
+  async function onYearChange() {
+    const yr = getYear();
+    await loadFundingFromDatabase(yr);
+    renderQuarterTables();
+  }
+
+  window.addEventListener('beforeunload', () => saveFundingToDatabase(true));
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && activeSubView === 'funding') saveFundingToDatabase(true);
+    if (document.hidden) saveFundingToDatabase(true);
   });
 
   (async function init() {
-
-    populateRebPeriodSelect();
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('plan') === 'delay') {
-      document.getElementById('rebProgramTypeSelect').value = 'delay';
-      populateRebPeriodSelect();
-    }
+    document.getElementById('btnLoadSample')?.addEventListener('click', loadSampleSequence115);
+    document.getElementById('btnAddStage')?.addEventListener('click', addFundingStage);
+    document.getElementById('btnCopyFunding')?.addEventListener('click', () => copySheetBlock('fundingOfficialWrap', '補助經費收支明細表'));
+    document.getElementById('sharedBudgetBiz')?.addEventListener('change', onSharedBudgetChange);
+    document.getElementById('sharedBudgetDelay')?.addEventListener('change', onSharedBudgetChange);
+    document.getElementById('fundingStageSelect')?.addEventListener('change', (e) => onFundingStageChange(e.target.value));
 
     try {
       fundingStagesByYear = JSON.parse(localStorage.getItem(STORAGE_KEY_FUNDING_STAGES) || '{}');
     } catch (e) { fundingStagesByYear = {}; }
+
     const yr = getYear();
+    ensureYearFundingData(yr);
+    renderQuarterTables();
     await loadFundingFromDatabase(yr);
     renderQuarterTables();
-
-    if (params.get('view') === 'reimburse') {
-      switchSubView('reimburse');
-    }
-
-    // Bind explicit click handlers safely as backup
-    const sampleBtn = document.querySelector('button[onclick*="loadSampleSequence115"]');
-    if (sampleBtn) sampleBtn.addEventListener('click', (e) => { e.preventDefault(); loadSampleSequence115(); });
-    const addStageBtn = document.querySelector('button[onclick*="addFundingStage"]');
-    if (addStageBtn) addStageBtn.addEventListener('click', (e) => { e.preventDefault(); addFundingStage(); });
-    const copyFundingBtn = document.querySelector('button[onclick*="copySheetBlock(\'fundingOfficialWrap\'"]');
-    if (copyFundingBtn) copyFundingBtn.addEventListener('click', (e) => { e.preventDefault(); copySheetBlock('fundingOfficialWrap', '補助經費收支明細表'); });
   })();
 </script>
 </body>
