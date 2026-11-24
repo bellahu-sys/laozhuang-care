@@ -50,7 +50,7 @@
     .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
-    .container { max-width: 1240px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .container { max-width: 1280px; margin: 22px auto 60px auto; padding: 0 16px; }
     .card {
       background: #fff; border-radius: 12px; padding: 20px 24px;
       border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
@@ -65,9 +65,27 @@
     .controls-row {
       display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
       background: var(--amber-bg); border: 1px solid var(--amber-border);
-      padding: 12px 14px; border-radius: 8px; margin-bottom: 16px;
+      padding: 12px 14px; border-radius: 8px; margin-bottom: 14px;
     }
-    select, input[type="text"], input[type="date"] {
+    .pool-box {
+      background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;
+      padding: 12px 14px; margin-bottom: 16px;
+    }
+    .pool-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 8px;
+    }
+    .pool-chip-wrap {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;
+    }
+    .pool-num-btn {
+      padding: 3px 8px; border-radius: 5px; border: 1px solid #94a3b8;
+      background: #fff; color: #0f172a; font-size: 0.84rem; font-weight: bold; cursor: pointer;
+    }
+    .pool-num-btn:hover {
+      background: #fef3c7; border-color: var(--amber); color: var(--amber-dark);
+    }
+
+    select, input[type="text"] {
       padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
       font-size: 0.92rem; background: #fff;
     }
@@ -99,7 +117,7 @@
 
     .table-wrap { overflow-x: auto; }
     table.doc-table {
-      width: 100%; border-collapse: collapse; min-width: 820px;
+      width: 100%; border-collapse: collapse; min-width: 900px;
       background: #fff; font-size: 0.94rem;
     }
     table.doc-table th {
@@ -112,11 +130,20 @@
     table.doc-table tr:hover td { background: #fffdf7; }
     table.doc-table td.center-col { text-align: center; font-weight: bold; color: #334155; }
     table.doc-table input {
-      width: 100%; padding: 6px 8px; font-size: 0.92rem;
+      padding: 6px 8px; font-size: 0.92rem;
       border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;
     }
     table.doc-table input:focus {
       outline: 2px solid #fcd34d; border-color: var(--amber); background: #fffbeb;
+    }
+
+    .doc-num-cell {
+      display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
+    }
+    .doc-prefix-fixed {
+      white-space: nowrap; font-weight: bold; color: #0f172a;
+      background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px;
+      padding: 6px 8px; font-size: 0.9rem;
     }
 
     #dbStatus { font-size: 0.88rem; font-weight: bold; color: #0f766e; }
@@ -126,7 +153,7 @@
       body { background: #fff; }
       .container { max-width: 100%; margin: 0; padding: 0; }
       .card { border: none; box-shadow: none; padding: 0; }
-      table.doc-table input { border: none; padding: 2px; background: transparent; }
+      table.doc-table input, .doc-prefix-fixed { border: none; padding: 2px; background: transparent; }
     }
   </style>
 </head>
@@ -228,14 +255,38 @@
         <option value="118">118 年</option>
       </select>
 
-      <label style="font-weight:bold; margin-left:6px;">快速查詢：</label>
-      <input type="text" id="searchInput" placeholder="輸入公文號、使用文件或備註關鍵字..." oninput="renderTable()" style="width:260px;">
+      <label style="font-weight:bold;">固定文字：</label>
+      <input type="text" id="fixedPrefixInput" value="卓鎮老社發字第" onchange="onFixedPrefixChange(this.value)" style="width:155px; font-weight:bold;">
+
+      <label style="font-weight:bold;">快速查詢：</label>
+      <input type="text" id="searchInput" placeholder="輸入數字、公文號、使用文件或備註..." oninput="renderTable()" style="width:220px;">
       <button type="button" class="btn btn-outline btn-sm" onclick="clearSearch()">清除篩選</button>
 
       <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="toggleNumberPoolBox()">據點／協會可用數字</button>
         <button type="button" class="btn btn-amber" onclick="addRow()">＋ 新增一列</button>
         <button type="button" class="btn btn-outline" onclick="loadFromDatabase()">重新從資料庫載入</button>
         <button type="button" class="btn btn-primary" onclick="saveToDatabase()">儲存至資料庫</button>
+      </div>
+    </div>
+
+    <!-- 據點與協會可用數字分配區 -->
+    <div class="pool-box no-print" id="numberPoolBox" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <strong style="color:var(--amber-dark); font-size:0.95rem;">據點與協會可用數字分配（點擊數字可一鍵帶入或複製「固定文字＋數字」）</strong>
+        <button type="button" class="btn btn-outline btn-sm" onclick="saveNumberPools()">儲存可用數字設定</button>
+      </div>
+      <div class="pool-grid">
+        <div>
+          <label style="font-size:0.86rem; font-weight:bold; color:#0f766e;">據點可用數字（以逗號或空白分隔，如：115001, 115002）：</label>
+          <input type="text" id="stationPoolInput" placeholder="輸入據點可用數字..." oninput="renderPoolChips()" style="width:100%; margin-top:4px;">
+          <div class="pool-chip-wrap" id="stationPoolChips"></div>
+        </div>
+        <div>
+          <label style="font-size:0.86rem; font-weight:bold; color:#0369a1;">協會可用數字（以逗號或空白分隔，如：115051, 115052）：</label>
+          <input type="text" id="assocPoolInput" placeholder="輸入協會可用數字..." oninput="renderPoolChips()" style="width:100%; margin-top:4px;">
+          <div class="pool-chip-wrap" id="assocPoolChips"></div>
+        </div>
       </div>
     </div>
 
@@ -245,12 +296,12 @@
       <table class="doc-table">
         <thead>
           <tr>
-            <th style="width:8%;">編號</th>
-            <th style="width:24%;">公文號</th>
+            <th style="width:7%;">編號</th>
+            <th style="width:29%;">公文號（固定文字 ＋ 數字）</th>
             <th style="width:15%;">發文日期</th>
-            <th style="width:26%;">使用文件</th>
-            <th style="width:19%;">備註</th>
-            <th class="no-print" style="width:8%;">操作</th>
+            <th style="width:23%;">使用文件</th>
+            <th style="width:17%;">備註</th>
+            <th class="no-print" style="width:9%;">操作</th>
           </tr>
         </thead>
         <tbody id="docTableBody"></tbody>
@@ -267,8 +318,33 @@
     } catch (e) {}
   }
 
+  const DEFAULT_PREFIX = '卓鎮老社發字第';
   let currentYear = 115;
-  let records = [];
+  let fixedPrefix = (() => {
+    try {
+      return localStorage.getItem('lz_doc_fixed_prefix') || DEFAULT_PREFIX;
+    } catch (e) {
+      return DEFAULT_PREFIX;
+    }
+  })();
+
+  let stationPoolText = (() => {
+    try {
+      return localStorage.getItem('lz_doc_station_pool') || '';
+    } catch (e) {
+      return '';
+    }
+  })();
+
+  let assocPoolText = (() => {
+    try {
+      return localStorage.getItem('lz_doc_assoc_pool') || '';
+    } catch (e) {
+      return '';
+    }
+  })();
+
+  let records = []; // [{ id, db_id, seq_no, doc_number, issue_date, used_document, remark }]
 
   function setStatus(msg, isErr = false) {
     const el = document.getElementById('dbStatus');
@@ -289,6 +365,88 @@
     document.title = `${currentYear}年度公文號記錄 - 老庄社區照顧關懷據點`;
   }
 
+  function onFixedPrefixChange(val) {
+    fixedPrefix = String(val || '').trim() || DEFAULT_PREFIX;
+    document.getElementById('fixedPrefixInput').value = fixedPrefix;
+    localStorage.setItem('lz_doc_fixed_prefix', fixedPrefix);
+    renderTable();
+  }
+
+  function toggleNumberPoolBox() {
+    const box = document.getElementById('numberPoolBox');
+    if (!box) return;
+    const willOpen = box.style.display === 'none';
+    box.style.display = willOpen ? 'block' : 'none';
+    if (willOpen) {
+      document.getElementById('stationPoolInput').value = stationPoolText;
+      document.getElementById('assocPoolInput').value = assocPoolText;
+      renderPoolChips();
+    }
+  }
+
+  function saveNumberPools() {
+    stationPoolText = document.getElementById('stationPoolInput').value.trim();
+    assocPoolText = document.getElementById('assocPoolInput').value.trim();
+    localStorage.setItem('lz_doc_station_pool', stationPoolText);
+    localStorage.setItem('lz_doc_assoc_pool', assocPoolText);
+    renderPoolChips();
+    setStatus('已儲存據點與協會可用數字');
+  }
+
+  function parsePoolList(raw) {
+    return String(raw || '')
+      .split(/[,，、\s]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  function renderPoolChips() {
+    stationPoolText = document.getElementById('stationPoolInput')?.value ?? stationPoolText;
+    assocPoolText = document.getElementById('assocPoolInput')?.value ?? assocPoolText;
+
+    const stList = parsePoolList(stationPoolText);
+    const asList = parsePoolList(assocPoolText);
+
+    const stWrap = document.getElementById('stationPoolChips');
+    const asWrap = document.getElementById('assocPoolChips');
+
+    if (stWrap) {
+      stWrap.innerHTML = stList.map(num =>
+        `<button type="button" class="pool-num-btn" onclick="applyPoolNumberToFirstEmptyOrCopy('${escapeAttr(num)}')">${escapeAttr(num)}</button>`
+      ).join('');
+    }
+    if (asWrap) {
+      asWrap.innerHTML = asList.map(num =>
+        `<button type="button" class="pool-num-btn" onclick="applyPoolNumberToFirstEmptyOrCopy('${escapeAttr(num)}')">${escapeAttr(num)}</button>`
+      ).join('');
+    }
+  }
+
+  async function applyPoolNumberToFirstEmptyOrCopy(numStr) {
+    const targetRow = records.find(r => !String(r.doc_number || '').trim());
+    if (targetRow) {
+      targetRow.doc_number = numStr;
+      renderTable();
+    }
+    await copyFullDocNumber(numStr);
+  }
+
+  async function copyFullDocNumber(numStr) {
+    const cleanNum = String(numStr || '').replace(new RegExp('^' + fixedPrefix.replace(/[.*+?^${}()|[\]\]/g, '\$&')), '').trim();
+    const fullText = `${fixedPrefix}${cleanNum}`;
+    try {
+      await navigator.clipboard.writeText(fullText);
+    } catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = fullText;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setStatus(`已複製：${fullText}`);
+  }
+
   function createEmptyRow(seqNo) {
     return {
       id: 'row_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -303,6 +461,7 @@
 
   async function loadFromDatabase() {
     currentYear = parseInt(document.getElementById('yearSelect').value, 10) || 115;
+    document.getElementById('fixedPrefixInput').value = fixedPrefix;
     updateBannerTitle();
     setStatus('正在從資料庫讀取公文號記錄...');
 
@@ -329,15 +488,23 @@
       }
 
       if (Array.isArray(data) && data.length > 0) {
-        records = data.map((r, idx) => ({
-          id: 'db_' + r.id,
-          db_id: r.id,
-          seq_no: r.seq_no ?? (idx + 1),
-          doc_number: r.doc_number || '',
-          issue_date: r.issue_date || '',
-          used_document: r.used_document || '',
-          remark: r.remark || ''
-        }));
+        records = data.map((r, idx) => {
+          let rawDoc = String(r.doc_number || '').trim();
+          if (rawDoc.startsWith(fixedPrefix)) {
+            rawDoc = rawDoc.slice(fixedPrefix.length).trim();
+          } else if (rawDoc.startsWith(DEFAULT_PREFIX)) {
+            rawDoc = rawDoc.slice(DEFAULT_PREFIX.length).trim();
+          }
+          return {
+            id: 'db_' + r.id,
+            db_id: r.id,
+            seq_no: r.seq_no ?? (idx + 1),
+            doc_number: rawDoc,
+            issue_date: r.issue_date || '',
+            used_document: r.used_document || '',
+            remark: r.remark || ''
+          };
+        });
       } else {
         records = [createEmptyRow(1)];
       }
@@ -374,7 +541,8 @@
   async function deleteRow(rowId) {
     const target = records.find(r => r.id === rowId);
     if (!target) return;
-    if (!confirm(`確定要刪除編號「${target.seq_no}」${target.doc_number ? '（' + target.doc_number + '）' : ''}嗎？`)) return;
+    const fullDoc = `${fixedPrefix}${target.doc_number || ''}`;
+    if (!confirm(`確定要刪除編號「${target.seq_no}」${target.doc_number ? '（' + fullDoc + '）' : ''}嗎？`)) return;
 
     if (target.db_id && supabaseClient) {
       const { error } = await supabaseClient
@@ -423,15 +591,19 @@
       }
 
       if (nonEmptyRows.length > 0) {
-        const payload = nonEmptyRows.map((r, idx) => ({
-          roc_year: currentYear,
-          seq_no: Number(r.seq_no) || (idx + 1),
-          doc_number: String(r.doc_number || '').trim(),
-          issue_date: String(r.issue_date || '').trim() || null,
-          used_document: String(r.used_document || '').trim(),
-          remark: String(r.remark || '').trim(),
-          updated_at: new Date().toISOString()
-        }));
+        const payload = nonEmptyRows.map((r, idx) => {
+          const numPart = String(r.doc_number || '').trim();
+          const storedDocNum = numPart ? `${fixedPrefix}${numPart}` : '';
+          return {
+            roc_year: currentYear,
+            seq_no: Number(r.seq_no) || (idx + 1),
+            doc_number: storedDocNum,
+            issue_date: String(r.issue_date || '').trim() || null,
+            used_document: String(r.used_document || '').trim(),
+            remark: String(r.remark || '').trim(),
+            updated_at: new Date().toISOString()
+          };
+        });
 
         const { error: insErr } = await supabaseClient
           .from('official_document_numbers')
@@ -465,13 +637,17 @@
     const kw = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
 
     const filtered = kw
-      ? records.filter(r =>
-          String(r.seq_no || '').toLowerCase().includes(kw) ||
-          String(r.doc_number || '').toLowerCase().includes(kw) ||
-          String(r.issue_date || '').toLowerCase().includes(kw) ||
-          String(r.used_document || '').toLowerCase().includes(kw) ||
-          String(r.remark || '').toLowerCase().includes(kw)
-        )
+      ? records.filter(r => {
+          const fullDoc = `${fixedPrefix}${r.doc_number || ''}`.toLowerCase();
+          return (
+            String(r.seq_no || '').toLowerCase().includes(kw) ||
+            String(r.doc_number || '').toLowerCase().includes(kw) ||
+            fullDoc.includes(kw) ||
+            String(r.issue_date || '').toLowerCase().includes(kw) ||
+            String(r.used_document || '').toLowerCase().includes(kw) ||
+            String(r.remark || '').toLowerCase().includes(kw)
+          );
+        })
       : records;
 
     if (filtered.length === 0) {
@@ -482,19 +658,23 @@
     tbody.innerHTML = filtered.map(r => `
       <tr>
         <td class="center-col">
-          <input type="text" value="${escapeAttr(r.seq_no)}" oninput="onFieldChange('${r.id}', 'seq_no', this.value)" style="text-align:center; font-weight:bold;">
+          <input type="text" value="${escapeAttr(r.seq_no)}" oninput="onFieldChange('${r.id}', 'seq_no', this.value)" style="width:100%; text-align:center; font-weight:bold;">
         </td>
         <td>
-          <input type="text" value="${escapeAttr(r.doc_number)}" placeholder="如：老庄關懷字第1150001號" oninput="onFieldChange('${r.id}', 'doc_number', this.value)">
+          <div class="doc-num-cell">
+            <span class="doc-prefix-fixed">${escapeAttr(fixedPrefix)}</span>
+            <input type="text" value="${escapeAttr(r.doc_number)}" placeholder="如：115060" oninput="onFieldChange('${r.id}', 'doc_number', this.value)" style="flex:1; min-width:95px; font-weight:bold;">
+            <button type="button" class="btn btn-blue btn-sm no-print" onclick="copyFullDocNumber(this.closest('tr').querySelector('input[placeholder]').value)">複製</button>
+          </div>
         </td>
         <td>
-          <input type="date" value="${escapeAttr(r.issue_date)}" onchange="onFieldChange('${r.id}', 'issue_date', this.value)">
+          <input type="text" value="${escapeAttr(r.issue_date)}" placeholder="" onchange="onFieldChange('${r.id}', 'issue_date', this.value)" oninput="onFieldChange('${r.id}', 'issue_date', this.value)" style="width:100%;">
         </td>
         <td>
-          <input type="text" value="${escapeAttr(r.used_document)}" placeholder="輸入使用此公文號的文件名稱" oninput="onFieldChange('${r.id}', 'used_document', this.value)">
+          <input type="text" value="${escapeAttr(r.used_document)}" placeholder="輸入使用此公文號的文件名稱" oninput="onFieldChange('${r.id}', 'used_document', this.value)" style="width:100%;">
         </td>
         <td>
-          <input type="text" value="${escapeAttr(r.remark)}" placeholder="備註說明" oninput="onFieldChange('${r.id}', 'remark', this.value)">
+          <input type="text" value="${escapeAttr(r.remark)}" placeholder="備註說明" oninput="onFieldChange('${r.id}', 'remark', this.value)" style="width:100%;">
         </td>
         <td class="center-col no-print">
           <button type="button" class="btn btn-danger btn-sm" onclick="deleteRow('${r.id}')">刪除</button>
