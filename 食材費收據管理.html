@@ -149,6 +149,12 @@
       .card { border: none; box-shadow: none; padding: 0; }
     }
   </style>
+<script>
+  window.addEventListener('error', function(ev) {
+    const el = document.getElementById('syncStatus');
+    if (el) { el.style.color = '#dc2626'; el.textContent = '⚠️ 頁面腳本錯誤：' + (ev.message || '未知錯誤'); }
+  });
+</script>
 </head>
 <body>
 
@@ -365,15 +371,23 @@
   async function syncFromCloud() {
     const statusEl = document.getElementById('syncStatus');
     if (!supabaseClient) {
-      statusEl.textContent = '本機瀏覽器儲存模式（已就緒）';
+      if (statusEl) { statusEl.style.color = '#dc2626'; statusEl.textContent = '⚠️ 未偵測到 config.js 連線設定（目前為本機儲存）'; }
       return;
     }
+    if (statusEl) { statusEl.style.color = '#0284c7'; statusEl.textContent = '正在連線雲端資料庫...'; }
     try {
       const { data, error } = await supabaseClient
         .from('food_receipt_items')
         .select('*')
         .order('id', { ascending: true });
-      if (!error && Array.isArray(data)) {
+      if (error) {
+        if (statusEl) {
+          statusEl.style.color = '#dc2626';
+          statusEl.textContent = '⚠️ 雲端讀取失敗：' + (error.message || JSON.stringify(error));
+        }
+        return;
+      }
+      if (Array.isArray(data)) {
         if (data.length > 0) {
           allFoodRows = data.map(r => ({
             id: String(r.id),
@@ -390,12 +404,16 @@
           }));
           saveLocalData();
         }
-        statusEl.textContent = '✅ 已連線雲端資料庫同步';
-      } else {
-        statusEl.textContent = '本機儲存模式（已就緒）';
+        if (statusEl) {
+          statusEl.style.color = '#0f766e';
+          statusEl.textContent = `✅ 已連線雲端資料庫同步（雲端共 ${data.length} 筆）`;
+        }
       }
     } catch (e) {
-      statusEl.textContent = '本機儲存模式（已就緒）';
+      if (statusEl) {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = '⚠️ 雲端連線例外：' + (e.message || e);
+      }
     }
   }
 
