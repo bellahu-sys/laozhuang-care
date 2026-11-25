@@ -457,11 +457,7 @@
     const defaultMonth = document.getElementById('monthSelect').value;
     const importMode = document.getElementById('importMode').value;
 
-    const lines = rawText.replace(/
-/g, '
-').replace(//g, '
-').split('
-');
+    const lines = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     const hasCareHeader = lines.some(l => l.includes('關懷核銷食材費') || l.includes('【關懷核銷】'));
     const hasLtcHeader = lines.some(l => l.includes('長照核銷食材費') || l.includes('【長照核銷】'));
 
@@ -488,7 +484,7 @@
         continue;
       }
 
-      const cols = rawLine.split('	').map(c => c.trim());
+      const cols = rawLine.split('\t').map(c => c.trim());
       const firstCol = cols[0] || '';
       const secondCol = cols[1] || '';
 
@@ -692,7 +688,6 @@
       return 99999999;
     }
 
-    // 同一「收據日期」的所有品項合併在同一張收據下，不依菜單日期拆分
     const groups = [];
     const groupMap = new Map();
     rows.forEach(item => {
