@@ -59,25 +59,9 @@
     h1 { color: var(--primary-dark); font-size: 1.35rem; margin: 0; }
 
     .sub-page-tabs {
-      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;
-      background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px;
-      padding: 8px 10px;
-    }
-    .sub-page-tab {
-      padding: 8px 18px; border-radius: 8px; border: 1px solid #fda4af;
-      background: #ffffff; color: #881337; font-weight: bold; cursor: pointer; font-size: 0.94rem;
-      text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-      box-shadow: 0 1px 2px rgba(159, 18, 57, 0.06);
-      transition: all 0.16s ease;
-    }
-    .sub-page-tab:hover {
-      background: #ffe4e6; border-color: var(--primary); color: var(--primary-dark);
-      transform: translateY(-1px);
-    }
-    .sub-page-tab.active {
-      background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
-      color: #ffffff; border-color: #9f1239;
-      box-shadow: 0 3px 8px rgba(190, 18, 60, 0.25);
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 14px; background: #fff1f2; border: 1px solid #fecdd3;
+      border-radius: 8px; padding: 10px 12px;
     }
 
     .controls-row {
@@ -91,6 +75,7 @@
     .btn {
       padding: 7px 12px; border: none; border-radius: 6px; font-weight: bold;
       cursor: pointer; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 5px;
+      text-decoration: none;
     }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: var(--primary-dark); }
@@ -130,7 +115,7 @@
 
     .picker-dropdown-wrap { position: relative; display: inline-block; }
     .picker-panel {
-      display: none; position: absolute; top: 100%; left: 0; min-width: 280px; max-height: 320px; overflow-y: auto;
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px; max-height: 340px; overflow-y: auto;
       background: #fff; border: 1px solid #94a3b8; border-radius: 8px;
       box-shadow: 0 10px 24px rgba(0,0,0,0.16); padding: 10px; z-index: 400; margin-top: 4px;
     }
@@ -238,15 +223,15 @@
     </div>
   </div>
 
-  <!-- 切換分頁：包含原本「長照與延緩經費收支」連結 + 「2. 講師鐘點費核銷」 + 移入的「個人所得稅計算-講師」與「個人所得稅計算_臨時人員」 -->
+  <!-- 切換分頁：按鈕風格統一為 .btn.btn-sm -->
   <div class="sub-page-tabs no-print">
-    <button type="button" class="sub-tab-btn" id="subTabReimburseSetting" onclick="switchSubPage('reimburseSetting')">核銷鐘點費設定</button>
-    <button type="button" class="sub-tab-btn active" id="subTabReimburse" onclick="switchSubPage('reimburse')">2. 講師鐘點費核銷</button>
-    <button type="button" class="sub-tab-btn" id="subTabTaxInst" onclick="switchSubPage('taxInst')">個人所得稅計算-講師</button>
-    <button type="button" class="sub-tab-btn" id="subTabTaxTemp" onclick="switchSubPage('taxTemp')">個人所得稅計算_臨時人員</button>
+    <button type="button" class="btn btn-outline btn-sm" id="subTabReimburseSetting" onclick="switchSubPage('reimburseSetting')">核銷鐘點費設定</button>
+    <button type="button" class="btn btn-primary btn-sm" id="subTabReimburse" onclick="switchSubPage('reimburse')">2. 講師鐘點費核銷</button>
+    <button type="button" class="btn btn-outline btn-sm" id="subTabTaxInst" onclick="switchSubPage('taxInst')">個人所得稅計算-講師</button>
+    <button type="button" class="btn btn-outline btn-sm" id="subTabTaxTemp" onclick="switchSubPage('taxTemp')">個人所得稅計算_臨時人員</button>
   </div>
 
-  <!-- 分頁 1（新增於 2. 講師鐘點費核銷 前）：核銷鐘點費設定（由講師鐘點費記錄搬移之「鐘點費-核銷」表格） -->
+  <!-- 分頁 1：核銷鐘點費設定 -->
   <div id="panelReimburseSetting" style="display:none;">
     <div class="controls-row no-print">
       <label style="font-weight:bold;">新增計畫欄位：</label>
@@ -285,8 +270,12 @@
         <option value="DELAY">延緩（3期）</option>
       </select>
 
+      <div class="picker-dropdown-wrap">
+        <button type="button" class="btn btn-outline btn-sm" id="rebDisplayInstBtn" onclick="togglePickerPanel('rebDisplayInstPanel')">勾選顯示講師 ▾</button>
+        <div class="picker-panel" id="rebDisplayInstPanel"></div>
+      </div>
+
       <button type="button" class="btn btn-primary btn-sm" onclick="saveReimburseSheet()">儲存核銷統計至資料庫</button>
-      <a href="講師鐘點費記錄.html?tab=settings" class="btn btn-outline btn-sm">前往「講師鐘點費設定」</a>
     </div>
 
     <div class="sync-hint-banner no-print">
@@ -296,7 +285,7 @@
     <div id="reimburseSheetContainer"></div>
   </div>
 
-  <!-- 分頁 3（由講師鐘點費記錄移入）：個人所得稅計算-講師 -->
+  <!-- 分頁 3：個人所得稅計算-講師 -->
   <div id="panelTaxInstructor" style="display:none;">
     <div class="controls-row no-print">
       <label style="font-weight:bold;">年度：</label>
@@ -322,7 +311,7 @@
     <div id="taxTablesMultiContainer"></div>
   </div>
 
-  <!-- 分頁 4（由講師鐘點費記錄移入）：個人所得稅計算_臨時人員 -->
+  <!-- 分頁 4：個人所得稅計算_臨時人員 -->
   <div id="panelTaxTemp" style="display:none;">
     <div class="controls-row no-print">
       <label style="font-weight:bold;">年度：</label>
@@ -371,6 +360,7 @@
 
   let currentYear = 115;
   let masterInstructors = [];
+  let rebDisplayInstructors = [];
   let taxCheckedInstructors = [];
   let taxTableCount = 1;
   let taxInstructorGroupMap = {};
@@ -379,7 +369,7 @@
   const BOGONG_INSTRUCTORS = ['吳貴英', '詹細珍', '詹益誠'];
   let tempStaffList = [];
   let tempHoursRecords = [];
-  let reimburseClaimsMap = {}; // key: `${program_type}__${period_key}__${col_key}__${instName}` -> number
+  let reimburseClaimsMap = {};
 
   const PERIOD_BLOCKS = [
     { program: 'LTC', periodKey: 'Q1', title: '第1季 1-3月', cols: ['1月講師', '2月講師', '3月講師'] },
@@ -420,11 +410,18 @@
     }
   });
 
+  function setTabButtonStyle(btnId, isActive) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.classList.toggle('btn-primary', isActive);
+    btn.classList.toggle('btn-outline', !isActive);
+  }
+
   function switchSubPage(key) {
-    document.getElementById('subTabReimburseSetting').classList.toggle('active', key === 'reimburseSetting');
-    document.getElementById('subTabReimburse').classList.toggle('active', key === 'reimburse');
-    document.getElementById('subTabTaxInst').classList.toggle('active', key === 'taxInst');
-    document.getElementById('subTabTaxTemp').classList.toggle('active', key === 'taxTemp');
+    setTabButtonStyle('subTabReimburseSetting', key === 'reimburseSetting');
+    setTabButtonStyle('subTabReimburse', key === 'reimburse');
+    setTabButtonStyle('subTabTaxInst', key === 'taxInst');
+    setTabButtonStyle('subTabTaxTemp', key === 'taxTemp');
 
     document.getElementById('panelReimburseSetting').style.display = (key === 'reimburseSetting') ? 'block' : 'none';
     document.getElementById('panelReimburse').style.display = (key === 'reimburse') ? 'block' : 'none';
@@ -476,6 +473,7 @@
     ];
   }
 
+  function getRebDisplayInstKey() { return `lz_reb_display_inst_${currentYear}`; }
   function getTaxCheckedInstKey() { return `lz_tax_only_checked_inst_${currentYear}`; }
   function getTaxSplitCountKey() { return `lz_tax_split_count_${currentYear}`; }
   function getTaxGroupAssignKey() { return `lz_tax_group_assign_${currentYear}`; }
@@ -487,6 +485,17 @@
 
   function loadCheckedInstructorsForYear() {
     const defaultActive = masterInstructors.filter(i => i.status === '服務中').map(i => i.name);
+
+    const savedReb = localStorage.getItem(getRebDisplayInstKey());
+    if (savedReb) {
+      try {
+        const arr = JSON.parse(savedReb);
+        if (Array.isArray(arr)) rebDisplayInstructors = sortByMasterOrder(arr);
+      } catch (e) {}
+    } else {
+      rebDisplayInstructors = sortByMasterOrder(defaultActive);
+    }
+
     const savedTax = localStorage.getItem(getTaxCheckedInstKey());
     if (savedTax) {
       try {
@@ -496,6 +505,54 @@
     } else {
       taxCheckedInstructors = sortByMasterOrder(defaultActive);
     }
+  }
+
+  function onRebInstructorCheckChange(name, isChecked) {
+    if (isChecked) {
+      if (!rebDisplayInstructors.includes(name)) rebDisplayInstructors.push(name);
+    } else {
+      rebDisplayInstructors = rebDisplayInstructors.filter(n => n !== name);
+    }
+    rebDisplayInstructors = sortByMasterOrder(rebDisplayInstructors);
+    localStorage.setItem(getRebDisplayInstKey(), JSON.stringify(rebDisplayInstructors));
+    renderRebDisplayPicker();
+    renderReimburseSheet();
+  }
+
+  function setAllRebInstructors(selectAll) {
+    rebDisplayInstructors = selectAll ? masterInstructors.map(m => m.name) : [];
+    localStorage.setItem(getRebDisplayInstKey(), JSON.stringify(rebDisplayInstructors));
+    renderRebDisplayPicker();
+    renderReimburseSheet();
+  }
+
+  function renderRebDisplayPicker() {
+    const panel = document.getElementById('rebDisplayInstPanel');
+    const btn = document.getElementById('rebDisplayInstBtn');
+    if (panel) {
+      const itemsHtml = masterInstructors.map(m => {
+        const isChk = rebDisplayInstructors.includes(m.name);
+        return `
+          <label class="picker-item">
+            <input type="checkbox" ${isChk ? 'checked' : ''} onchange="onRebInstructorCheckChange('${escapeAttr(m.name)}', this.checked)">
+            <span>${escapeHtml(m.name)}</span>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(${escapeHtml(m.status || '服務中')})</span>
+          </label>
+        `;
+      }).join('');
+
+      panel.innerHTML = `
+        <div style="padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+          <span style="font-size:0.82rem; font-weight:bold; color:var(--primary);">勾選要顯示的講師</span>
+          <div style="display:flex; gap:4px;">
+            <button type="button" class="btn btn-outline btn-sm" style="padding:2px 6px; font-size:0.76rem;" onclick="setAllRebInstructors(true)">全選</button>
+            <button type="button" class="btn btn-outline btn-sm" style="padding:2px 6px; font-size:0.76rem;" onclick="setAllRebInstructors(false)">全不選</button>
+          </div>
+        </div>
+        ${itemsHtml}
+      `;
+    }
+    if (btn) btn.textContent = `勾選顯示講師 (${rebDisplayInstructors.length}) ▾`;
   }
 
   function loadTaxSplitConfig() {
@@ -538,6 +595,8 @@
   }
 
   function renderPickerPanels() {
+    renderRebDisplayPicker();
+
     const p2 = document.getElementById('taxInstPickerPanel');
     if (p2) {
       const taxItemsHtml = masterInstructors.map(m => {
@@ -580,6 +639,7 @@
   async function onRebContextChange() {
     currentYear = parseInt(document.getElementById('rebYearSelect').value, 10) || 115;
     loadCheckedInstructorsForYear();
+    renderRebDisplayPicker();
     reimburseClaimsMap = {};
     if (supabaseClient) {
       try {
@@ -612,7 +672,7 @@
       alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
       return;
     }
-    const insts = taxCheckedInstructors.length > 0 ? taxCheckedInstructors : masterInstructors.map(m => m.name);
+    const insts = rebDisplayInstructors;
     const payload = [];
     PERIOD_BLOCKS.forEach(blk => {
       blk.cols.forEach(colKey => {
@@ -651,7 +711,7 @@
     const wrap = document.getElementById('reimburseSheetContainer');
     if (!wrap) return;
     const planFilter = document.getElementById('rebPlanSelect')?.value || 'ALL';
-    const insts = taxCheckedInstructors.length > 0 ? taxCheckedInstructors : masterInstructors.map(m => m.name);
+    const insts = rebDisplayInstructors;
     const blocks = PERIOD_BLOCKS.filter(b => planFilter === 'ALL' || b.program === planFilter);
 
     const html = blocks.map(blk => {
@@ -659,24 +719,26 @@
       blk.cols.forEach(c => { colTotals[c] = 0; });
       let grandTotal = 0;
 
-      const bodyRows = insts.map(instName => {
-        let rowSum = 0;
-        const tds = blk.cols.map(colKey => {
-          const k = `${blk.program}__${blk.periodKey}__${colKey}__${instName}`;
-          const val = Number(reimburseClaimsMap[k] || 0);
-          rowSum += val;
-          colTotals[colKey] += val;
-          return `<td><input type="text" inputmode="decimal" class="num-input" value="${val !== 0 ? fmtNum(val) : ''}" placeholder="0" onchange="onRebCellInput('${blk.program}', '${blk.periodKey}', '${escapeAttr(colKey)}', '${escapeAttr(instName)}', this.value)"></td>`;
-        }).join('');
-        grandTotal += rowSum;
-        return `
-          <tr>
-            <td style="font-weight:bold;">${escapeHtml(instName)}</td>
-            ${tds}
-            <td class="num-col" style="font-weight:bold;">${rowSum !== 0 ? fmtNum(rowSum) : '0'}</td>
-          </tr>
-        `;
-      }).join('');
+      const bodyRows = insts.length > 0
+        ? insts.map(instName => {
+            let rowSum = 0;
+            const tds = blk.cols.map(colKey => {
+              const k = `${blk.program}__${blk.periodKey}__${colKey}__${instName}`;
+              const val = Number(reimburseClaimsMap[k] || 0);
+              rowSum += val;
+              colTotals[colKey] += val;
+              return `<td><input type="text" inputmode="decimal" class="num-input" value="${val !== 0 ? fmtNum(val) : ''}" placeholder="0" onchange="onRebCellInput('${blk.program}', '${blk.periodKey}', '${escapeAttr(colKey)}', '${escapeAttr(instName)}', this.value)"></td>`;
+            }).join('');
+            grandTotal += rowSum;
+            return `
+              <tr>
+                <td style="font-weight:bold;">${escapeHtml(instName)}</td>
+                ${tds}
+                <td class="num-col" style="font-weight:bold;">${rowSum !== 0 ? fmtNum(rowSum) : '0'}</td>
+              </tr>
+            `;
+          }).join('')
+        : `<tr><td colspan="${blk.cols.length + 2}" class="center-col" style="padding:14px; color:#64748b;">尚未勾選要顯示的講師，請點選上方「勾選顯示講師 ▾」</td></tr>`;
 
       const footTds = blk.cols.map(c => `<td class="num-col">${fmtNum(colTotals[c])}</td>`).join('');
 
@@ -1004,8 +1066,7 @@
     wrap.innerHTML = datalistHtml + tablesHtml;
   }
 
-
-  let tempTaxMode = 'auto'; // 'auto' | 'manual'
+  let tempTaxMode = 'auto';
   let tempManualStaffCols = ['陳遠香', '邱鳳廷', '張瑞合', '邱和妹', '施汶里', '徐邱鳳嬌'];
   let tempManualRows = [];
 
@@ -1375,10 +1436,6 @@
     `;
   }
 
-
-
-
-
   let rebCfgPlans = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
   let rebCfgMap = {};
   let rebCfgTeachers = [];
@@ -1501,7 +1558,7 @@
       `;
     }).join('');
 
-    tbl.innerHTML = `<thead><tr><th style="width:115px;">講師 \ 計畫</th>${headCells}</tr></thead><tbody>${bodyRows}</tbody>`;
+    tbl.innerHTML = `<thead><tr><th style="width:115px;">講師 \\ 計畫</th>${headCells}</tr></thead><tbody>${bodyRows}</tbody>`;
   }
 
   async function rebCfgSaveToDatabase() {
@@ -1580,3 +1637,4 @@
 
 </body>
 </html>
+```[cite: 3, 4]
