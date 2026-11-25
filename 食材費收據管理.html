@@ -152,7 +152,7 @@
   <script>
     window.addEventListener('error', function(ev) {
       const el = document.getElementById('syncStatus');
-      if (el) { el.style.color = '#dc2626'; el.textContent = '⚠️ 頁面腳本錯誤：' + (ev.message || '未知錯誤'); }
+      if (el) { el.style.color = '#dc2626'; el.textContent = '頁面腳本錯誤：' + (ev.message || '未知錯誤'); }
     });
   </script>
 </head>
@@ -369,7 +369,7 @@
   async function syncFromCloud() {
     const statusEl = document.getElementById('syncStatus');
     if (!supabaseClient) {
-      if (statusEl) { statusEl.style.color = '#dc2626'; statusEl.textContent = '⚠️ 未偵測到 config.js 連線設定（目前為本機儲存）'; }
+      if (statusEl) { statusEl.style.color = '#dc2626'; statusEl.textContent = '未偵測到 config.js 連線設定（目前為本機儲存）'; }
       return;
     }
     if (statusEl) { statusEl.style.color = '#0284c7'; statusEl.textContent = '正在連線雲端資料庫...'; }
@@ -381,7 +381,7 @@
       if (error) {
         if (statusEl) {
           statusEl.style.color = '#dc2626';
-          statusEl.textContent = '⚠️ 雲端讀取失敗：' + (error.message || JSON.stringify(error));
+          statusEl.textContent = '雲端讀取失敗：' + (error.message || JSON.stringify(error));
         }
         return;
       }
@@ -404,13 +404,13 @@
         }
         if (statusEl) {
           statusEl.style.color = '#0f766e';
-          statusEl.textContent = `✅ 已連線雲端資料庫同步（雲端共 ${data.length} 筆）`;
+          statusEl.textContent = `已連線雲端資料庫同步（雲端共 ${data.length} 筆）`;
         }
       }
     } catch (e) {
       if (statusEl) {
         statusEl.style.color = '#dc2626';
-        statusEl.textContent = '⚠️ 雲端連線例外：' + (e.message || e);
+        statusEl.textContent = '雲端連線例外：' + (e.message || e);
       }
     }
   }
@@ -431,6 +431,23 @@
     return null;
   }
 
+  function normalizeDateKey(dStr, fallbackMonth) {
+    const s = String(dStr || '').trim();
+    if (!s) return `${fallbackMonth}/1`;
+    const parts = s.replace(/年|月/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      const mo = parseInt(parts[1], 10) || parseInt(fallbackMonth, 10) || 1;
+      const da = parseInt(parts[2], 10) || 1;
+      return `${mo}/${da}`;
+    }
+    if (parts.length === 2) {
+      const mo = parseInt(parts[0], 10) || parseInt(fallbackMonth, 10) || 1;
+      const da = parseInt(parts[1], 10) || 1;
+      return `${mo}/${da}`;
+    }
+    return s;
+  }
+
   async function parseAndImport() {
     const rawText = document.getElementById('pasteInput').value;
     if (!rawText || !rawText.trim()) {
@@ -443,7 +460,11 @@
     const targetPlan = document.getElementById('importTargetPlan').value;
     const importMode = document.getElementById('importMode').value;
 
-    const lines = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    const lines = rawText.replace(/
+/g, '
+').replace(//g, '
+').split('
+');
     let currentSectionPlan = targetPlan === 'auto' ? 'care' : targetPlan;
     let currentReceiptDate = '';
     const parsedItems = [];
@@ -454,14 +475,16 @@
 
       if (trimmed.includes('長照核銷食材費') || trimmed.includes('【長照核銷】')) {
         if (targetPlan === 'auto') currentSectionPlan = 'ltc';
+        currentReceiptDate = '';
         continue;
       }
       if (trimmed.includes('關懷核銷食材費') || trimmed.includes('【關懷核銷】')) {
         if (targetPlan === 'auto') currentSectionPlan = 'care';
+        currentReceiptDate = '';
         continue;
       }
 
-      const cols = rawLine.split('\t').map(c => c.trim());
+      const cols = rawLine.split('	').map(c => c.trim());
       const firstCol = cols[0] || '';
       const secondCol = cols[1] || '';
 
@@ -483,13 +506,14 @@
       let unitPrice = 0;
       let totalPrice = 0;
 
+      const dateTokenRegex = /^(?:\d{2,4}[\/\-])?\d{1,2}[\/\-]\d{1,2}$/;
       const hasMenuDateCol = (
         cols.length >= 8 ||
-        (cols.length === 7 && /^\d{1,2}\/\d{1,2}$/.test(cols[1]) && !/^\d/.test(cols[2]))
+        (cols.length === 7 && dateTokenRegex.test(cols[1]) && !/^\d/.test(cols[2]))
       );
 
       if (hasMenuDateCol) {
-        if (/^\d{1,2}\/\d{1,2}$/.test(cols[0])) {
+        if (dateTokenRegex.test(cols[0])) {
           currentReceiptDate = cols[0];
         }
         receiptDate = currentReceiptDate || cols[1] || '';
@@ -500,7 +524,7 @@
         unitPrice = parseNumber(cols[5]);
         totalPrice = parseNumber(cols[6]);
       } else {
-        if (/^\d{1,2}\/\d{1,2}$/.test(cols[0])) {
+        if (dateTokenRegex.test(cols[0])) {
           currentReceiptDate = cols[0];
         }
         receiptDate = currentReceiptDate || '';
@@ -518,13 +542,14 @@
       }
 
       const detectedMonth = detectMonthFromText(receiptDate || menuDate) || defaultMonth;
+      const normReceipt = normalizeDateKey(receiptDate, detectedMonth);
       parsedItems.push({
         id: 'food_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
         rocYear: defaultRocYear,
         month: detectedMonth,
         plan: currentSectionPlan,
-        receiptDate: receiptDate || `${defaultMonth}/1`,
-        menuDate: menuDate || receiptDate || `${defaultMonth}/1`,
+        receiptDate: normReceipt,
+        menuDate: menuDate || normReceipt,
         itemName,
         qty,
         unit,
@@ -589,10 +614,10 @@
         const now = new Date();
         const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
         cloudMsg = `（已同步雲端 ${tStr}）`;
-        if (statusEl) { statusEl.style.color = '#0f766e'; statusEl.textContent = `✅ 已同步雲端資料庫（${tStr}）`; }
+        if (statusEl) { statusEl.style.color = '#0f766e'; statusEl.textContent = `已同步雲端資料庫（${tStr}）`; }
       } catch (e) {
-        cloudMsg = '（⚠️ 雲端同步失敗：' + (e.message || e) + '，請確認已建立 food_receipt_items 資料表）';
-        if (statusEl) { statusEl.style.color = '#dc2626'; statusEl.textContent = '⚠️ 雲端同步失敗：' + (e.message || e); }
+        cloudMsg = '（雲端同步失敗：' + (e.message || e) + '，請確認已建立 food_receipt_items 資料表）';
+        if (statusEl) { statusEl.style.color = '#dc2626'; statusEl.textContent = '雲端同步失敗：' + (e.message || e); }
       }
     }
 
@@ -617,9 +642,9 @@
           .eq('month', m)
           .eq('plan_type', activePlan);
         if (error) throw error;
-        if (statusEl) { statusEl.style.color = '#0f766e'; statusEl.textContent = '✅ 已同步清除雲端資料'; }
+        if (statusEl) { statusEl.style.color = '#0f766e'; statusEl.textContent = '已同步清除雲端資料'; }
       } catch (e) {
-        if (statusEl) { statusEl.style.color = '#dc2626'; statusEl.textContent = '⚠️ 雲端清除失敗：' + (e.message || e); }
+        if (statusEl) { statusEl.style.color = '#dc2626'; statusEl.textContent = '雲端清除失敗：' + (e.message || e); }
       }
     }
   }
@@ -636,7 +661,6 @@
 
     function parseDateSortValue(dStr) {
       const s = String(dStr || '').trim();
-      // 支援 115/10/02、2026-10-02、10/2、10-2 等格式
       const parts = s.replace(/年|月/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
       if (parts.length >= 3) {
         let y = parseInt(parts[0], 10) || 0;
@@ -653,19 +677,10 @@
       return 99999999;
     }
 
-    const sortedRows = [...rows].sort((a, b) => {
-      const da = parseDateSortValue(a.receiptDate || a.menuDate);
-      const db = parseDateSortValue(b.receiptDate || b.menuDate);
-      if (da !== db) return da - db;
-      const ma = parseDateSortValue(a.menuDate || a.receiptDate);
-      const mb = parseDateSortValue(b.menuDate || b.receiptDate);
-      return ma - mb;
-    });
-
     const groups = [];
     const groupMap = new Map();
-    sortedRows.forEach(item => {
-      const key = item.receiptDate || `${m}/1`;
+    rows.forEach(item => {
+      const key = normalizeDateKey(item.receiptDate, m);
       if (!groupMap.has(key)) {
         const g = { receiptDate: key, items: [], subtotal: 0, sortVal: parseDateSortValue(key) };
         groupMap.set(key, g);
@@ -675,7 +690,11 @@
       g.items.push(item);
       g.subtotal += Number(item.totalPrice) || 0;
     });
+
     groups.sort((a, b) => a.sortVal - b.sortVal);
+    groups.forEach(g => {
+      g.items.sort((a, b) => parseDateSortValue(a.menuDate || a.receiptDate) - parseDateSortValue(b.menuDate || b.receiptDate));
+    });
 
     const grandTotal = groups.reduce((acc, g) => acc + g.subtotal, 0);
 
