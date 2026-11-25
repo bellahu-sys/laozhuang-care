@@ -527,7 +527,7 @@
       else if (item.voucherNo === '2') item.category = '講師費';
     } else if (field === 'totalAmt') {
       item.totalAmt = parseNum(val);
-      item.grantAmt = Math.max(0, item.totalAmt - (Number(item.selfAmt) || 0));
+      item.grantAmt = Math.max(0, item.totalAmt - (Number(r.selfAmt) || 0));
       const gInp = document.getElementById(`inp_grant_${id}`);
       if (gInp) gInp.value = item.grantAmt;
     } else if (field === 'selfAmt') {
@@ -687,20 +687,18 @@
       return;
     }
 
-    function parseReceiptMonthDay(rDateStr, fallbackMonth) {
+    function extractDayFromReceiptDate(rDateStr) {
       const s = String(rDateStr || '').trim();
       const parts = s.replace(/[年月]/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
       if (parts.length >= 3) {
-        const mo = parseInt(parts[1], 10) || fallbackMonth;
-        const da = parseInt(parts[2], 10) || '';
-        return { mo, da: da ? String(da) : '' };
+        const da = parseInt(parts[2], 10);
+        return Number.isFinite(da) && da > 0 ? String(da) : '';
       }
       if (parts.length === 2) {
-        const mo = parseInt(parts[0], 10) || fallbackMonth;
-        const da = parseInt(parts[1], 10) || '';
-        return { mo, da: da ? String(da) : '' };
+        const da = parseInt(parts[1], 10);
+        return Number.isFinite(da) && da > 0 ? String(da) : '';
       }
-      return { mo: fallbackMonth, da: '' };
+      return '';
     }
 
     const byDate = new Map();
@@ -711,11 +709,11 @@
 
     allRows = allRows.filter(r => !(String(r.rocYear) === String(yr) && Number(r.month) === m && isFoodRow(r)));
     byDate.forEach((subtotal, rDate) => {
-      const { mo, da } = parseReceiptMonthDay(rDate, m);
+      const da = extractDayFromReceiptDate(rDate);
       allRows.push({
         id: 'food_imp_' + yr + '_' + m + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         rocYear: String(yr),
-        month: mo,
+        month: m,
         day: da,
         category: '食材費',
         summary: '食材費',
@@ -784,6 +782,11 @@
     ensureMonthSlots(yr, m, 12);
     saveLocal();
     renderSheet();
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('ltc_voucher_details').delete().eq('roc_year', String(yr)).eq('month', m);
+      } catch (e) {}
+    }
     for (const dr of toDelete) {
       await deleteRowFromCloud(dr.id);
     }
