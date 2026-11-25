@@ -634,12 +634,40 @@
 
     const rows = allFoodRows.filter(r => String(r.rocYear) === yr && String(r.month) === m && r.plan === activePlan);
 
+    function parseDateSortValue(dStr) {
+      const s = String(dStr || '').trim();
+      // 支援 115/10/02、2026-10-02、10/2、10-2 等格式
+      const parts = s.replace(/年|月/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
+      if (parts.length >= 3) {
+        let y = parseInt(parts[0], 10) || 0;
+        if (y < 1911) y += 1911;
+        const mo = parseInt(parts[1], 10) || 0;
+        const da = parseInt(parts[2], 10) || 0;
+        return y * 10000 + mo * 100 + da;
+      }
+      if (parts.length === 2) {
+        const mo = parseInt(parts[0], 10) || 0;
+        const da = parseInt(parts[1], 10) || 0;
+        return (parseInt(yr, 10) + 1911) * 10000 + mo * 100 + da;
+      }
+      return 99999999;
+    }
+
+    const sortedRows = [...rows].sort((a, b) => {
+      const da = parseDateSortValue(a.receiptDate || a.menuDate);
+      const db = parseDateSortValue(b.receiptDate || b.menuDate);
+      if (da !== db) return da - db;
+      const ma = parseDateSortValue(a.menuDate || a.receiptDate);
+      const mb = parseDateSortValue(b.menuDate || b.receiptDate);
+      return ma - mb;
+    });
+
     const groups = [];
     const groupMap = new Map();
-    rows.forEach(item => {
+    sortedRows.forEach(item => {
       const key = item.receiptDate || `${m}/1`;
       if (!groupMap.has(key)) {
-        const g = { receiptDate: key, items: [], subtotal: 0 };
+        const g = { receiptDate: key, items: [], subtotal: 0, sortVal: parseDateSortValue(key) };
         groupMap.set(key, g);
         groups.push(g);
       }
@@ -647,6 +675,7 @@
       g.items.push(item);
       g.subtotal += Number(item.totalPrice) || 0;
     });
+    groups.sort((a, b) => a.sortVal - b.sortVal);
 
     const grandTotal = groups.reduce((acc, g) => acc + g.subtotal, 0);
 
