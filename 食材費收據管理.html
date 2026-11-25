@@ -288,6 +288,7 @@
     <h2 class="no-print">
       <span>二、食材費收據資料表</span>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-amber" onclick="syncFromCloud().then(() => renderCurrentMonth())">重新同步雲端</button>
         <button type="button" class="btn btn-blue" onclick="copyCurrentPlanTable()">一鍵複製目前收據表（貼上 Excel）</button>
         <button type="button" class="btn btn-gray" onclick="window.print()">列印收據表</button>
       </div>
@@ -655,7 +656,7 @@
     parseAndImport();
   }
 
-  async function clearCurrentMonthPlan() {
+  async async function clearCurrentMonthPlan() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = document.getElementById('monthSelect').value;
     const label = activePlan === 'care' ? '關懷核銷食材費' : '長照核銷食材費';
