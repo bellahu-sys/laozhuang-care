@@ -215,8 +215,9 @@
         <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
         <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
         <a href="長照與延緩核銷統計.html">1. 長照與延緩核銷統計（收支明細表）</a>
-        <a href="長照核銷食材費.html">長照核銷食材費</a>
         <a href="長照講師核銷記錄.html">2. 長照講師核銷記錄</a>
+        <div class="dropdown-divider">食材費收據管理</div>
+        <a href="食材費收據管理.html">關懷與長照食材費收據匯入／統計</a>
       </div>
     </div>
   </div>
@@ -227,7 +228,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div>
         <h1>長照講師核銷記錄</h1>
-        <p class="sub-note">接受衛生福利部補助經費支出憑證明細表 — 可手動輸入或帶入當月「長照核銷食材費」與「講師鐘點費」，一鍵複製貼上 Word 核銷文件。</p>
+        <p class="sub-note">接受衛生福利部補助經費支出憑證明細表 — 可手動輸入或帶入當月「長照食材費收據」與「講師鐘點費」，一鍵複製貼上 Word 核銷文件。</p>
       </div>
       <div id="syncStatus">雲端同步準備中...</div>
     </div>
@@ -236,8 +237,9 @@
   <div class="card no-print">
     <h2>
       <span>一、月份選擇與長照食材費／講師鐘點費合併工具</span>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <span style="font-size:0.86rem; color:#0f766e; font-weight:bold;">● 即時雲端儲存已啟用</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" onclick="saveMonthChanges()">儲存本月變更</button>
+        <button type="button" class="btn btn-amber" onclick="loadSampleApril()">載入 115 年 4 月範例</button>
         <button type="button" class="btn btn-gray" onclick="clearCurrentMonth()">清除本月資料</button>
       </div>
     </h2>
@@ -258,6 +260,12 @@
           <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
         </select>
       </label>
+      <label><strong>補助計畫編號：</strong>
+        <input type="text" id="planCodeInput" value="11500K0201" style="width:140px;" oninput="renderSheet()">
+      </label>
+      <label><strong>計畫名稱：</strong>
+        <input type="text" id="planNameInput" value="115年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫" style="width:360px;" oninput="renderSheet()">
+      </label>
     </div>
 
     <div class="info-banner">
@@ -275,6 +283,7 @@
     <h2 class="no-print">
       <span id="sheetHeading">二、115 年 4 月接受衛生福利部補助經費支出憑證明細表</span>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" onclick="saveMonthChanges()">儲存本月變更</button>
         <button type="button" class="btn btn-blue" onclick="copyOfficialTable()">一鍵複製明細表（貼上 Word 核銷文件）</button>
       </div>
     </h2>
@@ -304,7 +313,7 @@
             <th colspan="3" style="width:15%;">支出日期</th>
             <th rowspan="2" style="width:31%;">摘要</th>
             <th rowspan="2" style="width:10%;">支出憑<br>證編號</th>
-            <th colspan="3" style="width:34%;">金   額（新臺幣元）</th>
+            <th colspan="3" style="width:34%;">金　　　額（新臺幣元）</th>
             <th rowspan="2" class="no-print" style="width:10%;">操作</th>
           </tr>
           <tr>
@@ -331,6 +340,7 @@
 
 <script>
   const STORAGE_KEY_MONTHLY_VOUCHERS = 'laozhuang_monthly_instructor_vouchers_v1';
+  const STORAGE_KEY_FOOD_RECEIPTS = 'laozhuang_food_receipts_v1';
 
   let supabaseClient = null;
   if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
@@ -455,6 +465,8 @@
   function onYearMonthChange() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = Number(document.getElementById('monthSelect').value);
+    document.getElementById('planCodeInput').value = `${yr}00K0201`;
+    document.getElementById('planNameInput').value = `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
     ensureMonthSlots(yr, m, 12);
     renderSheet();
   }
@@ -477,38 +489,6 @@
       acc.grant += Number(r.grantAmt) || 0;
       return acc;
     }, { total: 0, self: 0, grant: 0 });
-  }
-
-  async function saveRowToCloud(row) {
-    const statusEl = document.getElementById('syncStatus');
-    if (!row || !supabaseClient) return;
-    if (!isRowActive(row)) return;
-    try {
-      const { error } = await supabaseClient.from('ltc_voucher_details').upsert({
-        id: row.id,
-        roc_year: row.rocYear,
-        month: row.month,
-        day: parseNum(row.day),
-        category: row.category,
-        summary: row.summary,
-        voucher_no: row.voucherNo,
-        total_amt: row.totalAmt,
-        self_amt: row.selfAmt,
-        grant_amt: row.grantAmt
-      });
-      if (!error && statusEl) {
-        const now = new Date();
-        const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
-        statusEl.textContent = `✅ 已即時雲端儲存（${tStr}）`;
-      }
-    } catch (e) {}
-  }
-
-  async function deleteRowFromCloud(id) {
-    if (!supabaseClient || !id) return;
-    try {
-      await supabaseClient.from('ltc_voucher_details').delete().eq('id', id);
-    } catch (e) {}
   }
 
   function onCellEdit(id, field, val) {
@@ -541,7 +521,6 @@
 
     saveLocal();
     recalcTotalsDom();
-    saveRowToCloud(item);
   }
 
   function recalcTotalsDom() {
@@ -569,8 +548,8 @@
   function renderSheet() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = Number(document.getElementById('monthSelect').value);
-    const planCode = `${yr}00K0201`;
-    const planName = `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
+    const planCode = document.getElementById('planCodeInput').value.trim();
+    const planName = document.getElementById('planNameInput').value.trim();
 
     document.getElementById('sheetHeading').textContent = `二、${yr} 年 ${m} 月接受衛生福利部補助經費支出憑證明細表`;
     document.getElementById('vYear').textContent = yr;
@@ -656,49 +635,34 @@
     const yr = document.getElementById('rocYearSelect').value;
     const m = Number(document.getElementById('monthSelect').value);
 
-    if (!supabaseClient) {
-      alert('無法連線至雲端資料庫，請檢查 config.js 設定！');
-      return;
-    }
-
     let foodItems = [];
-    try {
-      const { data, error } = await supabaseClient
-        .from('food_receipt_items')
-        .select('*')
-        .eq('roc_year', String(yr))
-        .eq('month', String(m))
-        .eq('plan_type', 'ltc')
-        .order('id', { ascending: true });
-      if (error) throw error;
-      if (Array.isArray(data) && data.length > 0) {
-        foodItems = data.map(d => ({
-          receiptDate: d.receipt_date || `${m}/1`,
-          totalPrice: Number(d.total_price) || 0
-        }));
-      }
-    } catch (e) {
-      alert('讀取雲端「長照核銷食材費」失敗：' + (e.message || e));
-      return;
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('food_receipt_items')
+          .select('*')
+          .eq('roc_year', String(yr))
+          .eq('month', String(m))
+          .eq('plan_type', 'ltc');
+        if (!error && Array.isArray(data)) {
+          foodItems = data.map(d => ({
+            receiptDate: d.receipt_date || `${m}/1`,
+            totalPrice: Number(d.total_price) || 0
+          }));
+        }
+      } catch (e) {}
     }
 
     if (foodItems.length === 0) {
-      alert(`在雲端資料庫中找不到 ${yr} 年 ${m} 月的「長照核銷食材費」收據資料，請先至「長照核銷食材費」匯入！`);
-      return;
+      try {
+        const localFood = JSON.parse(localStorage.getItem(STORAGE_KEY_FOOD_RECEIPTS) || '[]');
+        foodItems = localFood.filter(x => String(x.rocYear) === String(yr) && Number(x.month) === m && x.plan === 'ltc');
+      } catch (e) {}
     }
 
-    function extractDayFromReceiptDate(rDateStr) {
-      const s = String(rDateStr || '').trim();
-      const parts = s.replace(/[年月]/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
-      if (parts.length >= 3) {
-        const da = parseInt(parts[2], 10);
-        return Number.isFinite(da) && da > 0 ? String(da) : '';
-      }
-      if (parts.length === 2) {
-        const da = parseInt(parts[1], 10);
-        return Number.isFinite(da) && da > 0 ? String(da) : '';
-      }
-      return '';
+    if (foodItems.length === 0) {
+      alert(`在「食材費收據管理」中找不到 ${yr} 年 ${m} 月的「長照核銷食材費」資料！`);
+      return;
     }
 
     const byDate = new Map();
@@ -709,12 +673,13 @@
 
     allRows = allRows.filter(r => !(String(r.rocYear) === String(yr) && Number(r.month) === m && isFoodRow(r)));
     byDate.forEach((subtotal, rDate) => {
-      const da = extractDayFromReceiptDate(rDate);
+      const parts = String(rDate).split('/');
+      const dayStr = parts.length > 1 ? String(parseInt(parts[1], 10) || '') : '';
       allRows.push({
         id: 'food_imp_' + yr + '_' + m + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         rocYear: String(yr),
         month: m,
-        day: da,
+        day: dayStr,
         category: '食材費',
         summary: '食材費',
         voucherNo: '1',
@@ -727,13 +692,9 @@
     ensureMonthSlots(yr, m, 12);
     saveLocal();
     renderSheet();
-    const savedFoodRows = allRows.filter(r => String(r.rocYear) === String(yr) && Number(r.month) === m && isFoodRow(r) && isRowActive(r));
-    for (const fr of savedFoodRows) {
-      await saveRowToCloud(fr);
-    }
   }
 
-  async function importInstructorsTemplate() {
+  function importInstructorsTemplate() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = Number(document.getElementById('monthSelect').value);
     const adYear = Number(yr) + 1911;
@@ -757,39 +718,89 @@
     ensureMonthSlots(yr, m, 12);
     saveLocal();
     renderSheet();
-    const savedFeeRows = allRows.filter(r => String(r.rocYear) === String(yr) && Number(r.month) === m && !isFoodRow(r) && isRowActive(r));
-    for (const ir of savedFeeRows) {
-      await saveRowToCloud(ir);
-    }
   }
 
-  async function clearSingleRow(id) {
+  function clearSingleRow(id) {
     const item = allRows.find(r => String(r.id) === String(id));
     if (!item) return;
     item.day = ''; item.summary = ''; item.voucherNo = '';
     item.totalAmt = 0; item.selfAmt = 0; item.grantAmt = 0;
     saveLocal();
     renderSheet();
-    await deleteRowFromCloud(id);
   }
 
   async function clearCurrentMonth() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = Number(document.getElementById('monthSelect').value);
     if (!confirm(`確定要清除 ${yr} 年 ${m} 月的所有明細資料嗎？`)) return;
-    const toDelete = allRows.filter(r => String(r.rocYear) === String(yr) && Number(r.month) === m);
     allRows = allRows.filter(r => !(String(r.rocYear) === String(yr) && Number(r.month) === m));
     ensureMonthSlots(yr, m, 12);
     saveLocal();
-    renderSheet();
     if (supabaseClient) {
       try {
-        await supabaseClient.from('ltc_voucher_details').delete().eq('roc_year', String(yr)).eq('month', m);
+        await supabaseClient
+          .from('ltc_voucher_details')
+          .delete()
+          .eq('roc_year', String(yr))
+          .eq('month', m);
       } catch (e) {}
     }
-    for (const dr of toDelete) {
-      await deleteRowFromCloud(dr.id);
+    renderSheet();
+  }
+
+  function loadSampleApril() {
+    const yr = document.getElementById('rocYearSelect').value;
+    document.getElementById('monthSelect').value = '4';
+    if (allRows.some(r => String(r.rocYear) === String(yr) && Number(r.month) === 4 && isRowActive(r))) {
+      if (!confirm(`目前 ${yr} 年 4 月已有資料，是否要覆蓋載入 4 月範例資料？`)) return;
     }
+    allRows = allRows.filter(r => !(String(r.rocYear) === String(yr) && Number(r.month) === 4));
+
+    const sample4 = [
+      { day: '19', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 3680, selfAmt: 0, grantAmt: 3680 },
+      { day: '20', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 4880, selfAmt: 1640, grantAmt: 3240 },
+      { day: '22', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 4150, selfAmt: 0, grantAmt: 4150 },
+      { day: '23', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 4065, selfAmt: 0, grantAmt: 4065 },
+      { day: '28', category: '食材費', summary: '食材費', voucherNo: '1', totalAmt: 865, selfAmt: 0, grantAmt: 865 },
+      { day: '30', category: '講師費', summary: '健康促進講師費(林熙鈴)', voucherNo: '2', totalAmt: 3000, selfAmt: 0, grantAmt: 3000 },
+      { day: '30', category: '講師費', summary: '健康促進講師費(張國堂)', voucherNo: '2', totalAmt: 8000, selfAmt: 0, grantAmt: 8000 },
+      { day: '30', category: '講師費', summary: '健康促進講師費(鄧美續)', voucherNo: '2', totalAmt: 10000, selfAmt: 0, grantAmt: 10000 },
+      { day: '30', category: '講師費', summary: '健康促進講師費(吳佩珊)', voucherNo: '2', totalAmt: 3000, selfAmt: 0, grantAmt: 3000 }
+    ];
+
+    sample4.forEach((d, idx) => {
+      allRows.push({ id: `sample_apr_${idx + 1}_${Date.now()}`, rocYear: String(yr), month: 4, ...d });
+    });
+
+    ensureMonthSlots(yr, 4, 15);
+    saveLocal();
+    renderSheet();
+  }
+
+  async function saveMonthChanges() {
+    saveLocal();
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = Number(document.getElementById('monthSelect').value);
+    const activeRows = allRows.filter(r => String(r.rocYear) === String(yr) && Number(r.month) === m && isRowActive(r));
+
+    if (supabaseClient && activeRows.length > 0) {
+      try {
+        await supabaseClient.from('ltc_voucher_details').upsert(activeRows.map(row => ({
+          id: row.id,
+          roc_year: row.rocYear,
+          month: row.month,
+          day: parseNum(row.day),
+          category: row.category,
+          summary: row.summary,
+          voucher_no: row.voucherNo,
+          total_amt: row.totalAmt,
+          self_amt: row.selfAmt,
+          grant_amt: row.grantAmt
+        })));
+      } catch (e) {}
+    }
+    renderSheet();
+    alert(`已儲存 ${yr} 年 ${m} 月明細資料！`);
   }
 
   async function copyOfficialTable() {
