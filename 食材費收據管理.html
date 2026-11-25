@@ -267,7 +267,6 @@
           <option value="append">附加至當月該類別資料</option>
         </select>
       </label>
-      <button type="button" class="btn btn-amber" onclick="loadSampleReceiptData()">載入範例收據（8月關懷 / 7月長照）</button>
     </div>
 
     <textarea id="pasteInput" class="import-box" placeholder="請將 Gemini 產生的 TSV 表格或 Excel 複製內容貼到此處（支援【關懷核銷】與【長照核銷】雙區塊一次貼上，也支援單一區塊貼上；欄位支援：收據日期、菜單日期、品名、數量、單位、單價、總價、小計）..."></textarea>
@@ -600,15 +599,6 @@
     alert(`成功匯入 ${parsedItems.length} 筆食材費收據明細！${cloudMsg}`);
   }
 
-  function loadSampleReceiptData() {
-    const sampleTsv = `關懷核銷食材費\n收據日期\t品名\t數量\t單位\t單價\t總價\t小計\n\t高麗菜\t14\t斤\t38\t532\t\n\t南瓜\t10\t斤\t32\t320\t\n\t二節翅\t6\t斤\t130\t780\t\n\t小計\t\t\t\t\t3,832\n8/21\t空心菜\t12\t斤\t38\t456\t\n\t五花肉\t10\t斤\t180\t1,800\t\n\t里肌肉排\t6\t斤\t165\t990\t\n\t白苦瓜\t8\t斤\t50\t400\t\n\t秋刀魚\t10\t斤\t80\t800\t\n\t小計\t\t\t\t\t4,446\n8/28\t地瓜葉\t12\t斤\t38\t456\t\n\t五花肉\t10\t斤\t180\t1,800\t\n\t里肌肉排\t6\t斤\t165\t990\t\n\t五香豆干\t8\t斤\t45\t360\t\n\t過貓\t8\t斤\t52\t416\t\n\t小計\t\t\t\t\t4,022\n\t總計\t\t\t\t\t\t19,597\n\n長照核銷食材費\n收據日期\t菜單日期\t品名\t數量\t單位\t單價\t總價\t小計\n7/22\t7/22\t豆腐\t7\t斤\t20\t140\t\n\t7/22\t地瓜\t8\t斤\t30\t240\t\n\t7/22\t南瓜\t8\t斤\t30\t240\t\n\t7/23\t五花肉\t8\t斤\t180\t1,440\t\n\t7/23\t芋頭梗\t7\t斤\t50\t350\t\n\t\t\t\t\t\t3,625\n7/24\t7/24\t大黃瓜\t8\t斤\t25\t200\t\n\t7/24\t豆包\t6\t斤\t65\t390\t\n\t7/24\t洋蔥\t5\t斤\t30\t150\t\n\t7/24\t空心菜\t13\t斤\t35\t455\t\n\t7/24\t豬絞肉\t8\t斤\t160\t1,280\t\n\t7/24\t菜脯\t3\t斤\t40\t120\t\n\t\t\t\t\t\t2,595\n7/29\t7/29\t茄子\t8\t斤\t40\t320\t\n\t7/29\t豆包\t6\t斤\t65\t390\t\n\t7/29\t長豆\t8\t斤\t45\t360\t\n\t7/29\t秋刀魚\t8\t斤\t80\t640\t\n\t7/29\t豆干絲\t6\t斤\t40\t240\t\n\t7/30\t蒲瓜\t8\t斤\t25\t200\t\n\t7/30\t豬絞肉\t8\t斤\t160\t1,280\t\n\t\t\t\t\t\t3,430\n\t總計\t\t\t\t\t\t\t29,605`;
-
-    document.getElementById('importTargetPlan').value = 'auto';
-    document.getElementById('importMode').value = 'replace';
-    document.getElementById('pasteInput').value = sampleTsv;
-    parseAndImport();
-  }
-
   async function clearCurrentMonthPlan() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = document.getElementById('monthSelect').value;
@@ -668,7 +658,7 @@
 
     const container = document.getElementById('receiptSheetsContainer');
     if (groups.length === 0) {
-      container.innerHTML = `<div style="text-align:center; color:#64748b; padding:24px;">${yr} 年 ${m} 月尚無「${planLabel}」收據資料，請在上方匯入或點選「載入範例收據」。</div>`;
+      container.innerHTML = `<div style="text-align:center; color:#64748b; padding:24px;">${yr} 年 ${m} 月尚無「${planLabel}」收據資料，請在上方匯入收據內容。</div>`;
       return;
     }
 
