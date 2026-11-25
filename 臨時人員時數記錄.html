@@ -88,6 +88,42 @@
     }
 
     .grand-row td { background: #e2e8f0 !important; font-weight: bold; font-size: 1rem; border-top: 2px solid #1e293b; }
+
+    .section-divider { margin-top: 32px; padding-top: 22px; border-top: 2px solid var(--primary); }
+    .sub-header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+    }
+    .sub-header-bar h2 { margin: 0; font-size: 1.18rem; color: var(--primary); }
+    .btn-teal { background: #0f766e; color: #fff; }
+    .btn-teal:hover { background: #115e59; }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-sm { padding: 5px 10px; font-size: 0.84rem; }
+    .mode-pill-cal { background:#dcfce7; color:#166534; padding:4px 10px; border-radius:14px; font-size:0.86rem; font-weight:bold; }
+    .mode-pill-man { background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:14px; font-size:0.86rem; font-weight:bold; }
+    .sync-hint-banner {
+      font-size: 0.86rem; color: #334155; background: #f8fafc; border-left: 4px solid var(--primary);
+      padding: 8px 12px; border-radius: 4px; margin-bottom: 12px;
+    }
+    .sheet-title-banner {
+      text-align: center; font-size: 1.16rem; font-weight: bold;
+      color: #0f172a; padding: 6px 0 10px 0;
+    }
+    table.hours-table input.num-input {
+      width: 100%; text-align: right; padding: 5px 7px; font-size: 0.9rem;
+      border: 1px solid #94a3b8; border-radius: 4px; font-weight: bold; background: #fffbeb;
+      font-variant-numeric: tabular-nums;
+    }
+    table.hours-table input.text-input {
+      width: 100%; padding: 5px 7px; font-size: 0.88rem;
+      border: 1px solid #cbd5e1; border-radius: 4px;
+    }
+    tr.tax-total-row td {
+      background: #f1f5f9 !important; font-weight: bold; font-size: 0.98rem; color: #0f172a;
+    }
   </style>
 </head>
 <body>
@@ -131,10 +167,11 @@
         <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
         <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
         <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
-        <div class="dropdown-divider">其他核銷計畫（預留）</div>
-        <a href="#" onclick="alert('長照核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">長照核銷（待建立）</a>
-        <a href="#" onclick="alert('多元核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">多元核銷（待建立）</a>
-        <a href="#" onclick="alert('伯公核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">伯公核銷（待建立）</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">3. 長照核銷統計</a>
       </div>
     </div>
   </div>
@@ -190,6 +227,42 @@
     <tbody id="hoursBody"></tbody>
     <tfoot id="hoursFoot"></tfoot>
   </table>
+
+  <!-- 個人所得稅計算_臨時人員（連動本頁全年度1-12月時數記錄，亦支援獨立手動輸入模式） -->
+  <div class="section-divider">
+    <div class="sub-header-bar">
+      <h2>個人所得稅計算_臨時人員</h2>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span id="tempTaxModeBadge" class="mode-pill-cal">目前：連動時數記錄模式</span>
+        <button type="button" class="btn btn-outline btn-sm" id="btnTempSwitchManual" onclick="setTempTaxMode('manual')">手動輸入模式</button>
+        <button type="button" class="btn btn-teal btn-sm" id="btnTempSwitchAuto" style="display:none;" onclick="setTempTaxMode('auto')">切回連動時數記錄模式</button>
+
+        <span id="tempAutoControls" style="display:inline-flex; gap:6px; align-items:center;">
+          <button type="button" class="btn btn-teal btn-sm" onclick="loadHoursRecords()">重新讀取臨時人員時數</button>
+        </span>
+
+        <span id="tempManualControls" style="display:none; gap:6px; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn btn-blue btn-sm" onclick="addTempManualRow()">＋ 新增季別/項目列</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="addTempManualStaffCol()">＋ 新增人員欄位</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="saveTempManualData()">儲存手動模式資料</button>
+        </span>
+
+        <button type="button" class="btn btn-primary btn-sm" onclick="copyTempTaxTable()">複製所得稅統計表</button>
+      </div>
+    </div>
+
+    <div class="sync-hint-banner" id="tempTaxModeHint">
+      說明：「連動時數記錄模式」自動加總上方全年度 1～12 月各季臨時人員實領金額（修改上方天數或儲存後即時同步）；「手動輸入模式」則獨立存檔至雲端，兩者互不干擾。
+    </div>
+
+    <div class="sheet-title-banner" id="tempTaxTitle">115年度廚房臨時人員</div>
+    <div style="overflow-x:auto;">
+      <table class="hours-table">
+        <thead id="tempTaxHead"></thead>
+        <tbody id="tempTaxBody"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -326,6 +399,10 @@
     statusEl.style.color = '#166534';
     statusEl.textContent = '資料已同步';
     renderTable();
+    if (tempTaxMode === 'manual') {
+      await loadTempManualStore();
+    }
+    renderTempTaxSection();
   }
 
   function getVisibleMonths() {
@@ -428,6 +505,9 @@
     document.getElementById('grand-due').textContent = grandPay > 0 ? grandPay.toLocaleString() : '-';
     document.getElementById('grand-act').textContent = grandPay > 0 ? grandPay.toLocaleString() : '-';
     document.getElementById('grand-mtot').textContent = grandPay > 0 ? grandPay.toLocaleString() : '-';
+    if (typeof renderTempTaxSection === 'function' && tempTaxMode === 'auto') {
+      renderTempTaxSection();
+    }
   }
 
   function renderTable() {
@@ -525,6 +605,406 @@
     } else {
       statusEl.style.color = '#166534';
       statusEl.textContent = '已成功儲存至雲端！';
+      if (typeof renderTempTaxSection === 'function' && tempTaxMode === 'auto') {
+        renderTempTaxSection();
+      }
+    }
+  }
+
+
+  function fmtNum(n) {
+    const num = Math.round(Number(n || 0));
+    return Number.isFinite(num) ? num.toLocaleString('en-US') : '0';
+  }
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function escapeAttr(s) {
+    return String(s || '').replace(/"/g, '&quot;');
+  }
+
+  let tempTaxMode = 'auto';
+  let tempManualStaffCols = ['陳遠香', '邱鳳廷', '張瑞合', '邱和妹', '施汶里', '徐邱鳳嬌'];
+  let tempManualRows = [];
+
+  function getSelectedRocYear() {
+    return parseInt(document.getElementById('rocYearSelect')?.value, 10) || 115;
+  }
+
+  function getTempManualKey() {
+    return `lz_temp_tax_manual_${getSelectedRocYear()}`;
+  }
+
+  function createDefaultTempManualRows() {
+    const yr = getSelectedRocYear();
+    return ['關懷1-3月', '關懷4-6月', '關懷7-9月', '關懷10-12月'].map((lbl, idx) => ({
+      id: 'tm_' + yr + '_' + idx + '_' + Math.random().toString(36).slice(2, 5),
+      period_label: lbl,
+      values: {}
+    }));
+  }
+
+  async function loadTempManualStore() {
+    const yr = getSelectedRocYear();
+    const staffNamesFromList = tempStaffList.map(s => (s.name || '').trim()).filter(Boolean);
+    const defaultCols = staffNamesFromList.length > 0 ? [...staffNamesFromList] : ['陳遠香', '邱鳳廷', '張瑞合', '邱和妹', '施汶里', '徐邱鳳嬌'];
+    tempManualStaffCols = [...defaultCols];
+    tempManualRows = createDefaultTempManualRows();
+
+    let loadedFromCloud = false;
+    try {
+      const { data, error } = await supabaseClient
+        .from('instructor_fee_records')
+        .select('*')
+        .eq('roc_year', yr)
+        .eq('entry_type', 'temp_manual')
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        loadedFromCloud = true;
+        const rowMap = new Map();
+        const colSet = new Set(defaultCols);
+        data.forEach(rec => {
+          const pLbl = (rec.course_name || '關懷1-3月').trim();
+          const sName = (rec.instructor_name || '').trim();
+          if (sName) colSet.add(sName);
+          if (!rowMap.has(pLbl)) {
+            rowMap.set(pLbl, { id: 'tm_db_' + pLbl, period_label: pLbl, values: {} });
+          }
+          if (sName) {
+            const numVal = Number(rec.amount || 0);
+            rowMap.get(pLbl).values[sName] = (numVal !== 0) ? String(numVal) : (rec.remark || '');
+          }
+        });
+        tempManualStaffCols = [...colSet];
+        tempManualRows = [...rowMap.values()];
+      }
+    } catch (e) {}
+
+    if (!loadedFromCloud) {
+      const raw = localStorage.getItem(getTempManualKey());
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.cols) && parsed.cols.length > 0) tempManualStaffCols = parsed.cols;
+          if (parsed && Array.isArray(parsed.rows) && parsed.rows.length > 0) tempManualRows = parsed.rows;
+        } catch (e) {}
+      }
+    }
+  }
+
+  function persistTempManualLocal() {
+    localStorage.setItem(getTempManualKey(), JSON.stringify({
+      cols: tempManualStaffCols,
+      rows: tempManualRows
+    }));
+  }
+
+  async function setTempTaxMode(mode) {
+    tempTaxMode = mode;
+    const isManual = (mode === 'manual');
+    document.getElementById('btnTempSwitchManual').style.display = isManual ? 'none' : 'inline-block';
+    document.getElementById('btnTempSwitchAuto').style.display = isManual ? 'inline-block' : 'none';
+    document.getElementById('tempAutoControls').style.display = isManual ? 'none' : 'inline-flex';
+    document.getElementById('tempManualControls').style.display = isManual ? 'flex' : 'none';
+    document.getElementById('tempTaxModeHint').textContent = isManual
+      ? '目前為「手動輸入模式」：可自行填寫各季金額或新增列/人員，儲存時寫入雲端獨立標記（temp_manual），不會覆蓋「連動時數記錄模式」。'
+      : '說明：「連動時數記錄模式」自動加總上方全年度 1～12 月各季臨時人員實領金額（修改上方天數或儲存後即時同步）；「手動輸入模式」則獨立存檔至雲端，兩者互不干擾。';
+
+    if (isManual) {
+      await loadTempManualStore();
+    }
+    renderTempTaxSection();
+  }
+
+  function addTempManualRow() {
+    tempManualRows.push({
+      id: 'tm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      period_label: '',
+      values: {}
+    });
+    persistTempManualLocal();
+    renderTempTaxSection();
+  }
+
+  function deleteTempManualRow(rowId) {
+    tempManualRows = tempManualRows.filter(r => String(r.id) !== String(rowId));
+    if (tempManualRows.length === 0) tempManualRows = createDefaultTempManualRows();
+    persistTempManualLocal();
+    renderTempTaxSection();
+  }
+
+  function addTempManualStaffCol() {
+    const newName = prompt('請輸入要新增的臨時人員姓名：');
+    if (!newName || !newName.trim()) return;
+    const clean = newName.trim();
+    if (!tempManualStaffCols.includes(clean)) {
+      tempManualStaffCols.push(clean);
+      persistTempManualLocal();
+      renderTempTaxSection();
+    }
+  }
+
+  function onTempManualLabelChange(rowId, val) {
+    const row = tempManualRows.find(r => String(r.id) === String(rowId));
+    if (row) {
+      row.period_label = val;
+      persistTempManualLocal();
+    }
+  }
+
+  function onTempManualColNameChange(colIdx, newName) {
+    const clean = String(newName || '').trim();
+    const oldName = tempManualStaffCols[colIdx];
+    if (!clean || clean === oldName) return;
+    tempManualStaffCols[colIdx] = clean;
+    tempManualRows.forEach(r => {
+      if (r.values && Object.prototype.hasOwnProperty.call(r.values, oldName)) {
+        r.values[clean] = r.values[oldName];
+        delete r.values[oldName];
+      }
+    });
+    persistTempManualLocal();
+    renderTempTaxSection();
+  }
+
+  function onTempManualCellChange(rowId, staffName, rawVal) {
+    const row = tempManualRows.find(r => String(r.id) === String(rowId));
+    if (!row) return;
+    if (!row.values) row.values = {};
+    row.values[staffName] = String(rawVal).replace(/,/g, '').trim();
+    persistTempManualLocal();
+    renderTempTaxSection();
+  }
+
+  async function saveTempManualData() {
+    const yr = getSelectedRocYear();
+    persistTempManualLocal();
+    const statusEl = document.getElementById('statusText');
+    let cloudOk = false;
+    try {
+      await supabaseClient
+        .from('instructor_fee_records')
+        .delete()
+        .eq('roc_year', yr)
+        .eq('entry_type', 'temp_manual');
+
+      const payload = [];
+      tempManualRows.forEach((row, rIdx) => {
+        const pLbl = String(row.period_label || '').trim();
+        tempManualStaffCols.forEach((sName, cIdx) => {
+          const raw = row.values ? (row.values[sName] ?? '') : '';
+          const cleaned = String(raw).replace(/,/g, '').trim();
+          if (cleaned !== '') {
+            const isNum = /^-?\d+(\.\d+)?$/.test(cleaned);
+            payload.push({
+              roc_year: yr,
+              instructor_name: sName,
+              entry_type: 'temp_manual',
+              plan_name: pLbl || null,
+              course_name: pLbl,
+              amount: isNum ? Number(cleaned) : 0,
+              remark: isNum ? '' : cleaned,
+              sort_order: rIdx * 100 + cIdx + 1
+            });
+          }
+        });
+      });
+
+      if (payload.length > 0) {
+        const { error } = await supabaseClient.from('instructor_fee_records').insert(payload);
+        if (!error) cloudOk = true;
+      } else {
+        cloudOk = true;
+      }
+    } catch (e) {}
+
+    if (statusEl) {
+      statusEl.style.color = '#166534';
+      statusEl.textContent = `已儲存 ${yr} 年度臨時人員所得稅（手動輸入模式）${cloudOk ? '並同步雲端' : '（本機快取）'}`;
+    }
+    alert(`已儲存 ${yr} 年度臨時人員所得稅（手動輸入模式）資料！`);
+  }
+
+  function getAutoTaxStaffCols() {
+    const fromMaster = tempStaffList.map(s => (s.name || '').trim()).filter(Boolean);
+    const fromRecords = Object.values(monthRoleMap)
+      .map(r => (r.staff_name || '').trim())
+      .filter(Boolean);
+    const merged = [...new Set([...fromMaster, ...fromRecords])];
+    return merged.length > 0 ? merged : ['陳遠香', '邱鳳廷', '張瑞合', '邱和妹', '施汶里', '徐邱鳳嬌'];
+  }
+
+  function renderTempTaxSection() {
+    const yr = getSelectedRocYear();
+    const titleEl = document.getElementById('tempTaxTitle');
+    const badgeEl = document.getElementById('tempTaxModeBadge');
+    const headEl = document.getElementById('tempTaxHead');
+    const bodyEl = document.getElementById('tempTaxBody');
+    if (!headEl || !bodyEl) return;
+
+    const isManual = (tempTaxMode === 'manual');
+    badgeEl.textContent = isManual ? '目前：手動輸入模式（獨立存檔）' : '目前：連動時數記錄模式';
+    badgeEl.className = isManual ? 'mode-pill-man' : 'mode-pill-cal';
+
+    if (isManual) {
+      titleEl.textContent = `${yr}年度廚房臨時人員（手動輸入模式）`;
+      const cols = tempManualStaffCols;
+      headEl.innerHTML = `
+        <tr>
+          <th style="width:150px;">關懷季別／項目</th>
+          ${cols.map((n, idx) => `
+            <th>
+              <input type="text" class="text-input" value="${escapeAttr(n)}" onchange="onTempManualColNameChange(${idx}, this.value)" style="text-align:center; font-weight:bold; background:#fff;">
+            </th>
+          `).join('')}
+          <th style="width:75px;">操作</th>
+        </tr>
+      `;
+
+      const colSums = {};
+      cols.forEach(n => { colSums[n] = 0; });
+
+      const rowsHtml = tempManualRows.map(row => {
+        const tds = cols.map(n => {
+          const raw = row.values ? (row.values[n] ?? '') : '';
+          const cleaned = String(raw).replace(/,/g, '').trim();
+          const isNum = cleaned !== '' && /^-?\d+(\.\d+)?$/.test(cleaned);
+          const numVal = isNum ? Number(cleaned) : NaN;
+          if (isNum && Number.isFinite(numVal)) colSums[n] += numVal;
+          const disp = isNum ? fmtNum(numVal) : raw;
+          return `<td><input type="text" class="${isNum ? 'num-input' : 'text-input'}" style="${isNum ? '' : 'text-align:center;'}" value="${escapeAttr(disp)}" placeholder="輸入金額" onchange="onTempManualCellChange('${row.id}', '${escapeAttr(n)}', this.value)"></td>`;
+        }).join('');
+
+        return `
+          <tr>
+            <td><input type="text" class="text-input" value="${escapeAttr(row.period_label || '')}" placeholder="如：關懷1-3月" onchange="onTempManualLabelChange('${row.id}', this.value)"></td>
+            ${tds}
+            <td><button type="button" class="btn btn-danger btn-sm" onclick="deleteTempManualRow('${row.id}')">刪除</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      const totalTds = cols.map(n => `<td class="num-cell">${fmtNum(colSums[n])}</td>`).join('');
+      bodyEl.innerHTML = `
+        ${rowsHtml}
+        <tr class="tax-total-row">
+          <td>核銷金額</td>
+          ${totalTds}
+          <td></td>
+        </tr>
+      `;
+      return;
+    }
+
+    titleEl.textContent = `${yr}年度廚房臨時人員`;
+    const cols = getAutoTaxStaffCols();
+    headEl.innerHTML = `
+      <tr>
+        <th style="width:150px;">關懷季別</th>
+        ${cols.map(n => `<th>${escapeHtml(n)}</th>`).join('')}
+      </tr>
+    `;
+
+    const quarters = [
+      { label: '關懷1-3月', months: [1, 2, 3] },
+      { label: '關懷4-6月', months: [4, 5, 6] },
+      { label: '關懷7-9月', months: [7, 8, 9] },
+      { label: '關懷10-12月', months: [10, 11, 12] }
+    ];
+
+    const colGrandTotals = {};
+    cols.forEach(n => { colGrandTotals[n] = 0; });
+
+    const allRecs = Object.values(monthRoleMap);
+    const rowsHtml = quarters.map(q => {
+      const tds = cols.map(name => {
+        const sum = allRecs
+          .filter(r => (r.staff_name || '').trim() === name && q.months.includes(Number(r.month)))
+          .reduce((acc, r) => {
+            const days = Number(r.work_days) || 0;
+            const hrs = days * (Number(r.hours_per_day) || 3);
+            const rate = Number(r.hourly_rate) || 196;
+            return acc + Math.round(hrs * rate);
+          }, 0);
+        colGrandTotals[name] += sum;
+        return `<td class="num-cell">${sum > 0 ? fmtNum(sum) : ''}</td>`;
+      }).join('');
+      return `
+        <tr>
+          <td style="font-weight:bold;">${q.label}</td>
+          ${tds}
+        </tr>
+      `;
+    }).join('');
+
+    const totalTds = cols.map(n => `<td class="num-cell">${colGrandTotals[n] > 0 ? fmtNum(colGrandTotals[n]) : ''}</td>`).join('');
+
+    bodyEl.innerHTML = `
+      ${rowsHtml}
+      <tr class="tax-total-row">
+        <td>核銷金額</td>
+        ${totalTds}
+      </tr>
+    `;
+  }
+
+  function copyTempTaxTable() {
+    const lines = [];
+    if (tempTaxMode === 'manual') {
+      lines.push(['關懷季別／項目', ...tempManualStaffCols].join('\t'));
+      const colSums = {};
+      tempManualStaffCols.forEach(n => { colSums[n] = 0; });
+      tempManualRows.forEach(row => {
+        const vals = tempManualStaffCols.map(n => {
+          const raw = row.values ? (row.values[n] ?? '') : '';
+          const cleaned = String(raw).replace(/,/g, '').trim();
+          const isNum = cleaned !== '' && /^-?\d+(\.\d+)?$/.test(cleaned);
+          if (isNum) colSums[n] += Number(cleaned);
+          return isNum ? fmtNum(Number(cleaned)) : raw;
+        });
+        lines.push([row.period_label || '', ...vals].join('\t'));
+      });
+      lines.push(['核銷金額', ...tempManualStaffCols.map(n => fmtNum(colSums[n]))].join('\t'));
+    } else {
+      const cols = getAutoTaxStaffCols();
+      lines.push(['關懷季別', ...cols].join('\t'));
+      const quarters = [
+        { label: '關懷1-3月', months: [1, 2, 3] },
+        { label: '關懷4-6月', months: [4, 5, 6] },
+        { label: '關懷7-9月', months: [7, 8, 9] },
+        { label: '關懷10-12月', months: [10, 11, 12] }
+      ];
+      const colGrandTotals = {};
+      cols.forEach(n => { colGrandTotals[n] = 0; });
+      const allRecs = Object.values(monthRoleMap);
+      quarters.forEach(q => {
+        const vals = cols.map(name => {
+          const sum = allRecs
+            .filter(r => (r.staff_name || '').trim() === name && q.months.includes(Number(r.month)))
+            .reduce((acc, r) => acc + Math.round((Number(r.work_days) || 0) * (Number(r.hours_per_day) || 3) * (Number(r.hourly_rate) || 196)), 0);
+          colGrandTotals[name] += sum;
+          return sum > 0 ? fmtNum(sum) : '';
+        });
+        lines.push([q.label, ...vals].join('\t'));
+      });
+      lines.push(['核銷金額', ...cols.map(n => colGrandTotals[n] > 0 ? fmtNum(colGrandTotals[n]) : '')].join('\t'));
+    }
+    const text = lines.join('\n');
+    const statusEl = document.getElementById('statusText');
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => {
+        if (statusEl) { statusEl.style.color = '#166534'; statusEl.textContent = '已複製《個人所得稅計算_臨時人員》表格數據！'; }
+      });
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (statusEl) { statusEl.style.color = '#166534'; statusEl.textContent = '已複製《個人所得稅計算_臨時人員》表格數據！'; }
     }
   }
 
