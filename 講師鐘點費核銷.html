@@ -245,30 +245,42 @@
     <button type="button" class="btn btn-outline btn-sm" id="subTabTaxInst" onclick="switchSubPage('taxInst')">個人所得稅計算-講師</button>
   </div>
 
-  <!-- 分頁 1（新增於 2. 講師鐘點費核銷 前）：核銷鐘點費設定（由講師鐘點費記錄搬移之「鐘點費-核銷」表格） -->
+  <!-- 分頁 1（新增於 2. 講師鐘點費核銷 前）：核銷鐘點費設定 -->
   <div id="panelReimburseSetting" style="display:none;">
     <div class="controls-row no-print">
-      <label style="font-weight:bold;">新增計畫欄位：</label>
-      <input type="text" id="rebCfgNewPlanNameInput" placeholder="如：延緩3期" style="width:150px;">
-      <button type="button" class="btn btn-outline btn-sm" onclick="rebCfgAddPlanColumn()">＋ 新增計畫</button>
-      <span style="border-left:1px solid #fda4af; height:18px; margin:0 2px;"></span>
-      <label style="font-weight:bold;">修改計畫名稱：</label>
-      <select id="rebCfgRenameTargetSelect" style="width:130px;"></select>
-      <input type="text" id="rebCfgRenameNewInput" placeholder="輸入新計畫名稱" style="width:140px;">
-      <button type="button" class="btn btn-outline btn-sm" onclick="rebCfgRenamePlanColumn()">修改名稱</button>
-      <button type="button" class="btn btn-teal btn-sm" onclick="rebCfgReloadFromDatabase()">重新從資料庫載入</button>
-      <button type="button" class="btn btn-primary btn-sm" onclick="rebCfgSaveToDatabase()">儲存「鐘點費-核銷」至資料庫</button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnToggleRebCfgBody" onclick="toggleRebCfgBody()">展開／收合鐘點費-核銷設定表</button>
+      <button type="button" class="btn btn-outline btn-sm" id="btnToggleRebSummaryTable" onclick="toggleRebSummaryPreview()">顯示／隱藏核銷統計數值表</button>
+      <button type="button" class="btn btn-teal btn-sm" onclick="rebCfgReloadFromDatabase()">重新載入</button>
+      <button type="button" class="btn btn-blue btn-sm" onclick="rebCfgSaveToDatabase()">儲存設定</button>
     </div>
 
-    <div class="sheet-title-banner">鐘點費-核銷</div>
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;" class="no-print">
-      <div class="picker-dropdown-wrap">
-        <button type="button" class="btn btn-outline btn-sm" id="rebSettingTeacherBtn" onclick="togglePickerPanel('rebSettingTeacherPanel')">勾選顯示講師 ▾</button>
-        <div class="picker-panel" id="rebSettingTeacherPanel"></div>
+    <div id="rebCfgCollapsibleArea" style="display:none;">
+      <div class="controls-row no-print">
+        <label style="font-weight:bold;">新增計畫：</label>
+        <input type="text" id="rebCfgNewPlanNameInput" placeholder="如：延緩3期" style="width:140px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="rebCfgAddPlanColumn()">＋ 新增</button>
+        <label style="font-weight:bold;">修改名稱：</label>
+        <select id="rebCfgRenameTargetSelect" style="width:125px;"></select>
+        <input type="text" id="rebCfgRenameNewInput" placeholder="新計畫名稱" style="width:130px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="rebCfgRenamePlanColumn()">修改</button>
+        <div class="picker-dropdown-wrap">
+          <button type="button" class="btn btn-outline btn-sm" id="rebSettingTeacherBtn" onclick="togglePickerPanel('rebSettingTeacherPanel')">勾選講師 ▾</button>
+          <div class="picker-panel" id="rebSettingTeacherPanel"></div>
+        </div>
+      </div>
+
+      <div class="sheet-title-banner">鐘點費-核銷</div>
+      <div style="overflow-x:auto;">
+        <table class="excel-table" id="reimburseRateTable"></table>
       </div>
     </div>
-    <div style="overflow-x:auto;">
-      <table class="excel-table" id="reimburseRateTable"></table>
+
+    <!-- 產生之核銷統計數值表（點選顯示後呈現，供帶入核銷統計） -->
+    <div id="rebSummaryPreviewArea" style="display:none; margin-top:20px;">
+      <div class="sheet-title-banner">鐘點費-核銷產生數值表（供帶入核銷統計）</div>
+      <div style="overflow-x:auto;">
+        <table class="excel-table" id="reimburseGeneratedValueTable"></table>
+      </div>
     </div>
   </div>
 
@@ -1059,6 +1071,7 @@
     rebCfgPopulateRenameSelect();
     rebCfgRenderTeacherPicker();
     rebCfgRenderTable();
+    if (document.getElementById('rebSummaryPreviewArea')?.style.display !== 'none') renderReimburseGeneratedValueTable();
   }
 
   function rebCfgRenderTeacherPicker() {
@@ -1237,6 +1250,80 @@
     rebCfgRenderTeacherPicker();
     rebCfgRenderTable();
     setStatus('已同步資料庫「鐘點費-核銷」設定');
+  }
+
+
+  function toggleRebCfgBody() {
+    const area = document.getElementById('rebCfgCollapsibleArea');
+    if (!area) return;
+    const willOpen = area.style.display === 'none';
+    area.style.display = willOpen ? 'block' : 'none';
+    if (willOpen) {
+      rebCfgPopulateRenameSelect();
+      rebCfgRenderTeacherPicker();
+      rebCfgRenderTable();
+    }
+  }
+
+  function toggleRebSummaryPreview() {
+    const area = document.getElementById('rebSummaryPreviewArea');
+    if (!area) return;
+    const willOpen = area.style.display === 'none';
+    area.style.display = willOpen ? 'block' : 'none';
+    if (willOpen) {
+      rebCfgCollectFromDom();
+      renderReimburseGeneratedValueTable();
+    }
+  }
+
+  function renderReimburseGeneratedValueTable() {
+    const tbl = document.getElementById('reimburseGeneratedValueTable');
+    if (!tbl) return;
+    const list = rebCfgTeachers.map(name => masterInstructors.find(m => m.name === name) || { name, status: '服務中' });
+    if (list.length === 0) {
+      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:16px; color:#64748b;">尚無勾選講師</td></tr></tbody>';
+      return;
+    }
+
+    const headCells = rebCfgPlans.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+    const colTotals = {};
+    rebCfgPlans.forEach(p => { colTotals[p] = 0; });
+
+    const bodyRows = list.map(inst => {
+      const instName = inst.name;
+      let rowTotal = 0;
+      const tds = rebCfgPlans.map(plan => {
+        const rule = (rebCfgMap[instName] && rebCfgMap[instName][plan]) ? rebCfgMap[instName][plan] : { mode: 'per_hour', rate: '', hours: 1 };
+        let val = 0;
+        if (rule.mode !== 'none' && rule.rate !== '' && rule.rate !== undefined && rule.rate !== null) {
+          const rNum = Number(rule.rate) || 0;
+          const hNum = (rule.hours !== '' && rule.hours !== undefined && rule.hours !== null && Number(rule.hours) > 0) ? Number(rule.hours) : 1;
+          val = Math.round(rNum * hNum);
+        }
+        rowTotal += val;
+        colTotals[plan] += val;
+        return `<td class="num-col">${val > 0 ? fmtNum(val) : '0'}</td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td style="font-weight:bold;">${escapeHtml(instName)}</td>
+          ${tds}
+          <td class="num-col" style="font-weight:bold;">${fmtNum(rowTotal)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const grandTotal = Object.values(colTotals).reduce((a, b) => a + b, 0);
+    const totalRow = `
+      <tr class="total-row">
+        <td class="center-col">合計</td>
+        ${rebCfgPlans.map(p => `<td class="num-col">${fmtNum(colTotals[p])}</td>`).join('')}
+        <td class="num-col">${fmtNum(grandTotal)}</td>
+      </tr>
+    `;
+
+    tbl.innerHTML = `<thead><tr><th style="width:120px;">講師姓名</th>${headCells}<th style="width:110px;">單堂小計</th></tr></thead><tbody>${bodyRows}${totalRow}</tbody>`;
   }
 
   (async function init() {
