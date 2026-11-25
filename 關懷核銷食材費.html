@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>關懷核銷食材費 - 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --accent: #0284c7;
+      --bg: #f1f5f9;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1220px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 6px 0; font-size: 1.4rem; color: var(--primary); }
+    .sub-note { font-size: 0.9rem; color: #475569; margin: 0; }
+    h2 {
+      margin: 0 0 14px 0; font-size: 1.12rem; color: var(--primary);
+      border-bottom: 2px solid var(--primary); padding-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+
+    .toolbar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      background: #f8fafc; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    select, input[type="text"], textarea {
+      padding: 8px 11px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.94rem; background: #fff;
+    }
+    textarea.import-box {
+      width: 100%; min-height: 170px; font-family: Consolas, "Microsoft JhengHei", monospace;
+      font-size: 0.88rem; line-height: 1.45; resize: vertical;
+    }
+
+    button.btn {
+      padding: 8px 15px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: var(--accent); color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-gray { background: #64748b; color: #fff; }
+    .btn-gray:hover { background: #475569; }
+    .btn-danger { background: #dc2626; color: #fff; padding: 5px 10px; font-size: 0.82rem; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    .summary-strip {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;
+      margin-bottom: 16px;
+    }
+    .sum-box {
+      background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px;
+    }
+    .sum-label { font-size: 0.82rem; color: #475569; margin-bottom: 4px; }
+    .sum-val { font-size: 1.22rem; font-weight: bold; color: var(--primary-dark); }
+
+    .receipt-group {
+      border: 1.5px solid #000; background: #fff; margin-bottom: 18px;
+      color: #000;
+    }
+    table.receipt-table {
+      width: 100%; border-collapse: collapse; font-size: 0.93rem;
+    }
+    table.receipt-table th, table.receipt-table td {
+      border: 1px solid #000; padding: 7px 9px;
+    }
+    table.receipt-table th {
+      background: #e2e8f0; text-align: center; font-weight: bold;
+    }
+    .sheet-banner-title {
+      background: #e0f2fe; font-weight: bold; font-size: 1rem; padding: 8px 12px;
+      border-bottom: 1.5px solid #000; display: flex; justify-content: space-between; align-items: center;
+    }
+    .row-subtotal td {
+      background: #f8fafc; font-weight: bold;
+    }
+    .row-grandtotal td {
+      background: #fef9c3; font-weight: bold; font-size: 0.98rem;
+    }
+    .td-right { text-align: right; font-variant-numeric: tabular-nums; }
+    .td-center { text-align: center; }
+
+    .hint-text { font-size: 0.86rem; color: #475569; line-height: 1.5; margin-top: 6px; }
+    #syncStatus { font-size: 0.85rem; font-weight: bold; color: #0f766e; }
+
+    @media print {
+      nav.topbar, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card { border: none; box-shadow: none; padding: 0; }
+    }
+  </style>
+  <script>
+    window.addEventListener('error', function(ev) {
+      const el = document.getElementById('syncStatus');
+      if (el) { el.style.color = '#dc2626'; el.textContent = '頁面腳本錯誤：' + (ev.message || '未知錯誤'); }
+    });
+  </script>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">人事資料管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="志工資料管理.html">志工資料管理</a>
+        <div class="dropdown-divider">人事記錄</div>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="每日工作檢核表.html">每日工作檢核表</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+        <a href="資料庫臨時記錄.html">資料庫臨時記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="關懷核銷食材費.html">關懷核銷食材費</a>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照核銷食材費.html">長照核銷食材費</a>
+        <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+        <div class="dropdown-divider">其他計畫核銷</div>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="課程活動表.html">課程活動表</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="card no-print">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>關懷核銷食材費</h1>
+        <p class="sub-note">專責管理「關懷核銷食材費」：匯入 Gemini「【據點】食材費估算」技能產生的每月 TSV / 表格收據明細，自動依收據日期分張歸納、計算每張小計與月總計，並直接存入雲端資料庫。</p>
+      </div>
+      <div id="syncStatus">雲端同步準備中...</div>
+    </div>
+  </div>
+
+  <div class="card no-print">
+    <h2>
+      <span>一、匯入 Gemini 技能產生的每月關懷核銷食材費收據</span>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <label style="font-size:0.88rem; color:#334155;">民國年：
+          <select id="rocYearSelect" onchange="renderCurrentMonth()">
+            <option value="115">115 年</option>
+            <option value="116">116 年</option>
+            <option value="117">117 年</option>
+          </select>
+        </label>
+        <label style="font-size:0.88rem; color:#334155;">月份：
+          <select id="monthSelect" onchange="renderCurrentMonth()">
+            <option value="1">1 月</option><option value="2">2 月</option><option value="3">3 月</option>
+            <option value="4">4 月</option><option value="5">5 月</option><option value="6">6 月</option>
+            <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
+            <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
+          </select>
+        </label>
+      </div>
+    </h2>
+
+    <div class="toolbar">
+      <span><strong>匯入目標類別：</strong>關懷核銷食材費（專屬寫入雲端資料庫）</span>
+      <label><strong>匯入模式：</strong>
+        <select id="importMode">
+          <option value="replace">覆蓋當月關懷核銷食材費資料</option>
+          <option value="append">附加至當月關懷核銷食材費資料</option>
+        </select>
+      </label>
+    </div>
+
+    <textarea id="pasteInput" class="import-box" placeholder="請將 Gemini 產生的【關懷核銷食材費】TSV 表格或 Excel 複製內容貼到此處（欄位支援：收據日期、品名、數量、單位、單價、總價、小計；若整段雙區塊貼上也會自動只擷取關懷核銷食材費區塊）..."></textarea>
+    <p class="hint-text">
+      支援格式：可直接貼上 Gemini 輸出的 TSV 文字（含「關懷核銷食材費」標題列、「收據日期 / 品名 / 數量 / 單位 / 單價 / 總價 / 小計」與「小計 / 總計」列）。系統會自動略過「小計」「總計」彙整列，避免重複加總，並依「收據日期」重新分張計算每張小計與全月總計，解析後直接存入雲端資料庫。
+    </p>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+      <button type="button" class="btn btn-primary" onclick="parseAndImport()">解析並匯入關懷食材費（直存資料庫）</button>
+      <button type="button" class="btn btn-gray" onclick="document.getElementById('pasteInput').value = ''">清空貼上區</button>
+      <button type="button" class="btn btn-danger" onclick="clearCurrentMonthPlan()">清除本月關懷核銷食材費資料</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="no-print">
+      <span>二、關懷核銷食材費收據資料表</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-amber" onclick="syncFromCloud().then(() => renderCurrentMonth())">重新同步雲端</button>
+        <button type="button" class="btn btn-blue" onclick="copyCurrentPlanTable()">一鍵複製收據表（貼上 Excel）</button>
+        <button type="button" class="btn btn-gray" onclick="window.print()">列印收據表</button>
+      </div>
+    </h2>
+
+    <div class="summary-strip">
+      <div class="sum-box">
+        <div class="sum-label">核銷類別</div>
+        <div class="sum-val">關懷核銷食材費</div>
+      </div>
+      <div class="sum-box">
+        <div class="sum-label">收據張數</div>
+        <div class="sum-val" id="sumReceiptCount">0 張</div>
+      </div>
+      <div class="sum-box">
+        <div class="sum-label">食材明細筆數</div>
+        <div class="sum-val" id="sumItemCount">0 筆</div>
+      </div>
+      <div class="sum-box">
+        <div class="sum-label">當月總計金額</div>
+        <div class="sum-val" id="sumGrandTotal">0 元</div>
+      </div>
+    </div>
+
+    <div id="receiptSheetsContainer">
+      <div style="text-align:center; color:#64748b; padding:24px;">尚無關懷核銷食材費收據資料，請在上方貼上 Gemini 產生的收據內容並按「解析並匯入關懷食材費」。</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PLAN_TYPE = 'care';
+  const PLAN_LABEL = '關懷核銷食材費';
+  const DB_TABLE = 'food_receipt_items';
+
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
+  let careFoodRows = [];
+
+  (function initYearMonth() {
+    const today = new Date();
+    const rocY = String(today.getFullYear() - 1911);
+    const m = String(today.getMonth() + 1);
+    const ySel = document.getElementById('rocYearSelect');
+    const mSel = document.getElementById('monthSelect');
+    if ([...ySel.options].some(o => o.value === rocY)) ySel.value = rocY;
+    mSel.value = m;
+  })();
+
+  function fmt(num) {
+    return Math.round(Number(num) || 0).toLocaleString('en-US');
+  }
+
+  function parseNumber(val) {
+    if (val === null || val === undefined) return 0;
+    const cleaned = String(val).replace(/[,，\s$元]/g, '');
+    const n = parseFloat(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  async function syncFromCloud() {
+    const statusEl = document.getElementById('syncStatus');
+    if (!supabaseClient) {
+      if (statusEl) {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = '錯誤：未偵測到 config.js 雲端資料庫連線設定！';
+      }
+      return;
+    }
+    if (statusEl) {
+      statusEl.style.color = '#0284c7';
+      statusEl.textContent = '正在連線雲端資料庫讀取關懷核銷食材費...';
+    }
+    try {
+      const { data, error } = await supabaseClient
+        .from(DB_TABLE)
+        .select('*')
+        .eq('plan_type', PLAN_TYPE)
+        .order('id', { ascending: true });
+      if (error) {
+        if (statusEl) {
+          statusEl.style.color = '#dc2626';
+          statusEl.textContent = '雲端資料庫讀取失敗：' + (error.message || JSON.stringify(error));
+        }
+        return;
+      }
+      if (Array.isArray(data)) {
+        careFoodRows = data.map(r => ({
+          id: String(r.id),
+          rocYear: String(r.roc_year || '115'),
+          month: String(r.month || '8'),
+          plan: PLAN_TYPE,
+          receiptDate: r.receipt_date || '',
+          menuDate: r.menu_date || '',
+          itemName: r.item_name || '',
+          qty: Number(r.qty) || 0,
+          unit: r.unit || '斤',
+          unitPrice: Number(r.unit_price) || 0,
+          totalPrice: Number(r.total_price) || 0
+        }));
+        if (statusEl) {
+          statusEl.style.color = '#0f766e';
+          statusEl.textContent = `已連線雲端資料庫（關懷核銷食材費共 ${data.length} 筆）`;
+        }
+      }
+    } catch (e) {
+      if (statusEl) {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = '雲端連線例外：' + (e.message || e);
+      }
+    }
+  }
+
+  function detectMonthFromText(text) {
+    const mMatch = text.match(/(?:^|\s|\/)(\d{1,2})\/\d{1,2}(?:\s|$)/);
+    if (mMatch) {
+      const mNum = parseInt(mMatch[1], 10);
+      if (mNum >= 1 && mNum <= 12) return String(mNum);
+    }
+    return null;
+  }
+
+  function normalizeDateKey(dStr, fallbackMonth) {
+    const s = String(dStr || '').trim();
+    if (!s) return `${fallbackMonth}/1`;
+    const parts = s.replace(/[年月]/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      const mo = parseInt(parts[1], 10) || parseInt(fallbackMonth, 10) || 1;
+      const da = parseInt(parts[2], 10) || 1;
+      return `${mo}/${da}`;
+    }
+    if (parts.length === 2) {
+      const mo = parseInt(parts[0], 10) || parseInt(fallbackMonth, 10) || 1;
+      const da = parseInt(parts[1], 10) || 1;
+      return `${mo}/${da}`;
+    }
+    return s;
+  }
+
+  async function parseAndImport() {
+    const rawText = document.getElementById('pasteInput').value;
+    if (!rawText || !rawText.trim()) {
+      alert('請先在輸入框貼上 Gemini 產生的關懷核銷食材費收據內容！');
+      return;
+    }
+    if (!supabaseClient) {
+      alert('無法連線至雲端資料庫，請檢查 config.js 設定！');
+      return;
+    }
+
+    const defaultRocYear = document.getElementById('rocYearSelect').value;
+    const defaultMonth = document.getElementById('monthSelect').value;
+    const importMode = document.getElementById('importMode').value;
+
+    const lines = rawText.replace(/
+/g, '
+').replace(//g, '
+').split('
+');
+    let currentSectionPlan = PLAN_TYPE;
+    let currentReceiptDate = '';
+    const parsedItems = [];
+
+    for (let rawLine of lines) {
+      const trimmed = rawLine.trim();
+      if (!trimmed) continue;
+
+      if (trimmed.includes('長照核銷食材費') || trimmed.includes('【長照核銷】')) {
+        currentSectionPlan = 'ltc';
+        currentReceiptDate = '';
+        continue;
+      }
+      if (trimmed.includes('關懷核銷食材費') || trimmed.includes('【關懷核銷】')) {
+        currentSectionPlan = PLAN_TYPE;
+        currentReceiptDate = '';
+        continue;
+      }
+
+      if (currentSectionPlan !== PLAN_TYPE) {
+        continue;
+      }
+
+      const cols = rawLine.split('	').map(c => c.trim());
+      const firstCol = cols[0] || '';
+      const secondCol = cols[1] || '';
+
+      if (firstCol === '收據日期' || firstCol === '菜單日期' || secondCol === '品名') {
+        continue;
+      }
+      if (firstCol.includes('總計') || secondCol.includes('總計') || cols.some(c => c === '總計')) {
+        continue;
+      }
+      if (firstCol.includes('小計') || secondCol.includes('小計') || cols.some(c => c === '小計')) {
+        continue;
+      }
+
+      let receiptDate = '';
+      let menuDate = '';
+      let itemName = '';
+      let qty = 0;
+      let unit = '斤';
+      let unitPrice = 0;
+      let totalPrice = 0;
+
+      const dateTokenRegex = /^(?:\d{2,4}[\/\-])?\d{1,2}[\/\-]\d{1,2}$/;
+      const hasMenuDateCol = (
+        cols.length >= 8 ||
+        (cols.length === 7 && dateTokenRegex.test(cols[1]) && !/^\d/.test(cols[2]))
+      );
+
+      if (hasMenuDateCol) {
+        if (dateTokenRegex.test(cols[0])) {
+          currentReceiptDate = cols[0];
+        }
+        receiptDate = currentReceiptDate || cols[1] || '';
+        menuDate = cols[1] || receiptDate;
+        itemName = cols[2] || '';
+        qty = parseNumber(cols[3]);
+        unit = cols[4] || '斤';
+        unitPrice = parseNumber(cols[5]);
+        totalPrice = parseNumber(cols[6]);
+      } else {
+        if (dateTokenRegex.test(cols[0])) {
+          currentReceiptDate = cols[0];
+        }
+        receiptDate = currentReceiptDate || '';
+        menuDate = receiptDate;
+        itemName = cols[1] || '';
+        qty = parseNumber(cols[2]);
+        unit = cols[3] || '斤';
+        unitPrice = parseNumber(cols[4]);
+        totalPrice = parseNumber(cols[5]);
+      }
+
+      if (!itemName) continue;
+      if (!totalPrice && qty && unitPrice) {
+        totalPrice = Math.round(qty * unitPrice);
+      }
+
+      const detectedMonth = detectMonthFromText(receiptDate || menuDate) || defaultMonth;
+      const normReceipt = normalizeDateKey(receiptDate, detectedMonth);
+      parsedItems.push({
+        id: 'food_care_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        rocYear: defaultRocYear,
+        month: detectedMonth,
+        plan: PLAN_TYPE,
+        receiptDate: normReceipt,
+        menuDate: menuDate || normReceipt,
+        itemName,
+        qty,
+        unit,
+        unitPrice,
+        totalPrice
+      });
+    }
+
+    if (parsedItems.length === 0) {
+      alert('無法從貼上的內容解析出「關懷核銷食材費」明細，請確認內容是否正確！');
+      return;
+    }
+
+    const statusEl = document.getElementById('syncStatus');
+    if (statusEl) {
+      statusEl.style.color = '#0284c7';
+      statusEl.textContent = '正在直接寫入雲端資料庫...';
+    }
+
+    try {
+      if (importMode === 'replace') {
+        const affectedPairs = [...new Set(parsedItems.map(x => `${x.rocYear}__${x.month}`))];
+        for (const pair of affectedPairs) {
+          const [pYr, pMo] = pair.split('__');
+          const { error: delErr } = await supabaseClient
+            .from(DB_TABLE)
+            .delete()
+            .eq('roc_year', pYr)
+            .eq('month', pMo)
+            .eq('plan_type', PLAN_TYPE);
+          if (delErr) throw delErr;
+        }
+      }
+
+      const dbRows = parsedItems.map(p => ({
+        id: p.id,
+        roc_year: p.rocYear,
+        month: p.month,
+        plan_type: PLAN_TYPE,
+        receipt_date: p.receiptDate,
+        menu_date: p.menuDate,
+        item_name: p.itemName,
+        qty: p.qty,
+        unit: p.unit,
+        unit_price: p.unitPrice,
+        total_price: p.totalPrice
+      }));
+
+      const { error: insErr } = await supabaseClient
+        .from(DB_TABLE)
+        .upsert(dbRows, { onConflict: 'id' });
+      if (insErr) throw insErr;
+
+      await syncFromCloud();
+
+      const firstImported = parsedItems[0];
+      document.getElementById('rocYearSelect').value = firstImported.rocYear;
+      document.getElementById('monthSelect').value = firstImported.month;
+      renderCurrentMonth();
+
+      const now = new Date();
+      const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      if (statusEl) {
+        statusEl.style.color = '#0f766e';
+        statusEl.textContent = `已直接存入雲端資料庫（${tStr}）`;
+      }
+      alert(`成功解析並直接存入雲端資料庫，共 ${parsedItems.length} 筆「關懷核銷食材費」明細！`);
+    } catch (e) {
+      if (statusEl) {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = '雲端資料庫寫入失敗：' + (e.message || e);
+      }
+      alert('寫入雲端資料庫失敗：' + (e.message || e));
+    }
+  }
+
+  async function clearCurrentMonthPlan() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = document.getElementById('monthSelect').value;
+    if (!confirm(`確定要從資料庫清除 ${yr} 年 ${m} 月的「${PLAN_LABEL}」資料嗎？`)) return;
+    if (!supabaseClient) {
+      alert('無法連線至雲端資料庫！');
+      return;
+    }
+    const statusEl = document.getElementById('syncStatus');
+    try {
+      const { error } = await supabaseClient
+        .from(DB_TABLE)
+        .delete()
+        .eq('roc_year', yr)
+        .eq('month', m)
+        .eq('plan_type', PLAN_TYPE);
+      if (error) throw error;
+      await syncFromCloud();
+      renderCurrentMonth();
+      if (statusEl) {
+        statusEl.style.color = '#0f766e';
+        statusEl.textContent = `已從雲端資料庫清除 ${yr} 年 ${m} 月關懷核銷食材費`;
+      }
+    } catch (e) {
+      if (statusEl) {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = '雲端清除失敗：' + (e.message || e);
+      }
+      alert('清除失敗：' + (e.message || e));
+    }
+  }
+
+  function renderCurrentMonth() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = document.getElementById('monthSelect').value;
+
+    const rows = careFoodRows.filter(r => String(r.rocYear) === yr && String(r.month) === m);
+
+    function parseDateSortValue(dStr) {
+      const s = String(dStr || '').trim();
+      const parts = s.replace(/[年月]/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
+      if (parts.length >= 3) {
+        let y = parseInt(parts[0], 10) || 0;
+        if (y < 1911) y += 1911;
+        const mo = parseInt(parts[1], 10) || 0;
+        const da = parseInt(parts[2], 10) || 0;
+        return y * 10000 + mo * 100 + da;
+      }
+      if (parts.length === 2) {
+        const mo = parseInt(parts[0], 10) || 0;
+        const da = parseInt(parts[1], 10) || 0;
+        return (parseInt(yr, 10) + 1911) * 10000 + mo * 100 + da;
+      }
+      return 99999999;
+    }
+
+    const groups = [];
+    const groupMap = new Map();
+    rows.forEach(item => {
+      const key = normalizeDateKey(item.receiptDate, m);
+      if (!groupMap.has(key)) {
+        const g = { receiptDate: key, items: [], subtotal: 0, sortVal: parseDateSortValue(key) };
+        groupMap.set(key, g);
+        groups.push(g);
+      }
+      const g = groupMap.get(key);
+      g.items.push(item);
+      g.subtotal += Number(item.totalPrice) || 0;
+    });
+
+    groups.sort((a, b) => a.sortVal - b.sortVal);
+    groups.forEach(g => {
+      g.items.sort((a, b) => parseDateSortValue(a.menuDate || a.receiptDate) - parseDateSortValue(b.menuDate || b.receiptDate));
+    });
+
+    const grandTotal = groups.reduce((acc, g) => acc + g.subtotal, 0);
+
+    document.getElementById('sumReceiptCount').textContent = `${groups.length} 張`;
+    document.getElementById('sumItemCount').textContent = `${rows.length} 筆`;
+    document.getElementById('sumGrandTotal').textContent = `${fmt(grandTotal)} 元`;
+
+    const container = document.getElementById('receiptSheetsContainer');
+    if (groups.length === 0) {
+      container.innerHTML = `<div style="text-align:center; color:#64748b; padding:24px;">${yr} 年 ${m} 月尚無「${PLAN_LABEL}」收據資料，請在上方匯入收據內容。</div>`;
+      return;
+    }
+
+    const sheetsHtml = groups.map((g, idx) => {
+      const bodyRows = g.items.map((it, rIdx) => `
+        <tr>
+          <td class="td-center">${rIdx === 0 ? g.receiptDate : ''}</td>
+          <td>${it.itemName}</td>
+          <td class="td-right">${it.qty}</td>
+          <td class="td-center">${it.unit}</td>
+          <td class="td-right">${fmt(it.unitPrice)}</td>
+          <td class="td-right">${fmt(it.totalPrice)}</td>
+          <td></td>
+        </tr>
+      `).join('');
+
+      return `
+        <div class="receipt-group">
+          <div class="sheet-banner-title">
+            <span>${PLAN_LABEL}（${yr}年${m}月）— 第 ${idx + 1} 張收據（收據日期：${g.receiptDate}）</span>
+            <span>小計：<strong>${fmt(g.subtotal)}</strong> 元</span>
+          </div>
+          <table class="receipt-table">
+            <thead>
+              <tr><th>收據日期</th><th>品名</th><th>數量</th><th>單位</th><th>單價</th><th>總價</th><th>小計</th></tr>
+            </thead>
+            <tbody>
+              ${bodyRows}
+              <tr class="row-subtotal">
+                <td colspan="6" class="td-center">小計</td>
+                <td class="td-right">${fmt(g.subtotal)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }).join('');
+
+    const grandRowHtml = `
+      <div class="receipt-group">
+        <table class="receipt-table">
+          <tbody>
+            <tr class="row-grandtotal">
+              <td colspan="6" class="td-center">${PLAN_LABEL}（${yr}年${m}月）總計</td>
+              <td class="td-right">${fmt(grandTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    container.innerHTML = sheetsHtml + grandRowHtml;
+  }
+
+  async function copyCurrentPlanTable() {
+    const container = document.getElementById('receiptSheetsContainer');
+    try {
+      const htmlBlob = new Blob([container.innerHTML], { type: 'text/html' });
+      const textBlob = new Blob([container.innerText], { type: 'text/plain' });
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+      ]);
+      alert('已複製關懷核銷食材費收據表，可直接到 Excel 按 Ctrl+V 貼上！');
+    } catch (e) {
+      const range = document.createRange();
+      range.selectNode(container);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('copy');
+      sel.removeAllRanges();
+      alert('已複製收據表內容，請至 Excel 按 Ctrl+V 貼上！');
+    }
+  }
+
+  (async function init() {
+    await syncFromCloud();
+    renderCurrentMonth();
+  })();
+</script>
+</body>
+</html>
