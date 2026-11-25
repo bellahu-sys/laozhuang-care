@@ -445,11 +445,7 @@
     const defaultMonth = document.getElementById('monthSelect').value;
     const importMode = document.getElementById('importMode').value;
 
-    const lines = rawText.replace(/
-/g, '
-').replace(//g, '
-').split('
-');
+    const lines = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     let currentSectionPlan = PLAN_TYPE;
     let currentReceiptDate = '';
     const parsedItems = [];
@@ -473,7 +469,7 @@
         continue;
       }
 
-      const cols = rawLine.split('	').map(c => c.trim());
+      const cols = rawLine.split('\t').map(c => c.trim());
       const firstCol = cols[0] || '';
       const secondCol = cols[1] || '';
 
