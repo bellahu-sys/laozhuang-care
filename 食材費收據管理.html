@@ -427,10 +427,7 @@
     const targetPlan = document.getElementById('importTargetPlan').value;
     const importMode = document.getElementById('importMode').value;
 
-    const lines = rawText.replace(/
-/g, '
-').split('
-');
+    const lines = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     let currentSectionPlan = targetPlan === 'auto' ? 'care' : targetPlan;
     let currentReceiptDate = '';
     const parsedItems = [];
@@ -448,7 +445,7 @@
         continue;
       }
 
-      const cols = rawLine.split('	').map(c => c.trim());
+      const cols = rawLine.split('\t').map(c => c.trim());
       const firstCol = cols[0] || '';
       const secondCol = cols[1] || '';
 
@@ -541,9 +538,25 @@
     document.getElementById('monthSelect').value = firstImported.month;
     switchPlanView(firstImported.plan);
 
+    let cloudMsg = '（已存本機，尚未連線雲端）';
     if (supabaseClient) {
+      const statusEl = document.getElementById('syncStatus');
+      if (statusEl) { statusEl.style.color = '#0284c7'; statusEl.textContent = '正在同步至雲端資料庫...'; }
       try {
-        await supabaseClient.from('food_receipt_items').insert(parsedItems.map(p => ({
+        if (importMode === 'replace') {
+          const affectedPairs = [...new Set(parsedItems.map(x => `${x.rocYear}__${x.month}__${x.plan}`))];
+          for (const pair of affectedPairs) {
+            const [pYr, pMo, pPl] = pair.split('__');
+            const { error: delErr } = await supabaseClient
+              .from('food_receipt_items')
+              .delete()
+              .eq('roc_year', pYr)
+              .eq('month', pMo)
+              .eq('plan_type', pPl);
+            if (delErr) throw delErr;
+          }
+        }
+        const dbRows = parsedItems.map(p => ({
           id: p.id,
           roc_year: p.rocYear,
           month: p.month,
@@ -555,16 +568,26 @@
           unit: p.unit,
           unit_price: p.unitPrice,
           total_price: p.totalPrice
-        })));
-      } catch (e) {}
+        }));
+        const { error: insErr } = await supabaseClient
+          .from('food_receipt_items')
+          .upsert(dbRows, { onConflict: 'id' });
+        if (insErr) throw insErr;
+        const now = new Date();
+        const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+        cloudMsg = `（已同步雲端 ${tStr}）`;
+        if (statusEl) { statusEl.style.color = '#0f766e'; statusEl.textContent = `✅ 已同步雲端資料庫（${tStr}）`; }
+      } catch (e) {
+        cloudMsg = '（⚠️ 雲端同步失敗：' + (e.message || e) + '，請確認已建立 food_receipt_items 資料表）';
+        if (statusEl) { statusEl.style.color = '#dc2626'; statusEl.textContent = '⚠️ 雲端同步失敗：' + (e.message || e); }
+      }
     }
 
-    alert(`成功匯入 ${parsedItems.length} 筆食材費收據明細！`);
+    alert(`成功匯入 ${parsedItems.length} 筆食材費收據明細！${cloudMsg}`);
   }
 
   function loadSampleReceiptData() {
-    const sampleTsv = `關懷核銷食材費
-收據日期	品名	數量	單位	單價	總價	小計
+    const sampleTsv = `關懷核銷食材費\n收據日期	品名	數量	單位	單價	總價	小計
 	高麗菜	14	斤	38	532	
 	南瓜	10	斤	32	320	
 	二節翅	6	斤	130	780	
@@ -614,7 +637,7 @@
     parseAndImport();
   }
 
-  function clearCurrentMonthPlan() {
+  async function clearCurrentMonthPlan() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = document.getElementById('monthSelect').value;
     const label = activePlan === 'care' ? '關懷核銷食材費' : '長照核銷食材費';
@@ -622,6 +645,21 @@
     allFoodRows = allFoodRows.filter(r => !(String(r.rocYear) === yr && String(r.month) === m && r.plan === activePlan));
     saveLocalData();
     renderCurrentMonth();
+    if (supabaseClient) {
+      const statusEl = document.getElementById('syncStatus');
+      try {
+        const { error } = await supabaseClient
+          .from('food_receipt_items')
+          .delete()
+          .eq('roc_year', yr)
+          .eq('month', m)
+          .eq('plan_type', activePlan);
+        if (error) throw error;
+        if (statusEl) { statusEl.style.color = '#0f766e'; statusEl.textContent = '✅ 已同步清除雲端資料'; }
+      } catch (e) {
+        if (statusEl) { statusEl.style.color = '#dc2626'; statusEl.textContent = '⚠️ 雲端清除失敗：' + (e.message || e); }
+      }
+    }
   }
 
   function renderCurrentMonth() {
