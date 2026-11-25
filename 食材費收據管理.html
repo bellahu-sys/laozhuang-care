@@ -434,7 +434,7 @@
   function normalizeDateKey(dStr, fallbackMonth) {
     const s = String(dStr || '').trim();
     if (!s) return `${fallbackMonth}/1`;
-    const parts = s.replace(/年|月/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
+    const parts = s.replace(/[年月]/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
     if (parts.length >= 3) {
       const mo = parseInt(parts[1], 10) || parseInt(fallbackMonth, 10) || 1;
       const da = parseInt(parts[2], 10) || 1;
@@ -657,7 +657,7 @@
 
     function parseDateSortValue(dStr) {
       const s = String(dStr || '').trim();
-      const parts = s.replace(/年|月/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
+      const parts = s.replace(/[年月]/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
       if (parts.length >= 3) {
         let y = parseInt(parts[0], 10) || 0;
         if (y < 1911) y += 1911;
