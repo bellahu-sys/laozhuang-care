@@ -215,9 +215,8 @@
         <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
         <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
         <a href="長照與延緩核銷統計.html">1. 長照與延緩核銷統計（收支明細表）</a>
+        <a href="長照核銷食材費.html">長照核銷食材費</a>
         <a href="長照講師核銷記錄.html">2. 長照講師核銷記錄</a>
-        <div class="dropdown-divider">食材費收據管理</div>
-        <a href="食材費收據管理.html">關懷與長照食材費收據匯入／統計</a>
       </div>
     </div>
   </div>
@@ -228,7 +227,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div>
         <h1>長照講師核銷記錄</h1>
-        <p class="sub-note">接受衛生福利部補助經費支出憑證明細表 — 可手動輸入或帶入當月「長照食材費收據」與「講師鐘點費」，一鍵複製貼上 Word 核銷文件。</p>
+        <p class="sub-note">接受衛生福利部補助經費支出憑證明細表 — 可手動輸入或帶入當月「長照核銷食材費」與「講師鐘點費」，一鍵複製貼上 Word 核銷文件。</p>
       </div>
       <div id="syncStatus">雲端同步準備中...</div>
     </div>
@@ -258,12 +257,6 @@
           <option value="7">7 月</option><option value="8">8 月</option><option value="9">9 月</option>
           <option value="10">10 月</option><option value="11">11 月</option><option value="12">12 月</option>
         </select>
-      </label>
-      <label><strong>補助計畫編號：</strong>
-        <input type="text" id="planCodeInput" value="11500K0201" style="width:140px;" oninput="renderSheet()">
-      </label>
-      <label><strong>計畫名稱：</strong>
-        <input type="text" id="planNameInput" value="115年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫" style="width:360px;" oninput="renderSheet()">
       </label>
     </div>
 
@@ -338,7 +331,6 @@
 
 <script>
   const STORAGE_KEY_MONTHLY_VOUCHERS = 'laozhuang_monthly_instructor_vouchers_v1';
-  const STORAGE_KEY_FOOD_RECEIPTS = 'laozhuang_food_receipts_v1';
 
   let supabaseClient = null;
   if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
@@ -463,8 +455,6 @@
   function onYearMonthChange() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = Number(document.getElementById('monthSelect').value);
-    document.getElementById('planCodeInput').value = `${yr}00K0201`;
-    document.getElementById('planNameInput').value = `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
     ensureMonthSlots(yr, m, 12);
     renderSheet();
   }
@@ -579,8 +569,8 @@
   function renderSheet() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = Number(document.getElementById('monthSelect').value);
-    const planCode = document.getElementById('planCodeInput').value.trim();
-    const planName = document.getElementById('planNameInput').value.trim();
+    const planCode = `${yr}00K0201`;
+    const planName = `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
 
     document.getElementById('sheetHeading').textContent = `二、${yr} 年 ${m} 月接受衛生福利部補助經費支出憑證明細表`;
     document.getElementById('vYear').textContent = yr;
@@ -666,28 +656,34 @@
     const yr = document.getElementById('rocYearSelect').value;
     const m = Number(document.getElementById('monthSelect').value);
 
+    if (!supabaseClient) {
+      alert('無法連線至雲端資料庫，請檢查 config.js 設定！');
+      return;
+    }
+
     let foodItems = [];
     try {
-      const localFood = JSON.parse(localStorage.getItem(STORAGE_KEY_FOOD_RECEIPTS) || '[]');
-      foodItems = localFood.filter(x => String(x.rocYear) === String(yr) && Number(x.month) === m && x.plan === 'ltc');
-    } catch (e) {}
-
-    if (foodItems.length === 0 && supabaseClient) {
-      try {
-        const { data } = await supabaseClient
-          .from('food_receipt_items')
-          .select('*')
-          .eq('roc_year', String(yr))
-          .eq('month', String(m))
-          .eq('plan_type', 'ltc');
-        if (Array.isArray(data) && data.length > 0) {
-          foodItems = data.map(d => ({ receiptDate: d.receipt_date || `${m}/1`, totalPrice: Number(d.total_price) || 0 }));
-        }
-      } catch (e) {}
+      const { data, error } = await supabaseClient
+        .from('food_receipt_items')
+        .select('*')
+        .eq('roc_year', String(yr))
+        .eq('month', String(m))
+        .eq('plan_type', 'ltc')
+        .order('id', { ascending: true });
+      if (error) throw error;
+      if (Array.isArray(data) && data.length > 0) {
+        foodItems = data.map(d => ({
+          receiptDate: d.receipt_date || `${m}/1`,
+          totalPrice: Number(d.total_price) || 0
+        }));
+      }
+    } catch (e) {
+      alert('讀取雲端「長照核銷食材費」失敗：' + (e.message || e));
+      return;
     }
 
     if (foodItems.length === 0) {
-      alert(`在「食材費收據管理」中找不到 ${yr} 年 ${m} 月的「長照核銷食材費」資料！`);
+      alert(`在雲端資料庫中找不到 ${yr} 年 ${m} 月的「長照核銷食材費」收據資料，請先至「長照核銷食材費」匯入！`);
       return;
     }
 
