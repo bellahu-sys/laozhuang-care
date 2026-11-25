@@ -149,12 +149,12 @@
       .card { border: none; box-shadow: none; padding: 0; }
     }
   </style>
-<script>
-  window.addEventListener('error', function(ev) {
-    const el = document.getElementById('syncStatus');
-    if (el) { el.style.color = '#dc2626'; el.textContent = '⚠️ 頁面腳本錯誤：' + (ev.message || '未知錯誤'); }
-  });
-</script>
+  <script>
+    window.addEventListener('error', function(ev) {
+      const el = document.getElementById('syncStatus');
+      if (el) { el.style.color = '#dc2626'; el.textContent = '⚠️ 頁面腳本錯誤：' + (ev.message || '未知錯誤'); }
+    });
+  </script>
 </head>
 <body>
 
@@ -231,7 +231,6 @@
     </div>
   </div>
 
-  <!-- 區塊 1：匯入 Gemini 產生的每月食材費收據 -->
   <div class="card no-print">
     <h2>
       <span>一、匯入 Gemini 技能產生的每月食材費收據</span>
@@ -283,7 +282,6 @@
     </div>
   </div>
 
-  <!-- 區塊 2：關懷與長照食材費收據資料表 -->
   <div class="card">
     <h2 class="no-print">
       <span>二、食材費收據資料表</span>
@@ -434,7 +432,7 @@
     return null;
   }
 
-  function parseAndImport() {
+  async function parseAndImport() {
     const rawText = document.getElementById('pasteInput').value;
     if (!rawText || !rawText.trim()) {
       alert('請先在輸入框貼上 Gemini 產生的食材費收據內容！');
@@ -478,9 +476,6 @@
         continue;
       }
 
-      // Detect format:
-      // Format A (圖1 關懷): [收據日期, 品名, 數量, 單位, 單價, 總價, 小計]
-      // Format B (圖2 長照): [收據日期, 菜單日期, 品名, 數量, 單位, 單價, 總價, 小計]
       let receiptDate = '';
       let menuDate = '';
       let itemName = '';
@@ -606,49 +601,7 @@
   }
 
   function loadSampleReceiptData() {
-    const sampleTsv = `關懷核銷食材費\n收據日期	品名	數量	單位	單價	總價	小計
-	高麗菜	14	斤	38	532	
-	南瓜	10	斤	32	320	
-	二節翅	6	斤	130	780	
-	小計					3,832
-8/21	空心菜	12	斤	38	456	
-	五花肉	10	斤	180	1,800	
-	里肌肉排	6	斤	165	990	
-	白苦瓜	8	斤	50	400	
-	秋刀魚	10	斤	80	800	
-	小計					4,446
-8/28	地瓜葉	12	斤	38	456	
-	五花肉	10	斤	180	1,800	
-	里肌肉排	6	斤	165	990	
-	五香豆干	8	斤	45	360	
-	過貓	8	斤	52	416	
-	小計					4,022
-	總計						19,597
-
-長照核銷食材費
-收據日期	菜單日期	品名	數量	單位	單價	總價	小計
-7/22	7/22	豆腐	7	斤	20	140	
-	7/22	地瓜	8	斤	30	240	
-	7/22	南瓜	8	斤	30	240	
-	7/23	五花肉	8	斤	180	1,440	
-	7/23	芋頭梗	7	斤	50	350	
-						3,625
-7/24	7/24	大黃瓜	8	斤	25	200	
-	7/24	豆包	6	斤	65	390	
-	7/24	洋蔥	5	斤	30	150	
-	7/24	空心菜	13	斤	35	455	
-	7/24	豬絞肉	8	斤	160	1,280	
-	7/24	菜脯	3	斤	40	120	
-						2,595
-7/29	7/29	茄子	8	斤	40	320	
-	7/29	豆包	6	斤	65	390	
-	7/29	長豆	8	斤	45	360	
-	7/29	秋刀魚	8	斤	80	640	
-	7/29	豆干絲	6	斤	40	240	
-	7/30	蒲瓜	8	斤	25	200	
-	7/30	豬絞肉	8	斤	160	1,280	
-						3,430
-	總計							29,605`;
+    const sampleTsv = `關懷核銷食材費\n收據日期\t品名\t數量\t單位\t單價\t總價\t小計\n\t高麗菜\t14\t斤\t38\t532\t\n\t南瓜\t10\t斤\t32\t320\t\n\t二節翅\t6\t斤\t130\t780\t\n\t小計\t\t\t\t\t3,832\n8/21\t空心菜\t12\t斤\t38\t456\t\n\t五花肉\t10\t斤\t180\t1,800\t\n\t里肌肉排\t6\t斤\t165\t990\t\n\t白苦瓜\t8\t斤\t50\t400\t\n\t秋刀魚\t10\t斤\t80\t800\t\n\t小計\t\t\t\t\t4,446\n8/28\t地瓜葉\t12\t斤\t38\t456\t\n\t五花肉\t10\t斤\t180\t1,800\t\n\t里肌肉排\t6\t斤\t165\t990\t\n\t五香豆干\t8\t斤\t45\t360\t\n\t過貓\t8\t斤\t52\t416\t\n\t小計\t\t\t\t\t4,022\n\t總計\t\t\t\t\t\t19,597\n\n長照核銷食材費\n收據日期\t菜單日期\t品名\t數量\t單位\t單價\t總價\t小計\n7/22\t7/22\t豆腐\t7\t斤\t20\t140\t\n\t7/22\t地瓜\t8\t斤\t30\t240\t\n\t7/22\t南瓜\t8\t斤\t30\t240\t\n\t7/23\t五花肉\t8\t斤\t180\t1,440\t\n\t7/23\t芋頭梗\t7\t斤\t50\t350\t\n\t\t\t\t\t\t3,625\n7/24\t7/24\t大黃瓜\t8\t斤\t25\t200\t\n\t7/24\t豆包\t6\t斤\t65\t390\t\n\t7/24\t洋蔥\t5\t斤\t30\t150\t\n\t7/24\t空心菜\t13\t斤\t35\t455\t\n\t7/24\t豬絞肉\t8\t斤\t160\t1,280\t\n\t7/24\t菜脯\t3\t斤\t40\t120\t\n\t\t\t\t\t\t2,595\n7/29\t7/29\t茄子\t8\t斤\t40\t320\t\n\t7/29\t豆包\t6\t斤\t65\t390\t\n\t7/29\t長豆\t8\t斤\t45\t360\t\n\t7/29\t秋刀魚\t8\t斤\t80\t640\t\n\t7/29\t豆干絲\t6\t斤\t40\t240\t\n\t7/30\t蒲瓜\t8\t斤\t25\t200\t\n\t7/30\t豬絞肉\t8\t斤\t160\t1,280\t\n\t\t\t\t\t\t3,430\n\t總計\t\t\t\t\t\t\t29,605`;
 
     document.getElementById('importTargetPlan').value = 'auto';
     document.getElementById('importMode').value = 'replace';
@@ -691,7 +644,6 @@
 
     const rows = allFoodRows.filter(r => String(r.rocYear) === yr && String(r.month) === m && r.plan === activePlan);
 
-    // Group by receiptDate preserving appearance order
     const groups = [];
     const groupMap = new Map();
     rows.forEach(item => {
