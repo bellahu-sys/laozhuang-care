@@ -59,9 +59,25 @@
     h1 { color: var(--primary-dark); font-size: 1.35rem; margin: 0; }
 
     .sub-page-tabs {
-      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
-      margin-bottom: 14px; background: #fff1f2; border: 1px solid #fecdd3;
-      border-radius: 8px; padding: 10px 12px;
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;
+      background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .sub-page-tab {
+      padding: 8px 18px; border-radius: 8px; border: 1px solid #fda4af;
+      background: #ffffff; color: #881337; font-weight: bold; cursor: pointer; font-size: 0.94rem;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+      box-shadow: 0 1px 2px rgba(159, 18, 57, 0.06);
+      transition: all 0.16s ease;
+    }
+    .sub-page-tab:hover {
+      background: #ffe4e6; border-color: var(--primary); color: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+    .sub-page-tab.active {
+      background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
+      color: #ffffff; border-color: #9f1239;
+      box-shadow: 0 3px 8px rgba(190, 18, 60, 0.25);
     }
 
     .controls-row {
@@ -75,7 +91,6 @@
     .btn {
       padding: 7px 12px; border: none; border-radius: 6px; font-weight: bold;
       cursor: pointer; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 5px;
-      text-decoration: none;
     }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: var(--primary-dark); }
@@ -115,7 +130,7 @@
 
     .picker-dropdown-wrap { position: relative; display: inline-block; }
     .picker-panel {
-      display: none; position: absolute; top: 100%; left: 0; min-width: 280px; max-height: 340px; overflow-y: auto;
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px; max-height: 320px; overflow-y: auto;
       background: #fff; border: 1px solid #94a3b8; border-radius: 8px;
       box-shadow: 0 10px 24px rgba(0,0,0,0.16); padding: 10px; z-index: 400; margin-top: 4px;
     }
@@ -223,15 +238,14 @@
     </div>
   </div>
 
-  <!-- 切換分頁：按鈕風格統一為 .btn.btn-sm -->
+  <!-- 切換分頁：包含原本「長照與延緩經費收支」連結 + 「2. 講師鐘點費核銷」 + 移入的「個人所得稅計算-講師」與「個人所得稅計算_臨時人員」 -->
   <div class="sub-page-tabs no-print">
     <button type="button" class="btn btn-outline btn-sm" id="subTabReimburseSetting" onclick="switchSubPage('reimburseSetting')">核銷鐘點費設定</button>
     <button type="button" class="btn btn-primary btn-sm" id="subTabReimburse" onclick="switchSubPage('reimburse')">2. 講師鐘點費核銷</button>
     <button type="button" class="btn btn-outline btn-sm" id="subTabTaxInst" onclick="switchSubPage('taxInst')">個人所得稅計算-講師</button>
-    <button type="button" class="btn btn-outline btn-sm" id="subTabTaxTemp" onclick="switchSubPage('taxTemp')">個人所得稅計算_臨時人員</button>
   </div>
 
-  <!-- 分頁 1：核銷鐘點費設定 -->
+  <!-- 分頁 1（新增於 2. 講師鐘點費核銷 前）：核銷鐘點費設定（由講師鐘點費記錄搬移之「鐘點費-核銷」表格） -->
   <div id="panelReimburseSetting" style="display:none;">
     <div class="controls-row no-print">
       <label style="font-weight:bold;">新增計畫欄位：</label>
@@ -270,22 +284,18 @@
         <option value="DELAY">延緩（3期）</option>
       </select>
 
-      <div class="picker-dropdown-wrap">
-        <button type="button" class="btn btn-outline btn-sm" id="rebDisplayInstBtn" onclick="togglePickerPanel('rebDisplayInstPanel')">勾選顯示講師 ▾</button>
-        <div class="picker-panel" id="rebDisplayInstPanel"></div>
-      </div>
-
       <button type="button" class="btn btn-primary btn-sm" onclick="saveReimburseSheet()">儲存核銷統計至資料庫</button>
+      
     </div>
 
     <div class="sync-hint-banner no-print">
-      說明：此頁為「長照及延緩核銷」的講師鐘點費核銷區，並已整合「個人所得稅計算-講師」與「個人所得稅計算_臨時人員」兩個分頁，方便核銷與所得稅申報一次完成。
+      說明：此頁為「長照及延緩核銷」的講師鐘點費核銷區，並已整合「個人所得稅計算-講師」分頁（「個人所得稅計算_臨時人員」已移至關懷核銷區）。
     </div>
 
     <div id="reimburseSheetContainer"></div>
   </div>
 
-  <!-- 分頁 3：個人所得稅計算-講師 -->
+  <!-- 分頁 3（由講師鐘點費記錄移入）：個人所得稅計算-講師 -->
   <div id="panelTaxInstructor" style="display:none;">
     <div class="controls-row no-print">
       <label style="font-weight:bold;">年度：</label>
@@ -311,43 +321,6 @@
     <div id="taxTablesMultiContainer"></div>
   </div>
 
-  <!-- 分頁 4：個人所得稅計算_臨時人員 -->
-  <div id="panelTaxTemp" style="display:none;">
-    <div class="controls-row no-print">
-      <label style="font-weight:bold;">年度：</label>
-      <select id="tempYearSelect" onchange="onTempTaxYearChange()">
-        <option value="115">115 年</option>
-        <option value="116">116 年</option>
-        <option value="117">117 年</option>
-      </select>
-
-      <span id="tempTaxModeBadge" class="mode-pill-cal">目前：連動時數記錄模式</span>
-      <button type="button" class="btn btn-outline btn-sm" id="btnTempSwitchManual" onclick="setTempTaxMode('manual')">手動輸入模式</button>
-      <button type="button" class="btn btn-teal btn-sm" id="btnTempSwitchAuto" style="display:none;" onclick="setTempTaxMode('auto')">切回連動時數記錄模式</button>
-
-      <span id="tempAutoControls" style="display:inline-flex; gap:6px; align-items:center;">
-        <button type="button" class="btn btn-teal btn-sm" onclick="loadTempStaffQuarterData()">重新讀取關懷臨時人員時數</button>
-      </span>
-
-      <span id="tempManualControls" style="display:none; gap:6px; align-items:center; flex-wrap:wrap;">
-        <button type="button" class="btn btn-blue btn-sm" onclick="addTempManualRow()">＋ 新增季別/項目列</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="addTempManualStaffCol()">＋ 新增人員欄位</button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="saveTempManualData()">儲存手動模式資料</button>
-      </span>
-    </div>
-
-    <div class="sync-hint-banner no-print" id="tempTaxModeHint">
-      說明：「連動時數記錄模式」與「手動輸入模式」各自獨立儲存、互不干擾；切換模式不會互相覆蓋數值。
-    </div>
-
-    <div class="sheet-title-banner" id="tempTaxTitle">115年度廚房臨時人員</div>
-    <div style="overflow-x:auto;">
-      <table class="excel-table">
-        <thead id="tempTaxHead"></thead>
-        <tbody id="tempTaxBody"></tbody>
-      </table>
-    </div>
-  </div>
 </div>
 
 <script>
@@ -360,16 +333,13 @@
 
   let currentYear = 115;
   let masterInstructors = [];
-  let rebDisplayInstructors = [];
   let taxCheckedInstructors = [];
   let taxTableCount = 1;
   let taxInstructorGroupMap = {};
   let taxCourseOptions = ['關懷1-3月', '關懷4-6月', '關懷7-9月', '關懷10-12月', '延緩1期', '延緩2期', '多元', '伯公'];
   let taxMatrixRows = [];
   const BOGONG_INSTRUCTORS = ['吳貴英', '詹細珍', '詹益誠'];
-  let tempStaffList = [];
-  let tempHoursRecords = [];
-  let reimburseClaimsMap = {};
+  let reimburseClaimsMap = {}; // key: `${program_type}__${period_key}__${col_key}__${instName}` -> number
 
   const PERIOD_BLOCKS = [
     { program: 'LTC', periodKey: 'Q1', title: '第1季 1-3月', cols: ['1月講師', '2月講師', '3月講師'] },
@@ -421,12 +391,10 @@
     setTabButtonStyle('subTabReimburseSetting', key === 'reimburseSetting');
     setTabButtonStyle('subTabReimburse', key === 'reimburse');
     setTabButtonStyle('subTabTaxInst', key === 'taxInst');
-    setTabButtonStyle('subTabTaxTemp', key === 'taxTemp');
 
     document.getElementById('panelReimburseSetting').style.display = (key === 'reimburseSetting') ? 'block' : 'none';
     document.getElementById('panelReimburse').style.display = (key === 'reimburse') ? 'block' : 'none';
     document.getElementById('panelTaxInstructor').style.display = (key === 'taxInst') ? 'block' : 'none';
-    document.getElementById('panelTaxTemp').style.display = (key === 'taxTemp') ? 'block' : 'none';
 
     if (key === 'reimburseSetting') {
       rebCfgReloadFromDatabase();
@@ -436,9 +404,6 @@
     } else if (key === 'taxInst') {
       document.getElementById('taxYearSelect').value = String(currentYear);
       onTaxContextChange();
-    } else if (key === 'taxTemp') {
-      document.getElementById('tempYearSelect').value = String(currentYear);
-      loadTempStaffQuarterData();
     }
   }
 
@@ -473,7 +438,6 @@
     ];
   }
 
-  function getRebDisplayInstKey() { return `lz_reb_display_inst_${currentYear}`; }
   function getTaxCheckedInstKey() { return `lz_tax_only_checked_inst_${currentYear}`; }
   function getTaxSplitCountKey() { return `lz_tax_split_count_${currentYear}`; }
   function getTaxGroupAssignKey() { return `lz_tax_group_assign_${currentYear}`; }
@@ -485,17 +449,6 @@
 
   function loadCheckedInstructorsForYear() {
     const defaultActive = masterInstructors.filter(i => i.status === '服務中').map(i => i.name);
-
-    const savedReb = localStorage.getItem(getRebDisplayInstKey());
-    if (savedReb) {
-      try {
-        const arr = JSON.parse(savedReb);
-        if (Array.isArray(arr)) rebDisplayInstructors = sortByMasterOrder(arr);
-      } catch (e) {}
-    } else {
-      rebDisplayInstructors = sortByMasterOrder(defaultActive);
-    }
-
     const savedTax = localStorage.getItem(getTaxCheckedInstKey());
     if (savedTax) {
       try {
@@ -505,54 +458,6 @@
     } else {
       taxCheckedInstructors = sortByMasterOrder(defaultActive);
     }
-  }
-
-  function onRebInstructorCheckChange(name, isChecked) {
-    if (isChecked) {
-      if (!rebDisplayInstructors.includes(name)) rebDisplayInstructors.push(name);
-    } else {
-      rebDisplayInstructors = rebDisplayInstructors.filter(n => n !== name);
-    }
-    rebDisplayInstructors = sortByMasterOrder(rebDisplayInstructors);
-    localStorage.setItem(getRebDisplayInstKey(), JSON.stringify(rebDisplayInstructors));
-    renderRebDisplayPicker();
-    renderReimburseSheet();
-  }
-
-  function setAllRebInstructors(selectAll) {
-    rebDisplayInstructors = selectAll ? masterInstructors.map(m => m.name) : [];
-    localStorage.setItem(getRebDisplayInstKey(), JSON.stringify(rebDisplayInstructors));
-    renderRebDisplayPicker();
-    renderReimburseSheet();
-  }
-
-  function renderRebDisplayPicker() {
-    const panel = document.getElementById('rebDisplayInstPanel');
-    const btn = document.getElementById('rebDisplayInstBtn');
-    if (panel) {
-      const itemsHtml = masterInstructors.map(m => {
-        const isChk = rebDisplayInstructors.includes(m.name);
-        return `
-          <label class="picker-item">
-            <input type="checkbox" ${isChk ? 'checked' : ''} onchange="onRebInstructorCheckChange('${escapeAttr(m.name)}', this.checked)">
-            <span>${escapeHtml(m.name)}</span>
-            <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(${escapeHtml(m.status || '服務中')})</span>
-          </label>
-        `;
-      }).join('');
-
-      panel.innerHTML = `
-        <div style="padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; gap:6px;">
-          <span style="font-size:0.82rem; font-weight:bold; color:var(--primary);">勾選要顯示的講師</span>
-          <div style="display:flex; gap:4px;">
-            <button type="button" class="btn btn-outline btn-sm" style="padding:2px 6px; font-size:0.76rem;" onclick="setAllRebInstructors(true)">全選</button>
-            <button type="button" class="btn btn-outline btn-sm" style="padding:2px 6px; font-size:0.76rem;" onclick="setAllRebInstructors(false)">全不選</button>
-          </div>
-        </div>
-        ${itemsHtml}
-      `;
-    }
-    if (btn) btn.textContent = `勾選顯示講師 (${rebDisplayInstructors.length}) ▾`;
   }
 
   function loadTaxSplitConfig() {
@@ -595,8 +500,6 @@
   }
 
   function renderPickerPanels() {
-    renderRebDisplayPicker();
-
     const p2 = document.getElementById('taxInstPickerPanel');
     if (p2) {
       const taxItemsHtml = masterInstructors.map(m => {
@@ -639,7 +542,6 @@
   async function onRebContextChange() {
     currentYear = parseInt(document.getElementById('rebYearSelect').value, 10) || 115;
     loadCheckedInstructorsForYear();
-    renderRebDisplayPicker();
     reimburseClaimsMap = {};
     if (supabaseClient) {
       try {
@@ -672,7 +574,7 @@
       alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
       return;
     }
-    const insts = rebDisplayInstructors;
+    const insts = taxCheckedInstructors.length > 0 ? taxCheckedInstructors : masterInstructors.map(m => m.name);
     const payload = [];
     PERIOD_BLOCKS.forEach(blk => {
       blk.cols.forEach(colKey => {
@@ -711,7 +613,7 @@
     const wrap = document.getElementById('reimburseSheetContainer');
     if (!wrap) return;
     const planFilter = document.getElementById('rebPlanSelect')?.value || 'ALL';
-    const insts = rebDisplayInstructors;
+    const insts = taxCheckedInstructors.length > 0 ? taxCheckedInstructors : masterInstructors.map(m => m.name);
     const blocks = PERIOD_BLOCKS.filter(b => planFilter === 'ALL' || b.program === planFilter);
 
     const html = blocks.map(blk => {
@@ -719,26 +621,24 @@
       blk.cols.forEach(c => { colTotals[c] = 0; });
       let grandTotal = 0;
 
-      const bodyRows = insts.length > 0
-        ? insts.map(instName => {
-            let rowSum = 0;
-            const tds = blk.cols.map(colKey => {
-              const k = `${blk.program}__${blk.periodKey}__${colKey}__${instName}`;
-              const val = Number(reimburseClaimsMap[k] || 0);
-              rowSum += val;
-              colTotals[colKey] += val;
-              return `<td><input type="text" inputmode="decimal" class="num-input" value="${val !== 0 ? fmtNum(val) : ''}" placeholder="0" onchange="onRebCellInput('${blk.program}', '${blk.periodKey}', '${escapeAttr(colKey)}', '${escapeAttr(instName)}', this.value)"></td>`;
-            }).join('');
-            grandTotal += rowSum;
-            return `
-              <tr>
-                <td style="font-weight:bold;">${escapeHtml(instName)}</td>
-                ${tds}
-                <td class="num-col" style="font-weight:bold;">${rowSum !== 0 ? fmtNum(rowSum) : '0'}</td>
-              </tr>
-            `;
-          }).join('')
-        : `<tr><td colspan="${blk.cols.length + 2}" class="center-col" style="padding:14px; color:#64748b;">尚未勾選要顯示的講師，請點選上方「勾選顯示講師 ▾」</td></tr>`;
+      const bodyRows = insts.map(instName => {
+        let rowSum = 0;
+        const tds = blk.cols.map(colKey => {
+          const k = `${blk.program}__${blk.periodKey}__${colKey}__${instName}`;
+          const val = Number(reimburseClaimsMap[k] || 0);
+          rowSum += val;
+          colTotals[colKey] += val;
+          return `<td><input type="text" inputmode="decimal" class="num-input" value="${val !== 0 ? fmtNum(val) : ''}" placeholder="0" onchange="onRebCellInput('${blk.program}', '${blk.periodKey}', '${escapeAttr(colKey)}', '${escapeAttr(instName)}', this.value)"></td>`;
+        }).join('');
+        grandTotal += rowSum;
+        return `
+          <tr>
+            <td style="font-weight:bold;">${escapeHtml(instName)}</td>
+            ${tds}
+            <td class="num-col" style="font-weight:bold;">${rowSum !== 0 ? fmtNum(rowSum) : '0'}</td>
+          </tr>
+        `;
+      }).join('');
 
       const footTds = blk.cols.map(c => `<td class="num-col">${fmtNum(colTotals[c])}</td>`).join('');
 
@@ -1066,375 +966,6 @@
     wrap.innerHTML = datalistHtml + tablesHtml;
   }
 
-  let tempTaxMode = 'auto';
-  let tempManualStaffCols = ['陳遠香', '邱鳳廷', '張瑞合', '邱和妹', '施汶里', '徐邱鳳嬌'];
-  let tempManualRows = [];
-
-  function getTempManualKey() {
-    return `lz_temp_tax_manual_${currentYear}`;
-  }
-
-  function createDefaultTempManualRows() {
-    return ['關懷1-3月', '關懷4-6月', '關懷7-9月', '關懷10-12月'].map((lbl, idx) => ({
-      id: 'tm_' + currentYear + '_' + idx + '_' + Math.random().toString(36).slice(2, 5),
-      period_label: lbl,
-      values: {}
-    }));
-  }
-
-  async function loadTempManualStore() {
-    const defaultCols = tempStaffList.length > 0 ? [...tempStaffList] : ['陳遠香', '邱鳳廷', '張瑞合', '邱和妹', '施汶里', '徐邱鳳嬌'];
-    tempManualStaffCols = [...defaultCols];
-    tempManualRows = createDefaultTempManualRows();
-
-    let loadedFromCloud = false;
-    if (supabaseClient) {
-      try {
-        const { data, error } = await supabaseClient
-          .from('instructor_fee_records')
-          .select('*')
-          .eq('roc_year', currentYear)
-          .eq('entry_type', 'temp_manual')
-          .order('sort_order', { ascending: true })
-          .order('id', { ascending: true });
-
-        if (!error && Array.isArray(data) && data.length > 0) {
-          loadedFromCloud = true;
-          const rowMap = new Map();
-          const colSet = new Set(defaultCols);
-          data.forEach(rec => {
-            const pLbl = (rec.course_name || '關懷1-3月').trim();
-            const sName = (rec.instructor_name || '').trim();
-            if (sName) colSet.add(sName);
-            if (!rowMap.has(pLbl)) {
-              rowMap.set(pLbl, {
-                id: 'tm_db_' + pLbl,
-                period_label: pLbl,
-                values: {}
-              });
-            }
-            if (sName) {
-              const numVal = Number(rec.amount || 0);
-              rowMap.get(pLbl).values[sName] = (numVal !== 0) ? String(numVal) : (rec.remark || '');
-            }
-          });
-          tempManualStaffCols = [...colSet];
-          tempManualRows = [...rowMap.values()];
-        }
-      } catch (e) {}
-    }
-
-    if (!loadedFromCloud) {
-      const raw = localStorage.getItem(getTempManualKey());
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed && Array.isArray(parsed.cols) && parsed.cols.length > 0) {
-            tempManualStaffCols = parsed.cols;
-          }
-          if (parsed && Array.isArray(parsed.rows) && parsed.rows.length > 0) {
-            tempManualRows = parsed.rows;
-          }
-        } catch (e) {}
-      }
-    }
-  }
-
-  function persistTempManualLocal() {
-    localStorage.setItem(getTempManualKey(), JSON.stringify({
-      cols: tempManualStaffCols,
-      rows: tempManualRows
-    }));
-  }
-
-  async function setTempTaxMode(mode) {
-    tempTaxMode = mode;
-    const isManual = (mode === 'manual');
-    const badge = document.getElementById('tempTaxModeBadge');
-    const btnMan = document.getElementById('btnTempSwitchManual');
-    const btnAuto = document.getElementById('btnTempSwitchAuto');
-    const autoCtrl = document.getElementById('tempAutoControls');
-    const manCtrl = document.getElementById('tempManualControls');
-    const hint = document.getElementById('tempTaxModeHint');
-
-    if (badge) {
-      badge.textContent = isManual ? '目前：手動輸入模式（獨立存檔）' : '目前：連動時數記錄模式';
-      badge.className = isManual ? 'mode-pill-man' : 'mode-pill-cal';
-    }
-    if (btnMan) btnMan.style.display = isManual ? 'none' : 'inline-block';
-    if (btnAuto) btnAuto.style.display = isManual ? 'inline-block' : 'none';
-    if (autoCtrl) autoCtrl.style.display = isManual ? 'none' : 'inline-flex';
-    if (manCtrl) manCtrl.style.display = isManual ? 'flex' : 'none';
-    if (hint) {
-      hint.textContent = isManual
-        ? '目前為「手動輸入模式」：可自行填寫各季金額或新增列/人員，儲存時寫入獨立標記（temp_manual），不會覆蓋「連動時數記錄模式」。'
-        : '目前為「連動時數記錄模式」：自動讀取【關懷核銷】3. 臨時人員時數記錄每季累計金額，與「手動輸入模式」分開儲存、互不干擾。';
-    }
-
-    if (isManual) {
-      await loadTempManualStore();
-      renderTempManualTable();
-    } else {
-      await loadTempStaffQuarterData();
-    }
-  }
-
-  async function onTempTaxYearChange() {
-    currentYear = parseInt(document.getElementById('tempYearSelect').value, 10) || 115;
-    if (tempTaxMode === 'manual') {
-      await loadTempManualStore();
-      renderTempManualTable();
-    } else {
-      await loadTempStaffQuarterData();
-    }
-  }
-
-  function addTempManualRow() {
-    tempManualRows.push({
-      id: 'tm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
-      period_label: '',
-      values: {}
-    });
-    persistTempManualLocal();
-    renderTempManualTable();
-  }
-
-  function deleteTempManualRow(rowId) {
-    tempManualRows = tempManualRows.filter(r => String(r.id) !== String(rowId));
-    if (tempManualRows.length === 0) tempManualRows = createDefaultTempManualRows();
-    persistTempManualLocal();
-    renderTempManualTable();
-  }
-
-  function addTempManualStaffCol() {
-    const newName = prompt('請輸入要新增的臨時人員姓名：');
-    if (!newName || !newName.trim()) return;
-    const clean = newName.trim();
-    if (!tempManualStaffCols.includes(clean)) {
-      tempManualStaffCols.push(clean);
-      persistTempManualLocal();
-      renderTempManualTable();
-    }
-  }
-
-  function onTempManualLabelChange(rowId, val) {
-    const row = tempManualRows.find(r => String(r.id) === String(rowId));
-    if (row) {
-      row.period_label = val;
-      persistTempManualLocal();
-    }
-  }
-
-  function onTempManualColNameChange(colIdx, newName) {
-    const clean = String(newName || '').trim();
-    const oldName = tempManualStaffCols[colIdx];
-    if (!clean || clean === oldName) return;
-    tempManualStaffCols[colIdx] = clean;
-    tempManualRows.forEach(r => {
-      if (r.values && Object.prototype.hasOwnProperty.call(r.values, oldName)) {
-        r.values[clean] = r.values[oldName];
-        delete r.values[oldName];
-      }
-    });
-    persistTempManualLocal();
-    renderTempManualTable();
-  }
-
-  function onTempManualCellChange(rowId, staffName, rawVal) {
-    const row = tempManualRows.find(r => String(r.id) === String(rowId));
-    if (!row) return;
-    if (!row.values) row.values = {};
-    row.values[staffName] = String(rawVal).replace(/,/g, '').trim();
-    persistTempManualLocal();
-    renderTempManualTable();
-  }
-
-  async function saveTempManualData() {
-    persistTempManualLocal();
-    let cloudOk = false;
-    if (supabaseClient) {
-      try {
-        await supabaseClient
-          .from('instructor_fee_records')
-          .delete()
-          .eq('roc_year', currentYear)
-          .eq('entry_type', 'temp_manual');
-
-        const payload = [];
-        tempManualRows.forEach((row, rIdx) => {
-          const pLbl = String(row.period_label || '').trim();
-          tempManualStaffCols.forEach((sName, cIdx) => {
-            const raw = row.values ? (row.values[sName] ?? '') : '';
-            const cleaned = String(raw).replace(/,/g, '').trim();
-            if (cleaned !== '') {
-              const isNum = /^-?\d+(\.\d+)?$/.test(cleaned);
-              payload.push({
-                roc_year: currentYear,
-                instructor_name: sName,
-                entry_type: 'temp_manual',
-                plan_name: pLbl || null,
-                course_name: pLbl,
-                amount: isNum ? Number(cleaned) : 0,
-                remark: isNum ? '' : cleaned,
-                sort_order: rIdx * 100 + cIdx + 1
-              });
-            }
-          });
-        });
-
-        if (payload.length > 0) {
-          const { error } = await supabaseClient.from('instructor_fee_records').insert(payload);
-          if (!error) cloudOk = true;
-        } else {
-          cloudOk = true;
-        }
-      } catch (e) {}
-    }
-
-    setStatus(`已儲存 ${currentYear} 年度臨時人員所得稅（手動輸入模式）${cloudOk ? '並同步雲端' : '（本機快取）'}`);
-    alert(`已儲存 ${currentYear} 年度臨時人員所得稅（手動輸入模式）資料！`);
-  }
-
-  function renderTempManualTable() {
-    const headEl = document.getElementById('tempTaxHead');
-    const bodyEl = document.getElementById('tempTaxBody');
-    document.getElementById('tempTaxTitle').textContent = `${currentYear}年度廚房臨時人員（手動輸入模式）`;
-
-    const cols = tempManualStaffCols;
-    headEl.innerHTML = `
-      <tr>
-        <th style="width:150px;">關懷季別／項目</th>
-        ${cols.map((n, idx) => `
-          <th>
-            <input type="text" value="${escapeAttr(n)}" onchange="onTempManualColNameChange(${idx}, this.value)" style="text-align:center; font-weight:bold; background:#fff;">
-          </th>
-        `).join('')}
-        <th class="no-print" style="width:70px;">操作</th>
-      </tr>
-    `;
-
-    const colSums = {};
-    cols.forEach(n => { colSums[n] = 0; });
-
-    const rowsHtml = tempManualRows.map(row => {
-      const tds = cols.map(n => {
-        const raw = row.values ? (row.values[n] ?? '') : '';
-        const cleaned = String(raw).replace(/,/g, '').trim();
-        const isNum = cleaned !== '' && /^-?\d+(\.\d+)?$/.test(cleaned);
-        const numVal = isNum ? Number(cleaned) : NaN;
-        if (isNum && Number.isFinite(numVal)) colSums[n] += numVal;
-        const disp = isNum ? fmtNum(numVal) : raw;
-        return `<td><input type="text" class="${isNum ? 'num-input' : 'center-col'}" value="${escapeAttr(disp)}" placeholder="輸入金額" onchange="onTempManualCellChange('${row.id}', '${escapeAttr(n)}', this.value)"></td>`;
-      }).join('');
-
-      return `
-        <tr>
-          <td><input type="text" value="${escapeAttr(row.period_label || '')}" placeholder="如：關懷1-3月" onchange="onTempManualLabelChange('${row.id}', this.value)"></td>
-          ${tds}
-          <td class="center-col no-print"><button type="button" class="btn btn-danger btn-sm" onclick="deleteTempManualRow('${row.id}')">刪除</button></td>
-        </tr>
-      `;
-    }).join('');
-
-    const totalTds = cols.map(n => `<td class="num-col">${fmtNum(colSums[n])}</td>`).join('');
-
-    bodyEl.innerHTML = `
-      ${rowsHtml}
-      <tr class="total-row">
-        <td class="center-col">核銷金額</td>
-        ${totalTds}
-        <td class="no-print"></td>
-      </tr>
-    `;
-  }
-
-  async function loadTempStaffQuarterData() {
-    currentYear = parseInt(document.getElementById('tempYearSelect').value, 10) || 115;
-    document.getElementById('tempTaxTitle').textContent = `${currentYear}年度廚房臨時人員`;
-    setStatus('讀取關懷臨時人員時數記錄...');
-
-    if (supabaseClient) {
-      try {
-        const [staffRes, hoursRes] = await Promise.all([
-          supabaseClient.from('temp_staff').select('name, status').order('staff_number', { ascending: true }),
-          supabaseClient.from('temp_staff_hours').select('*').eq('roc_year', currentYear)
-        ]);
-        tempHoursRecords = hoursRes.data || [];
-        const dbStaffNames = (staffRes.data || []).map(s => (s.name || '').trim()).filter(Boolean);
-        const recStaffNames = [...new Set(tempHoursRecords.map(r => (r.staff_name || '').trim()).filter(Boolean))];
-        tempStaffList = [...new Set([...dbStaffNames, ...recStaffNames])];
-        setStatus(`已同步 ${currentYear} 年度關懷臨時人員時數`);
-      } catch (e) {
-        setStatus('讀取臨時人員資料失敗', true);
-      }
-    }
-
-    if (tempStaffList.length === 0) {
-      tempStaffList = ['施汶浬', '徐邱鳳嬌', '邱鳳廷', '張瑞合', '邱和妹'];
-    }
-    if (tempTaxMode === 'manual') {
-      await loadTempManualStore();
-      renderTempManualTable();
-    } else {
-      renderTempStaffQuarterTable();
-    }
-  }
-
-  function calcTempPayAmount(rec) {
-    const days = Number(rec.work_days || 0);
-    const hrs = Number(rec.hours_per_day || 3);
-    const rate = Number(rec.hourly_rate || 196);
-    return Math.round(days * hrs * rate);
-  }
-
-  function renderTempStaffQuarterTable() {
-    const headEl = document.getElementById('tempTaxHead');
-    const bodyEl = document.getElementById('tempTaxBody');
-    const cols = tempStaffList;
-
-    headEl.innerHTML = `
-      <tr>
-        <th style="width:140px;">關懷季別</th>
-        ${cols.map(n => `<th>${escapeHtml(n)}</th>`).join('')}
-      </tr>
-    `;
-
-    const quarters = [
-      { label: '關懷1-3月', months: [1, 2, 3] },
-      { label: '關懷4-6月', months: [4, 5, 6] },
-      { label: '關懷7-9月', months: [7, 8, 9] },
-      { label: '關懷10-12月', months: [10, 11, 12] }
-    ];
-
-    const colGrandTotals = {};
-    cols.forEach(n => { colGrandTotals[n] = 0; });
-
-    const rowsHtml = quarters.map(q => {
-      const tds = cols.map(name => {
-        const sum = tempHoursRecords
-          .filter(r => (r.staff_name || '').trim() === name && q.months.includes(Number(r.month)))
-          .reduce((acc, r) => acc + calcTempPayAmount(r), 0);
-        colGrandTotals[name] += sum;
-        return `<td class="num-col">${sum > 0 ? fmtNum(sum) : ''}</td>`;
-      }).join('');
-      return `
-        <tr>
-          <td class="center-col" style="font-weight:bold;">${q.label}</td>
-          ${tds}
-        </tr>
-      `;
-    }).join('');
-
-    const totalTds = cols.map(n => `<td class="num-col">${colGrandTotals[n] > 0 ? fmtNum(colGrandTotals[n]) : ''}</td>`).join('');
-
-    bodyEl.innerHTML = `
-      ${rowsHtml}
-      <tr class="total-row">
-        <td class="center-col">核銷金額</td>
-        ${totalTds}
-      </tr>
-    `;
-  }
 
   let rebCfgPlans = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
   let rebCfgMap = {};
@@ -1558,7 +1089,7 @@
       `;
     }).join('');
 
-    tbl.innerHTML = `<thead><tr><th style="width:115px;">講師 \\ 計畫</th>${headCells}</tr></thead><tbody>${bodyRows}</tbody>`;
+    tbl.innerHTML = `<thead><tr><th style="width:115px;">講師 \ 計畫</th>${headCells}</tr></thead><tbody>${bodyRows}</tbody>`;
   }
 
   async function rebCfgSaveToDatabase() {
@@ -1637,4 +1168,3 @@
 
 </body>
 </html>
-```[cite: 3, 4]
