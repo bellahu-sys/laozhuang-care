@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>老庄社區照顧關懷據點 ｜ 雲端系統首頁</title>
   <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --primary: #2c5e4f;
@@ -313,6 +314,118 @@
     }
     .reimburse-panel { display: none; }
     .reimburse-panel.active { display: block; }
+
+    /* 首頁快速手動輸入與改檔紀錄專區（直接存入 Supabase 資料庫，不暫存） */
+    .home-note-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 18px 20px;
+      border: 1px solid #cbd5e1;
+      border-left: 6px solid #0f766e;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+      margin-bottom: 24px;
+    }
+    .home-note-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .home-note-title {
+      margin: 0;
+      font-size: 1.12rem;
+      color: #115e59;
+      font-weight: bold;
+    }
+    .home-note-status {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #0f766e;
+    }
+    .home-note-form {
+      display: grid;
+      grid-template-columns: 195px 210px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 900px) {
+      .home-note-form {
+        grid-template-columns: 1fr;
+      }
+    }
+    .home-note-input, .home-note-select {
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: #fff;
+      width: 100%;
+    }
+    .home-btn {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-size: 0.88rem;
+      font-weight: bold;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .home-btn-save { background: #0f766e; color: #fff; }
+    .home-btn-save:hover { background: #115e59; }
+    .home-btn-copy { background: #2563eb; color: #fff; }
+    .home-btn-copy:hover { background: #1d4ed8; }
+    .home-btn-del { background: #fff; color: #b91c1c; border-color: #fecaca; padding: 4px 9px; font-size: 0.8rem; }
+    .home-btn-del:hover { background: #fef2f2; }
+    .home-note-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .home-note-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+    .home-note-main {
+      flex: 1 1 320px;
+      min-width: 0;
+    }
+    .home-note-path {
+      font-size: 0.82rem;
+      font-weight: bold;
+      color: #334155;
+      margin-bottom: 3px;
+      word-break: break-all;
+    }
+    .home-note-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .home-sql-box {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-family: Consolas, monospace;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      white-space: pre;
+      margin-top: 8px;
+    }
+
   </style>
 </head>
 <body>
@@ -407,6 +520,89 @@
       <a href="#sec-admin" class="jump-pill jump-2">二、行政與每日記錄</a>
       <a href="#sec-course-print" class="jump-pill jump-3">三、課程與報表套印</a>
       <a href="#sec-reimburse" class="jump-pill jump-4">四、核銷管理</a>
+    </div>
+  </div>
+
+
+  <div class="home-note-card" id="sec-home-notes">
+    <div class="home-note-header">
+      <h2 class="home-note-title">快速手動輸入工作／修改需求（直接存資料庫，附一鍵複製給 AI）</h2>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span id="homeNoteStatus" class="home-note-status">正在連線資料庫...</span>
+        <button type="button" class="home-btn home-btn-copy" onclick="copyAllHomeNotes()">複製全部給 AI</button>
+        <button type="button" class="home-btn home-btn-del" style="color:#334155; border-color:#cbd5e1; background:#fff;" onclick="toggleHomeNoteSql()">建表 SQL</button>
+      </div>
+    </div>
+
+    <div class="home-note-form">
+      <select id="homeNoteCategory" class="home-note-select">
+        <option value="一. 人事資料(人事資料管理)">一. 人事資料(人事資料管理)</option>
+        <option value="一. 人事資料(人事記錄)">一. 人事資料(人事記錄)</option>
+        <option value="二. 行政類與每日記錄">二. 行政類與每日記錄</option>
+        <option value="三. 課程安排與報表套印(課程安排)">三. 課程安排與報表套印(課程安排)</option>
+        <option value="三. 課程安排與報表套印(報表套印)">三. 課程安排與報表套印(報表套印)</option>
+        <option value="四. 核銷管理(關懷核銷)">四. 核銷管理(關懷核銷)</option>
+        <option value="四. 核銷管理(長照與延緩核銷)">四. 核銷管理(長照與延緩核銷)</option>
+        <option value="四. 核銷管理(多元核銷)">四. 核銷管理(多元核銷)</option>
+        <option value="四. 核銷管理(伯公核銷)">四. 核銷管理(伯公核銷)</option>
+        <option value="系統首頁">系統首頁</option>
+      </select>
+
+      <input type="text" id="homeNoteFileInput" class="home-note-input" list="homeHtmlFileList" placeholder="對應檔名，如：個案清單.html">
+      <datalist id="homeHtmlFileList">
+        <option value="index.html">
+        <option value="個案資料管理.html">
+        <option value="個案清單.html">
+        <option value="講師資料.html">
+        <option value="臨時人員資料.html">
+        <option value="志工資料管理.html">
+        <option value="電話問安管理.html">
+        <option value="延緩前測管理.html">
+        <option value="聯絡電話.html">
+        <option value="每日工作檢核表.html">
+        <option value="零用金管理中心.html">
+        <option value="每日菜單管理.html">
+        <option value="食材費收據管理.html">
+        <option value="公文編號記錄.html">
+        <option value="年度課程安排行事曆.html">
+        <option value="課程活動表.html">
+        <option value="講師鐘點費記錄.html">
+        <option value="月報表套印中心.html">
+        <option value="個案基本資料表套印.html">
+        <option value="健康管理表套印.html">
+        <option value="常來名冊報表.html">
+        <option value="每月業務費記錄.html">
+        <option value="專職人員薪資記錄.html">
+        <option value="臨時人員時數記錄.html">
+        <option value="關懷每季核銷統計.html">
+        <option value="長照與延緩核銷統計.html">
+        <option value="長照講師核銷記錄.html">
+        <option value="多元核銷記錄.html">
+        <option value="伯公核銷記錄.html">
+      </datalist>
+
+      <input type="text" id="homeNoteContentInput" class="home-note-input" placeholder="手動輸入要查看、自己改或請我幫改的內容（按 Enter 可直接存檔）" onkeydown="if(event.key==='Enter'){event.preventDefault();addHomeNoteToDb();}">
+
+      <button type="button" class="home-btn home-btn-save" onclick="addHomeNoteToDb()">存入資料庫</button>
+    </div>
+
+    <div id="homeNoteSqlBox" style="display:none; margin-bottom:10px;">
+      <div style="font-size:0.82rem; color:#475569; font-weight:bold;">若資料庫尚未建立 <code>home_manual_notes</code> 資料表，請至 Supabase SQL Editor 執行一次：</div>
+      <div class="home-sql-box">CREATE TABLE IF NOT EXISTS home_manual_notes (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  category_path TEXT NOT NULL DEFAULT '',
+  page_title TEXT NOT NULL DEFAULT '',
+  file_name TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE home_manual_notes DISABLE ROW LEVEL SECURITY;
+NOTIFY pgrst, 'reload schema';</div>
+    </div>
+
+    <div class="home-note-list" id="homeNoteList">
+      <div style="font-size:0.86rem; color:#64748b;">載入中...</div>
     </div>
   </div>
 
@@ -737,6 +933,235 @@
     const target = document.getElementById('tab-' + tabKey);
     if (target) target.classList.add('active');
   }
+
+  const homeSbClient = (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  let homeNotes = [];
+
+  const FILE_TITLE_MAP = {
+    'index.html': '系統首頁',
+    '個案資料管理.html': '個案資料管理',
+    '個案清單.html': '個案名冊查詢與服務狀況',
+    '講師資料.html': '講師資料管理',
+    '臨時人員資料.html': '臨時人員資料管理',
+    '志工資料管理.html': '志工資料管理',
+    '電話問安管理.html': '電話問安記錄',
+    '延緩前測管理.html': '延緩課程前測記錄',
+    '聯絡電話.html': '聯絡電話',
+    '每日工作檢核表.html': '每日工作檢核表',
+    '零用金管理中心.html': '零用金清點記錄',
+    '每日菜單管理.html': '每日菜單管理',
+    '食材費收據管理.html': '食材費計算',
+    '公文編號記錄.html': '公文編號記錄',
+    '年度課程安排行事曆.html': '年度排課行事曆',
+    '課程活動表.html': '課程活動表',
+    '講師鐘點費記錄.html': '講師鐘點費計算',
+    '月報表套印中心.html': '簽到表套印',
+    '個案基本資料表套印.html': '個案基本資料表套印',
+    '健康管理表套印.html': '長輩健康管理表套印',
+    '常來名冊報表.html': '常來個案名冊與報表',
+    '每月業務費記錄.html': '1. 每月業務費記錄',
+    '專職人員薪資記錄.html': '2. 專職人員薪資記錄',
+    '臨時人員時數記錄.html': '3. 臨時人員時數記錄',
+    '關懷每季核銷統計.html': '4. 關懷每季核銷統計',
+    '長照與延緩核銷統計.html': '1. 長照與延緩經費收支',
+    '長照講師核銷記錄.html': '2. 長照核銷統計',
+    '多元核銷記錄.html': '多元核銷記錄表單',
+    '伯公核銷記錄.html': '伯公核銷記錄表單'
+  };
+
+  function setHomeNoteStatus(msg, isErr = false) {
+    const el = document.getElementById('homeNoteStatus');
+    if (!el) return;
+    el.style.color = isErr ? '#dc2626' : '#0f766e';
+    el.textContent = msg;
+  }
+
+  function toggleHomeNoteSql() {
+    const box = document.getElementById('homeNoteSqlBox');
+    if (!box) return;
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function formatNoteCopyLine(item) {
+    const cat = item.category_path || '';
+    const title = item.page_title || FILE_TITLE_MAP[item.file_name] || '';
+    const file = item.file_name || '';
+    const prefix = [cat, title, file].filter(Boolean).join('/');
+    return item.content ? `${prefix}：${item.content}` : prefix;
+  }
+
+  async function copyToClipboard(text, msg) {
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        setHomeNoteStatus(msg);
+        return;
+      } catch (e) {}
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    setHomeNoteStatus(msg);
+  }
+
+  function copySingleHomeNote(id) {
+    const target = homeNotes.find(n => String(n.id) === String(id));
+    if (!target) return;
+    copyToClipboard(formatNoteCopyLine(target), '已複製該筆檔案資訊，可直接貼給 AI');
+  }
+
+  function copyAllHomeNotes() {
+    if (!homeNotes || homeNotes.length === 0) {
+      alert('目前資料庫尚無紀錄可複製');
+      return;
+    }
+    const lines = homeNotes.map(n => formatNoteCopyLine(n));
+    copyToClipboard(lines.join('\n'), `已複製全部 ${homeNotes.length} 筆紀錄，可直接貼給 AI`);
+  }
+
+  async function loadHomeNotesFromDb() {
+    if (!homeSbClient) {
+      setHomeNoteStatus('尚未連線資料庫（請確認 config.js）', true);
+      document.getElementById('homeNoteList').innerHTML = '<div style="font-size:0.86rem; color:#dc2626;">尚未連線 Supabase 資料庫</div>';
+      return;
+    }
+    setHomeNoteStatus('正在從資料庫讀取...');
+    try {
+      const { data, error } = await homeSbClient
+        .from('home_manual_notes')
+        .select('*')
+        .order('id', { ascending: false });
+      if (error) {
+        setHomeNoteStatus('請先建立 home_manual_notes 資料表（點右上角「建表 SQL」）', true);
+        document.getElementById('homeNoteList').innerHTML = '<div style="font-size:0.86rem; color:#b91c1c;">尚未建立 home_manual_notes 資料表，點選上方「建表 SQL」即可取得指令。</div>';
+        return;
+      }
+      homeNotes = data || [];
+      renderHomeNotes();
+      setHomeNoteStatus(`已同步資料庫（共 ${homeNotes.length} 筆）`);
+    } catch (e) {
+      setHomeNoteStatus('讀取失敗：' + (e.message || e), true);
+    }
+  }
+
+  async function addHomeNoteToDb() {
+    if (!homeSbClient) {
+      alert('尚未連線資料庫');
+      return;
+    }
+    const cat = document.getElementById('homeNoteCategory').value.trim();
+    const fileInput = document.getElementById('homeNoteFileInput');
+    const contentInput = document.getElementById('homeNoteContentInput');
+    let fileName = fileInput.value.trim();
+    const content = contentInput.value.trim();
+
+    if (!fileName && !content) {
+      alert('請輸入對應的 .html 檔名或要記錄的內容');
+      return;
+    }
+    if (fileName && !fileName.toLowerCase().endsWith('.html')) {
+      fileName = fileName + '.html';
+    }
+    const pageTitle = FILE_TITLE_MAP[fileName] || fileName.replace(/\.html$/i, '');
+
+    setHomeNoteStatus('正在存入資料庫...');
+    const { data, error } = await homeSbClient
+      .from('home_manual_notes')
+      .insert([{
+        category_path: cat,
+        page_title: pageTitle,
+        file_name: fileName,
+        content: content,
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      setHomeNoteStatus('存入資料庫失敗：' + error.message, true);
+      alert('存入資料庫失敗：' + error.message);
+      return;
+    }
+
+    contentInput.value = '';
+    if (data) {
+      homeNotes.unshift(data);
+    } else {
+      await loadHomeNotesFromDb();
+      return;
+    }
+    renderHomeNotes();
+    const now = new Date();
+    const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    setHomeNoteStatus(`已存入資料庫（${tStr}）`);
+  }
+
+  async function updateHomeNoteContent(id, newText) {
+    if (!homeSbClient) return;
+    const trimmed = String(newText || '').trim();
+    setHomeNoteStatus('正在更新資料庫...');
+    const { error } = await homeSbClient
+      .from('home_manual_notes')
+      .update({ content: trimmed, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) {
+      setHomeNoteStatus('更新失敗：' + error.message, true);
+      return;
+    }
+    const item = homeNotes.find(n => String(n.id) === String(id));
+    if (item) item.content = trimmed;
+    setHomeNoteStatus('已更新至資料庫');
+  }
+
+  async function deleteHomeNote(id) {
+    if (!homeSbClient) return;
+    if (!confirm('確定要從資料庫刪除這筆紀錄嗎？')) return;
+    const { error } = await homeSbClient.from('home_manual_notes').delete().eq('id', id);
+    if (error) {
+      setHomeNoteStatus('刪除失敗：' + error.message, true);
+      return;
+    }
+    homeNotes = homeNotes.filter(n => String(n.id) !== String(id));
+    renderHomeNotes();
+    setHomeNoteStatus('已從資料庫刪除');
+  }
+
+  function escNoteHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  function renderHomeNotes() {
+    const listEl = document.getElementById('homeNoteList');
+    if (!listEl) return;
+    if (!homeNotes || homeNotes.length === 0) {
+      listEl.innerHTML = '<div style="font-size:0.86rem; color:#64748b;">目前資料庫尚無紀錄，請在上方手動輸入後按「存入資料庫」。</div>';
+      return;
+    }
+    listEl.innerHTML = homeNotes.map(n => {
+      const pathText = [n.category_path, n.page_title, n.file_name].filter(Boolean).join('/');
+      return `
+        <div class="home-note-item">
+          <div class="home-note-main">
+            <div class="home-note-path">${escNoteHtml(pathText)}</div>
+            <input type="text" class="home-note-input" style="font-weight:bold;" value="${escNoteHtml(n.content || '')}" placeholder="輸入說明或修改需求（離開輸入框自動存資料庫）" onblur="updateHomeNoteContent(${n.id}, this.value)">
+          </div>
+          <div class="home-note-actions">
+            <button type="button" class="home-btn home-btn-copy" style="padding:5px 10px; font-size:0.82rem;" onclick="copySingleHomeNote(${n.id})">複製給 AI</button>
+            <button type="button" class="home-btn home-btn-del" onclick="deleteHomeNote(${n.id})">刪除</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  loadHomeNotesFromDb();
+
 </script>
 
 </body>
