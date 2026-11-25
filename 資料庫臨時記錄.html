@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>資料庫臨時記錄 ｜ 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --sec2-main: #b45309;
+      --sec2-dark: #92400e;
+      --sec2-bg: #fffbeb;
+      --sec2-border: #fde68a;
+      --bg: #eef2f6;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 260px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #fffbeb; color: var(--sec2-dark); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1380px; margin: 22px auto 50px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--sec2-border); border-left: 6px solid var(--sec2-main);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    }
+    .header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--sec2-border);
+      padding-bottom: 12px; margin-bottom: 14px;
+    }
+    h1 { margin: 0; font-size: 1.35rem; color: var(--sec2-dark); }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      background: var(--sec2-bg); border: 1px solid var(--sec2-border);
+      padding: 10px 12px; border-radius: 8px; margin-bottom: 14px;
+    }
+    .status-text { font-size: 0.88rem; font-weight: bold; color: #0f766e; margin-right: auto; }
+
+    .btn {
+      padding: 7px 13px; border-radius: 6px; border: 1px solid transparent;
+      font-size: 0.88rem; font-weight: bold; cursor: pointer;
+    }
+    .btn-primary { background: var(--sec2-main); color: #fff; }
+    .btn-primary:hover { background: var(--sec2-dark); }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-outline { background: #fff; color: #334155; border-color: #cbd5e1; }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-del { background: #fff; color: #b91c1c; border-color: #fecaca; padding: 4px 8px; font-size: 0.8rem; }
+    .btn-del:hover { background: #fef2f2; }
+
+    .table-wrap { overflow-x: auto; }
+    table.rec-table {
+      width: 100%; border-collapse: collapse; font-size: 0.9rem; background: #fff;
+    }
+    table.rec-table th {
+      background: #fef3c7; color: #78350f; font-weight: bold;
+      border: 1px solid #94a3b8; padding: 8px 8px; text-align: left; white-space: nowrap;
+    }
+    table.rec-table td {
+      border: 1px solid #cbd5e1; padding: 5px 6px; vertical-align: middle;
+    }
+    table.rec-table tr:nth-child(even) td { background: #fafafa; }
+    .cell-input {
+      width: 100%; padding: 5px 7px; border: 1px solid transparent;
+      border-radius: 4px; font-size: 0.88rem; background: transparent; color: #0f172a;
+    }
+    .cell-input:hover { border-color: #cbd5e1; background: #fff; }
+    .cell-input:focus { outline: 2px solid #f59e0b; border-color: #f59e0b; background: #fff; }
+
+    .sql-box {
+      background: #0f172a; color: #e2e8f0; padding: 10px 12px; border-radius: 6px;
+      font-family: Consolas, monospace; font-size: 0.8rem; overflow-x: auto;
+      white-space: pre; margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">人事資料管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="志工資料管理.html">志工資料管理</a>
+        <div class="dropdown-divider">人事記錄</div>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="每日工作檢核表.html">每日工作檢核表</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="食材費收據管理.html">食材費計算</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+        <a href="資料庫臨時記錄.html">資料庫臨時記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="card">
+    <div class="header-bar">
+      <h1>資料庫臨時記錄</h1>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" onclick="addNewRow()">＋ 新增一列</button>
+        <button type="button" class="btn btn-outline" onclick="resetDefaultRows()">載入預設對照清單</button>
+        <button type="button" class="btn btn-outline" onclick="toggleSqlBox()">建表 SQL</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <span id="statusText" class="status-text">正在連線資料庫...</span>
+    </div>
+
+    <div id="sqlBox" style="display:none;">
+      <div style="font-size:0.84rem; color:#475569; font-weight:bold; margin-bottom:4px;">請至 Supabase SQL Editor 執行一次以下語法建立 <code>temp_db_records</code> 資料表：</div>
+      <div class="sql-box">CREATE TABLE IF NOT EXISTS temp_db_records (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  section_name TEXT NOT NULL DEFAULT '',
+  page_title TEXT NOT NULL DEFAULT '',
+  file_name TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE temp_db_records DISABLE ROW LEVEL SECURITY;
+NOTIFY pgrst, 'reload schema';</div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="rec-table">
+        <thead>
+          <tr>
+            <th style="width:22%;">首頁區塊／分頁</th>
+            <th style="width:20%;">首頁或選單顯示標題</th>
+            <th style="width:19%;">對應正確的 .html 檔名</th>
+            <th style="width:31%;">主要功能說明</th>
+            <th style="width:8%;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="recTableBody">
+          <tr><td colspan="5" style="text-align:center; padding:18px; color:#64748b;">載入中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const sbClient = (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  const DEFAULT_MAPPING_ROWS = [
+    ['頂部導覽列', '系統首頁', 'index.html', '系統首頁與四大區塊快速導覽'],
+    ['一、人事資料（人事資料管理）', '個案資料管理', '個案資料管理.html', '單頁翻閱、新增與編輯長輩基本資料及服務狀況'],
+    ['一、人事資料（人事資料管理）', '個案名冊查詢與服務狀況', '個案清單.html', '查詢服務中／結案個案、篩選狀態與匯入匯出名冊'],
+    ['一、人事資料（人事資料管理）', '講師資料管理', '講師資料管理.html', '維護授課講師基本資料、聯絡方式與服務狀態'],
+    ['一、人事資料（人事資料管理）', '臨時人員資料管理', '臨時人員資料管理.html', '維護廚房主廚與助手等臨時人員基本資料'],
+    ['一、人事資料（人事資料管理）', '志工資料管理', '志工資料管理.html', '匯入志工 Excel 直接存資料庫、管理名冊與證書資訊'],
+    ['一、人事資料（人事記錄）', '電話問安記錄', '電話問安管理.html', '篩選常來長輩登錄每月電訪並匯出政府範本'],
+    ['一、人事資料（人事記錄）', '延緩課程前測記錄', '延緩前測管理.html', '管理每年 2-3 期延緩課程前測與重複套用紀錄'],
+    ['一、人事資料（人事記錄）', '聯絡電話', '聯絡電話.html', '政府與非政府機關聯絡電話總表、翻閱本與新增'],
+    ['二、行政類與每日記錄', '每日工作檢核表', '每日工作檢核表.html', '勾選每日與每月固定工作完成狀態並同步雲端'],
+    ['二、行政類與每日記錄', '零用金清點記錄', '零用金管理中心.html', '記錄每日餐費收支、現鈔硬幣盤點與月底結算'],
+    ['二、行政類與每日記錄', '每日菜單管理', '每日菜單管理.html', '登錄每日供餐菜色與人數，組裝採購估算 AI 指令'],
+    ['二、行政類與每日記錄', '食材費計算', '食材費收據管理.html', '匯入關懷與長照食材費收據、依日期排序並算小計總計'],
+    ['二、行政類與每日記錄', '公文編號記錄', '公文編號記錄.html', '登錄與查詢各年度公文號、發文日期、使用文件與備註'],
+    ['三、課程安排與報表套印（課程安排）', '年度排課行事曆', '年度課程安排行事曆.html', '1-12 月跨月拖曳排課、各計畫日期總覽與一鍵複製'],
+    ['三、課程安排與報表套印（課程安排）', '課程活動表', '課程活動表.html', '依年度／月份編排週一至週五課程活動表、講師與時間'],
+    ['三、課程安排與報表套印（課程安排）', '講師鐘點費計算', '講師鐘點費記錄.html', '講師鐘點費設定、鐘點費計算與個人所得稅統計'],
+    ['三、課程安排與報表套印（報表套印）', '個案基本資料表套印', '個案基本資料表套印.html', '依個案資料套印列印或匯出 Word / PDF'],
+    ['三、課程安排與報表套印（報表套印）', '長輩健康管理表套印', '健康管理表套印.html', '批次套印服務中長輩健康管理表單'],
+    ['三、課程安排與報表套印（報表套印）', '簽到表套印', '月報表套印中心.html', '設定上班日並套印 01 個案簽到表至 05 授課時數記錄表'],
+    ['三、課程安排與報表套印（報表套印）', '常來個案名冊與報表', '常來名冊報表.html', '管理常來據點名單並產生點名表、生日名單與關懷名冊'],
+    ['四、核銷管理（關懷核銷）', '1. 每月業務費記錄', '每月業務費記錄.html', '記錄每月業務費細項、多筆算式累加與國字大寫金額'],
+    ['四、核銷管理（關懷核銷）', '2. 專職人員薪資記錄', '專職人員薪資記錄.html', '記錄專職人員薪資、勞健保自付／雇主負擔與勞退'],
+    ['四、核銷管理（關懷核銷）', '3. 臨時人員時數記錄', '臨時人員時數記錄.html', '記錄主廚與助手出勤天數、時數、單價與實領金額'],
+    ['四、核銷管理（關懷核銷）', '4. 關懷每季核銷統計', '關懷每季核銷統計.html', '彙整當季業務費與薪資、試算自籌款並複製核銷表']
+  ];
+
+  let rowsData = [];
+
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('statusText');
+    if (!el) return;
+    el.style.color = isErr ? '#dc2626' : '#0f766e';
+    el.textContent = msg;
+  }
+
+  function toggleSqlBox() {
+    const box = document.getElementById('sqlBox');
+    if (!box) return;
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function escAttr(s) {
+    return String(s || '').replace(/"/g, '&quot;');
+  }
+
+  function buildCopyPath(row) {
+    const parts = [row.section_name, row.page_title, row.file_name]
+      .map(x => String(x || '').trim())
+      .filter(Boolean);
+    return parts.join('/');
+  }
+
+  async function copyRowPath(id) {
+    const item = rowsData.find(r => String(r.id) === String(id));
+    if (!item) return;
+    const text = buildCopyPath(item);
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus(`已複製路徑：${text}`);
+        return;
+      } catch (e) {}
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    setStatus(`已複製路徑：${text}`);
+  }
+
+  async function loadRecordsFromDb() {
+    if (!sbClient) {
+      setStatus('尚未連線資料庫（請確認 config.js）', true);
+      return;
+    }
+    setStatus('正在讀取資料庫...');
+    try {
+      const { data, error } = await sbClient
+        .from('temp_db_records')
+        .select('*')
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
+
+      if (error) {
+        setStatus('尚未建立 temp_db_records 資料表（請點右上角「建表 SQL」執行）', true);
+        document.getElementById('recTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; padding:18px; color:#b91c1c;">尚未建立 temp_db_records 資料表，請點選右上角「建表 SQL」執行。</td></tr>';
+        return;
+      }
+
+      rowsData = data || [];
+      renderTable();
+      setStatus(`已同步資料庫（共 ${rowsData.length} 筆）`);
+    } catch (e) {
+      setStatus('讀取失敗：' + (e.message || e), true);
+    }
+  }
+
+  async function resetDefaultRows() {
+    if (!sbClient) return;
+    if (!confirm('確定要將預設對照清單寫入資料庫嗎？（原有資料列將保留或新增）')) return;
+    setStatus('正在寫入預設對照清單至資料庫...');
+    const startOrder = rowsData.reduce((m, r) => Math.max(m, Number(r.sort_order) || 0), 0);
+    const payload = DEFAULT_MAPPING_ROWS.map((arr, idx) => ({
+      sort_order: startOrder + idx + 1,
+      section_name: arr[0],
+      page_title: arr[1],
+      file_name: arr[2],
+      description: arr[3],
+      updated_at: new Date().toISOString()
+    }));
+    const { error } = await sbClient.from('temp_db_records').insert(payload);
+    if (error) {
+      setStatus('寫入失敗：' + error.message, true);
+      return;
+    }
+    await loadRecordsFromDb();
+  }
+
+  async function addNewRow() {
+    if (!sbClient) return;
+    const nextOrder = rowsData.reduce((m, r) => Math.max(m, Number(r.sort_order) || 0), 0) + 1;
+    setStatus('正在新增一列至資料庫...');
+    const { data, error } = await sbClient
+      .from('temp_db_records')
+      .insert([{
+        sort_order: nextOrder,
+        section_name: '二、行政類與每日記錄',
+        page_title: '',
+        file_name: '',
+        description: '',
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      setStatus('新增失敗：' + error.message, true);
+      return;
+    }
+    if (data) rowsData.push(data);
+    renderTable();
+    setStatus('已新增至資料庫');
+  }
+
+  async function updateField(id, field, val) {
+    if (!sbClient) return;
+    const item = rowsData.find(r => String(r.id) === String(id));
+    if (!item) return;
+    const trimmed = String(val ?? '');
+    if (item[field] === trimmed) return;
+    item[field] = trimmed;
+    setStatus('正在更新資料庫...');
+    const { error } = await sbClient
+      .from('temp_db_records')
+      .update({ [field]: trimmed, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) {
+      setStatus('更新失敗：' + error.message, true);
+      return;
+    }
+    const now = new Date();
+    const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    setStatus(`已存入資料庫（${tStr}）`);
+  }
+
+  async function deleteRow(id) {
+    if (!sbClient) return;
+    if (!confirm('確定要從資料庫刪除此列嗎？')) return;
+    const { error } = await sbClient.from('temp_db_records').delete().eq('id', id);
+    if (error) {
+      setStatus('刪除失敗：' + error.message, true);
+      return;
+    }
+    rowsData = rowsData.filter(r => String(r.id) !== String(id));
+    renderTable();
+    setStatus('已從資料庫刪除');
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('recTableBody');
+    if (!tbody) return;
+    if (!rowsData || rowsData.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:18px; color:#64748b;">資料庫尚無資料，請按「＋ 新增一列」或「載入預設對照清單」。</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rowsData.map(r => `
+      <tr>
+        <td><input type="text" class="cell-input" value="${escAttr(r.section_name)}" onblur="updateField(${r.id}, 'section_name', this.value)"></td>
+        <td><input type="text" class="cell-input" value="${escAttr(r.page_title)}" onblur="updateField(${r.id}, 'page_title', this.value)"></td>
+        <td><input type="text" class="cell-input" value="${escAttr(r.file_name)}" onblur="updateField(${r.id}, 'file_name', this.value)"></td>
+        <td><input type="text" class="cell-input" value="${escAttr(r.description)}" onblur="updateField(${r.id}, 'description', this.value)"></td>
+        <td style="text-align:center; white-space:nowrap;">
+          <button type="button" class="btn btn-blue" style="padding:4px 8px; font-size:0.8rem;" onclick="copyRowPath(${r.id})">複製路徑</button>
+          <button type="button" class="btn btn-del" onclick="deleteRow(${r.id})">刪除</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  loadRecordsFromDb();
+</script>
+</body>
+</html>
