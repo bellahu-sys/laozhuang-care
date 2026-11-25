@@ -251,6 +251,11 @@
       <label style="font-weight:bold;">新增計畫欄位：</label>
       <input type="text" id="rebCfgNewPlanNameInput" placeholder="如：延緩3期" style="width:150px;">
       <button type="button" class="btn btn-outline btn-sm" onclick="rebCfgAddPlanColumn()">＋ 新增計畫</button>
+      <span style="border-left:1px solid #fda4af; height:18px; margin:0 2px;"></span>
+      <label style="font-weight:bold;">修改計畫名稱：</label>
+      <select id="rebCfgRenameTargetSelect" style="width:130px;"></select>
+      <input type="text" id="rebCfgRenameNewInput" placeholder="輸入新計畫名稱" style="width:140px;">
+      <button type="button" class="btn btn-outline btn-sm" onclick="rebCfgRenamePlanColumn()">修改名稱</button>
       <button type="button" class="btn btn-teal btn-sm" onclick="rebCfgReloadFromDatabase()">重新從資料庫載入</button>
       <button type="button" class="btn btn-primary btn-sm" onclick="rebCfgSaveToDatabase()">儲存「鐘點費-核銷」至資料庫</button>
     </div>
@@ -967,7 +972,7 @@
   }
 
 
-  let rebCfgPlans = ['關懷課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
+  let rebCfgPlans = ['長照課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
   let rebCfgMap = {};
   let rebCfgTeachers = [];
   const REB_CFG_TEACHERS_KEY = 'lz_rate_cfg_reb_teachers';
@@ -977,6 +982,14 @@
     return [...new Set(arr)].sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
   }
 
+  function rebCfgPopulateRenameSelect() {
+    const sel = document.getElementById('rebCfgRenameTargetSelect');
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = rebCfgPlans.map(p => `<option value="${escapeAttr(p)}">${escapeHtml(p)}</option>`).join('');
+    if (prev && rebCfgPlans.includes(prev)) sel.value = prev;
+  }
+
   function rebCfgAddPlanColumn() {
     const inp = document.getElementById('rebCfgNewPlanNameInput');
     const val = (inp?.value || '').trim();
@@ -984,7 +997,54 @@
     rebCfgCollectFromDom();
     if (!rebCfgPlans.includes(val)) rebCfgPlans.push(val);
     inp.value = '';
+    rebCfgPopulateRenameSelect();
     rebCfgRenderTable();
+  }
+
+  function rebCfgRenamePlanColumn() {
+    const sel = document.getElementById('rebCfgRenameTargetSelect');
+    const inp = document.getElementById('rebCfgRenameNewInput');
+    const oldName = (sel?.value || '').trim();
+    const newName = (inp?.value || '').trim();
+    if (!oldName || !newName) {
+      alert('請選擇要修改的計畫並輸入新名稱');
+      return;
+    }
+    rebCfgCollectFromDom();
+    const idx = rebCfgPlans.indexOf(oldName);
+    if (idx !== -1) {
+      if (rebCfgPlans.includes(newName) && oldName !== newName) {
+        rebCfgPlans.splice(idx, 1);
+      } else {
+        rebCfgPlans[idx] = newName;
+      }
+    }
+    Object.keys(rebCfgMap).forEach(inst => {
+      if (rebCfgMap[inst] && Object.prototype.hasOwnProperty.call(rebCfgMap[inst], oldName)) {
+        rebCfgMap[inst][newName] = rebCfgMap[inst][oldName];
+        if (oldName !== newName) delete rebCfgMap[inst][oldName];
+      }
+    });
+    if (inp) inp.value = '';
+    rebCfgPopulateRenameSelect();
+    rebCfgRenderTable();
+    setStatus(`已將「${oldName}」修改為「${newName}」（記得按「儲存『鐘點費-核銷』至資料庫」）`);
+  }
+
+  function rebCfgOnCellModeChange(selEl) {
+    const td = selEl.closest('td');
+    if (!td) return;
+    const isNone = selEl.value === 'none';
+    const amtInp = td.querySelector('.reb-amt');
+    const hrsInp = td.querySelector('.reb-hrs');
+    if (amtInp) {
+      amtInp.disabled = isNone;
+      if (isNone) amtInp.value = '';
+    }
+    if (hrsInp) {
+      hrsInp.disabled = isNone;
+      if (isNone) hrsInp.value = '';
+    }
   }
 
   function rebCfgOnTeacherToggle(instName, isChecked) {
@@ -996,6 +1056,7 @@
     }
     rebCfgTeachers = rebCfgSortByMaster(rebCfgTeachers);
     localStorage.setItem(REB_CFG_TEACHERS_KEY, JSON.stringify(rebCfgTeachers));
+    rebCfgPopulateRenameSelect();
     rebCfgRenderTeacherPicker();
     rebCfgRenderTable();
   }
@@ -1019,8 +1080,12 @@
   }
 
   function rebCfgCollectFromDom() {
+    const modeMap = new Map();
     const amtMap = new Map();
     const hrsMap = new Map();
+    document.querySelectorAll('.reb-mode').forEach(el => {
+      modeMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value);
+    });
     document.querySelectorAll('.reb-amt').forEach(el => {
       amtMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, ''));
     });
@@ -1029,13 +1094,24 @@
     });
 
     const rowsToUpsert = [];
-    amtMap.forEach((rawAmt, key) => {
+    modeMap.forEach((modeVal, key) => {
       const [inst, plan] = key.split('__');
+      const rawAmt = amtMap.get(key) || '';
       const rawHrs = hrsMap.get(key) || '1';
       if (!rebCfgMap[inst]) rebCfgMap[inst] = {};
-      if (rawAmt !== '' && Number.isFinite(Number(rawAmt))) {
+      if (modeVal === 'none') {
+        rebCfgMap[inst][plan] = { mode: 'none', rate: '', hours: '' };
+        rowsToUpsert.push({
+          instructor_name: inst,
+          plan_name: plan,
+          pay_mode: 'none',
+          rate: null,
+          hours: null,
+          updated_at: new Date().toISOString()
+        });
+      } else if (rawAmt !== '' && Number.isFinite(Number(rawAmt))) {
         const hrsNum = (rawHrs !== '' && Number.isFinite(Number(rawHrs))) ? Number(rawHrs) : 1;
-        rebCfgMap[inst][plan] = { rate: Number(rawAmt), hours: hrsNum };
+        rebCfgMap[inst][plan] = { mode: 'per_hour', rate: Number(rawAmt), hours: hrsNum };
         rowsToUpsert.push({
           instructor_name: inst,
           plan_name: plan,
@@ -1045,7 +1121,7 @@
           updated_at: new Date().toISOString()
         });
       } else {
-        rebCfgMap[inst][plan] = { rate: '', hours: 1 };
+        rebCfgMap[inst][plan] = { mode: 'per_hour', rate: '', hours: 1 };
       }
     });
     return rowsToUpsert;
@@ -1064,15 +1140,20 @@
     const bodyRows = list.map(inst => {
       const instName = inst.name;
       const tds = rebCfgPlans.map(plan => {
-        const rule = (rebCfgMap[instName] && rebCfgMap[instName][plan]) ? rebCfgMap[instName][plan] : { rate: '', hours: 1 };
-        const rateDisp = (rule.rate !== '' && rule.rate !== undefined && rule.rate !== null) ? rule.rate : '';
-        const hrsDisp = (rule.hours !== '' && rule.hours !== undefined && rule.hours !== null) ? rule.hours : 1;
+        const rule = (rebCfgMap[instName] && rebCfgMap[instName][plan]) ? rebCfgMap[instName][plan] : { mode: 'per_hour', rate: '', hours: 1 };
+        const isNone = rule.mode === 'none';
+        const rateDisp = isNone ? '' : ((rule.rate !== '' && rule.rate !== undefined && rule.rate !== null) ? rule.rate : '');
+        const hrsDisp = isNone ? '' : ((rule.hours !== '' && rule.hours !== undefined && rule.hours !== null) ? rule.hours : 1);
         return `
-          <td style="min-width:165px;">
+          <td style="min-width:175px;">
+            <select class="reb-mode" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" onchange="rebCfgOnCellModeChange(this)" style="width:100%; margin-bottom:4px; font-size:0.82rem;">
+              <option value="per_hour" ${!isNone ? 'selected' : ''}>費用 / 時數</option>
+              <option value="none" ${isNone ? 'selected' : ''}>無</option>
+            </select>
             <div style="display:flex; gap:4px; align-items:center; justify-content:center;">
-              <input type="text" inputmode="decimal" class="num-input reb-amt" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${rateDisp}" placeholder="費用" style="width:76px;">
+              <input type="text" inputmode="decimal" class="num-input reb-amt" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${rateDisp}" placeholder="費用" ${isNone ? 'disabled' : ''} style="width:76px;">
               <span style="font-size:0.76rem; color:#475569;">時數</span>
-              <input type="text" inputmode="decimal" class="num-input reb-hrs" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${hrsDisp}" placeholder="1" style="width:42px;">
+              <input type="text" inputmode="decimal" class="num-input reb-hrs" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${hrsDisp}" placeholder="1" ${isNone ? 'disabled' : ''} style="width:42px;">
             </div>
           </td>
         `;
@@ -1124,7 +1205,8 @@
         if (!error && Array.isArray(data)) {
           data.forEach(row => {
             const inst = (row.instructor_name || '').trim();
-            const plan = (row.plan_name || '').trim();
+            let plan = (row.plan_name || '').trim();
+            if (plan === '關懷課程') plan = '長照課程';
             if (!inst || !plan) return;
             if (!rebCfgPlans.includes(plan)) rebCfgPlans.push(plan);
             if (!rebCfgMap[inst]) rebCfgMap[inst] = {};
