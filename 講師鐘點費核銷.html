@@ -1098,6 +1098,48 @@
     });
   }
 
+  function numberToChineseUpper(num) {
+    const nRaw = Math.round(Number(num || 0));
+    if (!Number.isFinite(nRaw) || nRaw === 0) return '零元整';
+    const digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
+    const units = ['', '拾', '佰', '仟'];
+    const bigUnits = ['', '萬', '億', '兆'];
+    const neg = nRaw < 0 ? '負' : '';
+    let s = String(Math.abs(nRaw));
+    const groups = [];
+    while (s.length > 0) {
+      groups.push(s.slice(-4));
+      s = s.slice(0, -4);
+    }
+    const parts = [];
+    for (let g = 0; g < groups.length; g++) {
+      const grp = groups[g];
+      let grpStr = '';
+      let zeroPending = false;
+      for (let i = 0; i < grp.length; i++) {
+        const d = parseInt(grp[i], 10);
+        const pos = grp.length - 1 - i;
+        if (d === 0) {
+          zeroPending = true;
+        } else {
+          if (zeroPending) {
+            grpStr += '零';
+            zeroPending = false;
+          }
+          grpStr += digits[d] + units[pos];
+        }
+      }
+      if (grpStr !== '') {
+        parts.push(grpStr + bigUnits[g]);
+      } else if (parts.length > 0 && !parts[parts.length - 1].startsWith('零')) {
+        parts.push('零');
+      }
+    }
+    let out = parts.reverse().join('');
+    out = out.replace(/零+/g, '零').replace(/零([萬億兆])/g, '$1').replace(/零+$/, '');
+    return `${neg}${out || '零'}元整`;
+  }
+
   function renderActivePeriodView() {
     const wrap = document.getElementById('activePeriodSheetContainer');
     if (!wrap) return;
@@ -1124,16 +1166,14 @@
 
         const planOpts = plans.map(p => `<option value="${escapeAttr(p)}" ${p === pName ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
         return `
-          <td style="min-width:165px;">
-            <div class="rate-cell-box">
+          <td style="min-width:155px;">
+            <div style="display:flex; flex-direction:column; gap:4px;">
               <select onchange="onPeriodPlanChange('${blk.periodKey}', '${escapeAttr(colKey)}', '${escapeAttr(instName)}', this.value)" style="font-size:0.8rem; padding:3px 5px;">
                 ${planOpts}
               </select>
-              <div class="rate-cell-row">
-                <span class="rate-cell-unit">堂數</span>
-                <input type="text" inputmode="decimal" class="num-input" value="${sess > 0 ? sess : ''}" placeholder="0" onchange="onPeriodSessionChange('${blk.periodKey}', '${escapeAttr(colKey)}', '${escapeAttr(instName)}', '${escapeAttr(blk.defaultPlan)}', this.value)" style="width:48px; padding:4px 6px; font-size:0.84rem;">
-                <span class="rate-cell-unit">元</span>
-                <input type="text" inputmode="decimal" class="num-input" value="${amt !== 0 ? fmtNum(amt) : ''}" placeholder="0" onchange="onPeriodAmountChange('${blk.periodKey}', '${escapeAttr(colKey)}', '${escapeAttr(instName)}', '${escapeAttr(blk.defaultPlan)}', this.value)" style="width:74px; padding:4px 6px; font-size:0.84rem;">
+              <div style="font-size:0.85rem; color:#1e293b; line-height:1.45; display:flex; justify-content:space-between; align-items:center; gap:6px; padding:2px 2px;">
+                <span style="color:#475569; white-space:nowrap;">堂數：<strong>${fmtNum(sess)}</strong></span>
+                <span style="white-space:nowrap;"><strong>${fmtNum(amt)}</strong> 元</span>
               </div>
             </div>
           </td>
@@ -1141,16 +1181,19 @@
       }).join('');
 
       periodGrandTotal += rowTotal;
+      const upperChinese = numberToChineseUpper(rowTotal);
       return `
         <tr>
           <td style="font-weight:bold;">${escapeHtml(instName)}</td>
           ${colCells}
           <td class="num-col" style="font-weight:bold;">${fmtNum(rowTotal)}</td>
+          <td class="center-col" style="font-weight:bold; color:#881337; background:#fffafa; white-space:nowrap;">${escapeHtml(upperChinese)}</td>
         </tr>
       `;
     }).join('');
 
     const footCells = blk.cols.map(c => `<td class="num-col">${fmtNum(colTotals[c])}</td>`).join('');
+    const grandUpperChinese = numberToChineseUpper(periodGrandTotal);
 
     wrap.innerHTML = `
       <div class="period-card">
@@ -1168,6 +1211,7 @@
                 <th style="width:110px;">講師</th>
                 ${blk.cols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}
                 <th style="width:110px;">合計</th>
+                <th style="width:170px;">大寫金額</th>
               </tr>
             </thead>
             <tbody>
@@ -1176,6 +1220,7 @@
                 <td class="center-col">總計</td>
                 ${footCells}
                 <td class="num-col">${fmtNum(periodGrandTotal)}</td>
+                <td class="center-col">${escapeHtml(grandUpperChinese)}</td>
               </tr>
             </tbody>
           </table>
