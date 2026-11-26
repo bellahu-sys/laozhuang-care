@@ -397,6 +397,7 @@
             上傳設定 Excel (.xlsx)
             <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handlePresetExcelUpload(event)">
           </label>
+          <button type="button" class="btn btn-amber" style="padding:6px 12px; font-size:0.85rem;" onclick="saveCurrentFormAsPreset()">儲存問安設定</button>
           <span id="presetMatchInfo" style="font-size:0.82rem; color:#92400e;">未去電時維持空白表單；3 天到據點說明原因時可套用原始設定。</span>
         </div>
 
@@ -480,7 +481,6 @@
         </div>
 
         <div style="margin-top:14px; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
-          <button type="button" class="btn btn-amber" style="padding:10px 20px; font-size:1rem;" onclick="saveCurrentFormAsPreset()">儲存問安設定</button>
           <button type="button" class="btn btn-primary" style="padding:10px 24px; font-size:1rem;" onclick="saveCheckinRecord()">儲存此筆電話問安記錄</button>
         </div>
       </div>
