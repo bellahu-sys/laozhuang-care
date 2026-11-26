@@ -146,11 +146,10 @@
 <body>
 
 <script>
-  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true') {
     const pwd = prompt('請輸入老庄據點系統通行密碼：');
     if (pwd === STATION_PASSCODE) {
       sessionStorage.setItem('care_auth', 'true');
-      localStorage.setItem('care_auth', 'true');
     } else {
       document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
     }
@@ -231,7 +230,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div>
         <h1>關懷核銷食材費</h1>
-        <p class="sub-note">專責管理「關懷核銷食材費」：依「收據日期」將同日品項合併在同一張收據下，保留每筆原始「菜單日期」供核對提前採購與菜單品項，自動計算每張小計與月總計，並直接存入雲端資料庫。</p>
+        <p class="sub-note">專責管理「關懷核銷食材費」：依「收據日期」將同日品項合併在同一張收據下，保留每筆原始「菜單日期」供核對提前採購與菜單品項，自動計算每張小計與當月總計，並直接寫入雲端資料庫連動「1. 每月業務費記錄」食材費。</p>
       </div>
       <div id="syncStatus">雲端同步準備中...</div>
     </div>
@@ -260,7 +259,7 @@
     </h2>
 
     <div class="toolbar">
-      <span><strong>匯入目標類別：</strong>關懷核銷食材費（專屬寫入雲端資料庫）</span>
+      <span><strong>匯入目標類別：</strong>關懷核銷食材費（專屬寫入雲端資料庫並連動每月業務費）</span>
       <label><strong>匯入模式：</strong>
         <select id="importMode">
           <option value="replace">覆蓋當月關懷核銷食材費資料</option>
@@ -271,11 +270,12 @@
 
     <textarea id="pasteInput" class="import-box" placeholder="請將 Gemini 產生的【關懷核銷食材費】TSV 表格或 Excel 複製內容貼到此處（欄位支援：菜單日期、收據日期、品名、數量、單位、單價、總價、小計；同一收據日期的所有品項會合併在同一張收據，並保留各自菜單日期）..."></textarea>
     <p class="hint-text">
-      支援格式：可直接貼上 Gemini 輸出的 TSV 文字（含「關懷核銷食材費」標題列、「菜單日期 / 收據日期 / 品名 / 數量 / 單位 / 單價 / 總價 / 小計」與「小計 / 總計」列）。系統會自動略過「小計」「總計」彙整列，依「收據日期」將同日品項合併為同一張收據（不依菜單日期拆分），保留每筆「菜單日期」供核對提前採購與菜色，並直接存入雲端資料庫。
+      支援格式：可直接貼上 Gemini 輸出的 TSV 文字（含「關懷核銷食材費」標題列、「菜單日期 / 收據日期 / 品名 / 數量 / 單位 / 單價 / 總價 / 小計」與「小計 / 總計」列）。系統會自動略過「小計」「總計」彙整列，依「收據日期」將同日品項合併為同一張收據，保留每筆「菜單日期」，計算當月總計並直接存入雲端資料庫連動「1. 每月業務費記錄」。
     </p>
 
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
       <button type="button" class="btn btn-primary" onclick="parseAndImport()">解析並匯入關懷食材費（直存資料庫）</button>
+      <button type="button" class="btn btn-blue" onclick="syncMonthlyFoodTotalToBusinessExpense()">同步當月總計至每月業務費</button>
       <button type="button" class="btn btn-gray" onclick="document.getElementById('pasteInput').value = ''">清空貼上區</button>
       <button type="button" class="btn btn-danger" onclick="clearCurrentMonthPlan()">清除本月關懷核銷食材費資料</button>
     </div>
@@ -320,6 +320,7 @@
   const PLAN_TYPE = 'care';
   const PLAN_LABEL = '關懷核銷食材費';
   const DB_TABLE = 'food_receipt_items';
+  const BIZ_EXPENSE_TABLE = 'care_monthly_business_expenses';
 
   let supabaseClient = null;
   if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
@@ -329,6 +330,7 @@
   }
 
   let careFoodRows = [];
+  let currentMonthGrandTotal = 0;
 
   (function initYearMonth() {
     const today = new Date();
@@ -401,6 +403,86 @@
         statusEl.style.color = '#dc2626';
         statusEl.textContent = '雲端連線例外：' + (e.message || e);
       }
+    }
+  }
+
+  async function writeFoodTotalToBizExpense(rocYear, month, foodTotal) {
+    if (!supabaseClient) return;
+    const yrNum = parseInt(rocYear, 10) || 115;
+    const moNum = parseInt(month, 10) || 1;
+    const cleanTotal = Math.round(Number(foodTotal) || 0);
+
+    try {
+      const { data: existing, error: selErr } = await supabaseClient
+        .from(BIZ_EXPENSE_TABLE)
+        .select('*')
+        .eq('roc_year', yrNum)
+        .eq('month', moNum)
+        .limit(1);
+
+      if (selErr) {
+        console.warn('查詢每月業務費紀錄失敗：', selErr.message);
+        return;
+      }
+
+      if (Array.isArray(existing) && existing.length > 0) {
+        const row = existing[0];
+        const otherSum =
+          parseNumber(row.gas_fee) +
+          parseNumber(row.internet_fee) +
+          parseNumber(row.phone_fee) +
+          parseNumber(row.electricity_fee) +
+          parseNumber(row.water_fee) +
+          parseNumber(row.temp_staff_fee);
+        const { error: updErr } = await supabaseClient
+          .from(BIZ_EXPENSE_TABLE)
+          .update({
+            food_fee: cleanTotal,
+            monthly_total: Math.round(cleanTotal + otherSum),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', row.id);
+        if (updErr) throw updErr;
+      } else {
+        const { error: insErr } = await supabaseClient
+          .from(BIZ_EXPENSE_TABLE)
+          .insert({
+            roc_year: yrNum,
+            month: moNum,
+            food_fee: cleanTotal,
+            gas_fee: 0,
+            internet_fee: 0,
+            phone_fee: 0,
+            electricity_fee: 0,
+            water_fee: 0,
+            temp_staff_fee: 0,
+            monthly_total: cleanTotal,
+            updated_at: new Date().toISOString()
+          });
+        if (insErr) throw insErr;
+      }
+    } catch (e) {
+      console.warn('連動寫入每月業務費食材費失敗：', e.message || e);
+    }
+  }
+
+  async function syncMonthlyFoodTotalToBusinessExpense() {
+    const yr = document.getElementById('rocYearSelect').value;
+    const m = document.getElementById('monthSelect').value;
+    if (!supabaseClient) {
+      alert('無法連線至雲端資料庫！');
+      return;
+    }
+    const statusEl = document.getElementById('syncStatus');
+    try {
+      await writeFoodTotalToBizExpense(yr, m, currentMonthGrandTotal);
+      if (statusEl) {
+        statusEl.style.color = '#0f766e';
+        statusEl.textContent = `已同步 ${yr} 年 ${m} 月食材費總計（${fmt(currentMonthGrandTotal)} 元）至每月業務費記錄`;
+      }
+      alert(`已將 ${yr} 年 ${m} 月關懷核銷食材費總計 ${fmt(currentMonthGrandTotal)} 元同步至「1. 每月業務費記錄」食材費欄位！`);
+    } catch (e) {
+      alert('同步失敗：' + (e.message || e));
     }
   }
 
@@ -568,12 +650,12 @@
     const statusEl = document.getElementById('syncStatus');
     if (statusEl) {
       statusEl.style.color = '#0284c7';
-      statusEl.textContent = '正在直接寫入雲端資料庫...';
+      statusEl.textContent = '正在直接寫入雲端資料庫並連動每月業務費...';
     }
 
     try {
+      const affectedPairs = [...new Set(parsedItems.map(x => `${x.rocYear}__${x.month}`))];
       if (importMode === 'replace') {
-        const affectedPairs = [...new Set(parsedItems.map(x => `${x.rocYear}__${x.month}`))];
         for (const pair of affectedPairs) {
           const [pYr, pMo] = pair.split('__');
           const { error: delErr } = await supabaseClient
@@ -612,13 +694,21 @@
       document.getElementById('monthSelect').value = firstImported.month;
       renderCurrentMonth();
 
+      for (const pair of affectedPairs) {
+        const [pYr, pMo] = pair.split('__');
+        const monthSum = careFoodRows
+          .filter(r => String(r.rocYear) === String(pYr) && String(r.month) === String(pMo))
+          .reduce((acc, r) => acc + (Number(r.totalPrice) || 0), 0);
+        await writeFoodTotalToBizExpense(pYr, pMo, monthSum);
+      }
+
       const now = new Date();
       const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
       if (statusEl) {
         statusEl.style.color = '#0f766e';
-        statusEl.textContent = `已直接存入雲端資料庫（${tStr}）`;
+        statusEl.textContent = `已直接存入雲端資料庫並連動每月業務費（${tStr}）`;
       }
-      alert(`成功解析並直接存入雲端資料庫，共 ${parsedItems.length} 筆「關懷核銷食材費」明細！`);
+      alert(`成功解析並直接存入雲端資料庫，共 ${parsedItems.length} 筆「關懷核銷食材費」明細，並已同步連動每月業務費食材費！`);
     } catch (e) {
       if (statusEl) {
         statusEl.style.color = '#dc2626';
@@ -631,7 +721,7 @@
   async function clearCurrentMonthPlan() {
     const yr = document.getElementById('rocYearSelect').value;
     const m = document.getElementById('monthSelect').value;
-    if (!confirm(`確定要從資料庫清除 ${yr} 年 ${m} 月的「${PLAN_LABEL}」資料嗎？`)) return;
+    if (!confirm(`確定要從資料庫清除 ${yr} 年 ${m} 月的「${PLAN_LABEL}」資料並將每月業務費食材費歸零嗎？`)) return;
     if (!supabaseClient) {
       alert('無法連線至雲端資料庫！');
       return;
@@ -645,11 +735,13 @@
         .eq('month', m)
         .eq('plan_type', PLAN_TYPE);
       if (error) throw error;
+
+      await writeFoodTotalToBizExpense(yr, m, 0);
       await syncFromCloud();
       renderCurrentMonth();
       if (statusEl) {
         statusEl.style.color = '#0f766e';
-        statusEl.textContent = `已從雲端資料庫清除 ${yr} 年 ${m} 月關懷核銷食材費`;
+        statusEl.textContent = `已從雲端資料庫清除 ${yr} 年 ${m} 月關懷核銷食材費並同步歸零每月業務費`;
       }
     } catch (e) {
       if (statusEl) {
@@ -701,6 +793,7 @@
     groups.sort((a, b) => a.sortVal - b.sortVal);
 
     const grandTotal = groups.reduce((acc, g) => acc + g.subtotal, 0);
+    currentMonthGrandTotal = grandTotal;
 
     document.getElementById('sumReceiptCount').textContent = `${groups.length} 張`;
     document.getElementById('sumItemCount').textContent = `${rows.length} 筆`;

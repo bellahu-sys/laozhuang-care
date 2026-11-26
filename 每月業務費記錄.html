@@ -3,18 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>【關懷核銷】每月業務費記錄 - 老庄社區照顧關懷據點</title>
+  <title>1. 每月業務費記錄 ｜ 老庄社區照顧關懷據點</title>
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root { --primary: #2c5e4f; --bg: #f1f5f9; --border: #cbd5e1; --text: #1e293b; }
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --accent: #0284c7;
+      --bg: #eef2f6;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
     * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
     body { margin: 0; background: var(--bg); color: var(--text); }
 
     nav.topbar {
       background-color: var(--primary); color: #fff; padding: 12px 20px;
       display: flex; justify-content: space-between; align-items: center;
-      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); margin-bottom: 20px;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
       position: relative; z-index: 500;
     }
     .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
@@ -25,9 +32,9 @@
       font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
       cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
     }
-    .nav-btn:hover, .nav-item:hover .nav-btn { background: rgba(255,255,255,0.28); }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
     .dropdown-content {
-      display: none; position: absolute; top: 100%; left: 0; min-width: 245px;
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px;
       background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
       border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
     }
@@ -41,510 +48,584 @@
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
     .container {
-      max-width: 1220px; margin: 0 auto 30px auto; background: #fff;
-      padding: 24px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      max-width: 1380px; margin: 22px auto 50px auto; background: #fff;
+      padding: 24px; border-radius: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+      border: 1px solid var(--border);
     }
-    h1 { color: var(--primary); font-size: 1.38rem; margin: 0 0 16px 0; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+    .header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--primary);
+      padding-bottom: 12px; margin-bottom: 16px;
+    }
+    h1 { color: var(--primary); font-size: 1.35rem; margin: 0; }
 
-    .toolbar {
-      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-      margin-bottom: 14px; background: #f8fafc; padding: 12px 15px; border-radius: 6px; border: 1px solid var(--border);
+    .toolbar-row {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: #f8fafc; border: 1px solid var(--border);
+      padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;
     }
-    select, input[type="number"], input[type="text"] {
-      padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.94rem;
+    select, input[type="text"] {
+      padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background: #fff;
     }
-    button.btn {
-      padding: 8px 16px; border: none; border-radius: 5px; font-weight: bold;
-      cursor: pointer; font-size: 0.95rem;
+    .btn {
+      padding: 7px 13px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 5px;
     }
     .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { background: #1e4237; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: var(--accent); color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-sm { padding: 5px 10px; font-size: 0.84rem; }
 
-    .tip-box {
-      background: #f0fdfa; border: 1px solid #99f6e4; color: #115e59;
-      padding: 9px 14px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 14px;
+    .info-box {
+      background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 14px; font-size: 0.88rem; color: #0f172a; line-height: 1.6;
+    }
+    .period-banner {
+      background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;
+      padding: 12px 16px; margin-bottom: 14px; font-size: 1.05rem; font-weight: bold; color: #9a3412;
     }
 
-    .summary-banner {
-      background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px;
-      padding: 14px 18px; margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center;
+    .excel-table {
+      width: 100%; border-collapse: collapse; font-size: 0.92rem; background: #fff;
     }
-    .summary-banner .item { font-size: 1rem; }
-    .summary-banner .val { font-size: 1.25rem; font-weight: bold; color: #c2410c; }
+    .excel-table th {
+      background: #ffedd5; color: #7c2d12; font-weight: bold;
+      border: 1px solid #94a3b8; padding: 8px; text-align: center;
+    }
+    .excel-table td {
+      border: 1px solid #94a3b8; padding: 6px 8px; vertical-align: middle;
+    }
+    .excel-table td.num-col { text-align: right; font-variant-numeric: tabular-nums; }
+    .excel-table td.center-col { text-align: center; }
+    .excel-table tr.total-row td {
+      background: #fed7aa; font-weight: bold; font-size: 0.96rem; color: #7c2d12;
+    }
+    .excel-table input.num-input {
+      width: 100%; padding: 6px 8px; font-size: 0.9rem; text-align: right;
+      border: 1px solid #cbd5e1; border-radius: 4px; font-variant-numeric: tabular-nums;
+    }
+    .expr-badge {
+      margin-top: 4px; font-size: 0.78rem; color: #0f766e; background: #f0fdf4;
+      border: 1px solid #bbf7d0; border-radius: 4px; padding: 2px 6px; text-align: right;
+    }
+    .food-sync-badge {
+      margin-top: 4px; font-size: 0.76rem; color: #0369a1; background: #f0f9ff;
+      border: 1px solid #bae6fd; border-radius: 4px; padding: 2px 6px; text-align: right;
+    }
 
-    table.expense-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    table.expense-table th, table.expense-table td { border: 1px solid #94a3b8; padding: 7px 8px; text-align: center; font-size: 0.93rem; vertical-align: top; }
-    table.expense-table th { background: #fed7aa; color: #1e293b; font-weight: bold; vertical-align: middle; }
-    table.expense-table tr:nth-child(even) { background: #f8fafc; }
-    table.expense-table input { width: 100%; text-align: right; padding: 5px 6px; }
-    .formula-meta {
-      margin-top: 4px; font-size: 0.8rem; color: #166534; font-weight: bold;
-      text-align: right; min-height: 16px;
+    @media print {
+      nav.topbar, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; border: none; box-shadow: none; }
     }
-    .formula-meta.multi {
-      background: #dcfce7; padding: 2px 5px; border-radius: 4px; display: inline-block; float: right;
-    }
-    .total-col { font-weight: bold; color: var(--primary); background: #f0fdf4; text-align: right !important; vertical-align: middle !important; }
-    .grand-row td { background: #e2e8f0 !important; font-weight: bold; font-size: 1rem; vertical-align: middle; }
   </style>
 </head>
 <body>
 
-<nav class="topbar">
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar no-print">
   <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
   <div class="nav-menu">
     <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
     <div class="nav-item">
       <button type="button" class="nav-btn">人事資料 ▾</button>
       <div class="dropdown-content">
-        <div class="dropdown-divider">長輩個案管理</div>
-        <a href="個案翻閱本.html">個案資料翻閱本</a>
-        <a href="個案資料表.html">新增個案基本資料</a>
+        <div class="dropdown-divider">人事資料管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
         <a href="個案清單.html">個案名冊查詢與服務狀況</a>
-        <div class="dropdown-divider">工作人員與師資</div>
         <a href="講師資料.html">講師資料管理</a>
         <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="志工資料管理.html">志工資料管理</a>
+        <div class="dropdown-divider">人事記錄</div>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="聯絡電話.html">聯絡電話</a>
       </div>
     </div>
     <div class="nav-item">
-      <button type="button" class="nav-btn">行政類 ▾</button>
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
       <div class="dropdown-content">
-        <a href="聯絡電話.html">聯絡電話總表（全站通訊錄）</a>
-        <a href="零用金管理中心.html">零用金與現鈔清點記錄</a>
-        <a href="每日菜單管理.html">每日菜單管理與採購估算</a>
+        <a href="每日工作檢核表.html">每日工作檢核表</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+        <a href="資料庫臨時記錄.html">資料庫臨時記錄</a>
       </div>
     </div>
     <div class="nav-item">
-      <button type="button" class="nav-btn">報表套印 ▾</button>
-      <div class="dropdown-content">
-        <a href="月報表套印中心.html">每月核銷 5 份簽到/出勤表套印</a>
-        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
-        <a href="健康管理表套印.html">長輩健康管理表套印</a>
-      </div>
-    </div>
-    <div class="nav-item">
-      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <button type="button" class="nav-btn active">核銷管理 ▾</button>
       <div class="dropdown-content">
         <div class="dropdown-divider">關懷核銷</div>
+        <a href="關懷核銷食材費.html">關懷核銷食材費</a>
         <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
         <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
         <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
-        <div class="dropdown-divider">其他核銷計畫（預留）</div>
-        <a href="#" onclick="alert('長照核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">長照核銷（待建立）</a>
-        <a href="#" onclick="alert('多元核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">多元核銷（待建立）</a>
-        <a href="#" onclick="alert('伯公核銷專屬記錄表預留擴充中，歡迎隨時提供表單格式建立！'); return false;">伯公核銷（待建立）</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照核銷食材費.html">長照核銷食材費</a>
+        <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+        <div class="dropdown-divider">其他計畫核銷</div>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="課程活動表.html">課程活動表</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
       </div>
     </div>
   </div>
 </nav>
 
 <div class="container">
-  <h1>【關懷核銷】每月業務費記錄</h1>
-
-  <div class="toolbar">
-    <label><strong>民國年：</strong>
-      <select id="rocYearSelect" onchange="loadExpenses()">
-        <option value="115">115 年 (2026)</option>
-        <option value="116">116 年 (2027)</option>
-        <option value="117">117 年 (2028)</option>
-      </select>
-    </label>
-    <label><strong>檢視區間：</strong>
-      <select id="quarterSelect" onchange="renderTable()">
-        <option value="all">全年 1～12 月</option>
-        <option value="1">第 1 季（1～3 月）</option>
-        <option value="2">第 2 季（4～6 月）</option>
-        <option value="3">第 3 季（7～9 月）</option>
-        <option value="4" selected>第 4 季（10～12 月）</option>
-      </select>
-    </label>
-    <button type="button" class="btn btn-primary" onclick="saveAllExpenses()">儲存全部月份變更</button>
-    <button type="button" class="btn" style="background:#2563eb; color:#fff;" onclick="syncTempLaborFromHours(true)">重新同步臨時酬勞費</button>
-    <span id="statusText" style="font-weight:bold; color:#166534;"></span>
+  <div class="header-bar">
+    <h1>【關懷核銷】每月業務費記錄</h1>
+    <div class="no-print" style="display:flex; gap:8px; align-items:center;">
+      <span id="statusText" style="font-size:0.86rem; font-weight:bold; color:#0f766e;"></span>
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">列印</button>
+    </div>
   </div>
 
-  <div class="tip-box">
-    1. <strong>多筆金額累加提示</strong>：在<strong>「瓦斯費、電話費、電費、水費」</strong>欄位中，可直接輸入如 <strong><code>315+256+110</code></strong> 或 <strong><code>=315+256+110</code></strong>，系統會自動計算總和並顯示「共幾筆」費用，儲存後也會完整保留您的算式明細！<br>
-    2. <strong>臨時酬勞費自動連動</strong>：每月「臨時酬勞費」會自動讀取並連動<strong>「<a href="臨時人員時數記錄.html" style="color:#0f766e; text-decoration:underline;">3. 臨時人員時數記錄</a>」</strong>的單月實領金額總計（亦提供「重新同步時數金額」按鈕可隨時更新）。
+  <div class="toolbar-row no-print">
+    <label style="font-weight:bold;">民國年：</label>
+    <select id="yearSelect" onchange="onYearChange()">
+      <option value="115">115 年 (2026)</option>
+      <option value="116">116 年 (2027)</option>
+      <option value="117">117 年 (2028)</option>
+    </select>
+
+    <label style="font-weight:bold;">檢視區間：</label>
+    <select id="quarterSelect" onchange="renderTable()">
+      <option value="Q1">第1季（1～3月）</option>
+      <option value="Q2">第2季（4～6月）</option>
+      <option value="Q3">第3季（7～9月）</option>
+      <option value="Q4" selected>第4季（10～12月）</option>
+      <option value="ALL">全年度（1～12月）</option>
+    </select>
+
+    <button type="button" class="btn btn-primary btn-sm" onclick="saveAllToCloud()">儲存全部月份變更</button>
+    <button type="button" class="btn btn-amber btn-sm" onclick="syncFoodFeeFromReceipts()">重新同步關懷食材費</button>
+    <button type="button" class="btn btn-blue btn-sm" onclick="syncTempStaffFee()">重新同步臨時酬勞費</button>
   </div>
 
-  <div class="summary-banner">
-    <div class="item">本區間關懷業務費合計：<span class="val" id="periodTotalNum">0 元</span></div>
-    <div class="item">大寫：<span class="val" id="periodTotalChinese">零元整</span></div>
+  <div class="info-box no-print">
+    <div>1. <strong>關懷食材費自動連動</strong>：各月「食材費」會自動從資料庫讀取「<a href="關懷核銷食材費.html" style="color:#0369a1;font-weight:bold;">關懷核銷食材費</a>」當月收據總計；點選「重新同步關懷食材費」可立即更新，按「儲存全部月份變更」即可寫入資料庫。</div>
+    <div>2. <strong>多筆金額累加提示</strong>：在「瓦斯費、電話費、電費、水費」欄位中，可直接輸入如 <code>315+256+110</code> 或 <code>=315+256+110</code>，系統會自動計算總和並顯示「共幾筆」費用。</div>
+    <div>3. <strong>臨時酬勞費自動連動</strong>：每月「臨時酬勞費」會自動讀取並連動「<a href="臨時人員時數記錄.html" style="color:#0369a1;font-weight:bold;">3. 臨時人員時數記錄</a>」的單月實領金額總計。</div>
   </div>
 
-  <table class="expense-table">
-    <thead>
-      <tr>
-        <th style="width:70px;">月份</th>
-        <th style="width:105px;">食材費</th>
-        <th style="width:145px;">瓦斯費<br><span style="font-size:0.78rem; font-weight:normal;">(可輸入 + 算式)</span></th>
-        <th style="width:105px;">網路費</th>
-        <th style="width:145px;">電話費<br><span style="font-size:0.78rem; font-weight:normal;">(可輸入 + 算式)</span></th>
-        <th style="width:145px;">電費<br><span style="font-size:0.78rem; font-weight:normal;">(可輸入 + 算式)</span></th>
-        <th style="width:145px;">水費<br><span style="font-size:0.78rem; font-weight:normal;">(可輸入 + 算式)</span></th>
-        <th style="width:125px;">臨時酬勞費<br><span style="font-size:0.76rem; font-weight:normal; color:#0f766e;">(連動時數記錄)</span></th>
-        <th style="width:110px;">單月合計</th>
-        <th>備註</th>
-      </tr>
-    </thead>
-    <tbody id="expenseBody"></tbody>
-    <tfoot id="expenseFoot"></tfoot>
-  </table>
+  <div class="period-banner" id="periodBanner"></div>
+
+  <div style="overflow-x:auto;">
+    <table class="excel-table" id="expenseTable"></table>
+  </div>
 </div>
 
 <script>
-  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
-    const pwd = prompt('請輸入老庄據點系統通行密碼：');
-    if (pwd === STATION_PASSCODE) {
-      sessionStorage.setItem('care_auth', 'true');
-      localStorage.setItem('care_auth', 'true');
-    } else {
-      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
-    }
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
   }
 
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const ALL_FIELDS = ['food_fee', 'gas_fee', 'internet_fee', 'phone_fee', 'electricity_fee', 'water_fee', 'temp_labor_fee'];
-  const MULTI_FIELDS = ['gas_fee', 'phone_fee', 'electricity_fee', 'water_fee'];
+  let currentYear = 115;
   let monthDataMap = {};
+  let foodTotalsByMonth = {};
+  let tempStaffTotalsByMonth = {};
 
-  // 解析算式（如 "=315+256+110" 或 "315+256+110" 或單一數字 "3650"）
-  function parseFormulaExpression(rawStr) {
-    const str = String(rawStr ?? '').trim();
-    if (!str) return { sum: 0, count: 0, cleanExpr: '' };
-    const withoutEq = str.startsWith('=') ? str.slice(1).trim() : str;
-    const parts = withoutEq.split('+').map(s => s.trim()).filter(s => s !== '');
-    let sum = 0;
-    let validCount = 0;
-    parts.forEach(p => {
-      const num = parseFloat(p);
-      if (!isNaN(num)) {
-        sum += num;
-        if (num !== 0) validCount++;
-      }
-    });
-    return { sum: Math.round(sum), count: validCount, cleanExpr: str };
+  const QUARTER_MONTHS = {
+    Q1: { label: '第1季（1～3月）', months: [1, 2, 3] },
+    Q2: { label: '第2季（4～6月）', months: [4, 5, 6] },
+    Q3: { label: '第3季（7～9月）', months: [7, 8, 9] },
+    Q4: { label: '第4季（10～12月）', months: [10, 11, 12] },
+    ALL: { label: '全年度（1～12月）', months: [1,2,3,4,5,6,7,8,9,10,11,12] }
+  };
+
+  function fmt(n) {
+    return Math.round(Number(n) || 0).toLocaleString('en-US');
   }
 
-  function numberToChineseCurrency(n) {
-    n = Math.round(Number(n) || 0);
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('statusText');
+    if (!el) return;
+    el.style.color = isErr ? '#dc2626' : '#0f766e';
+    el.textContent = msg;
+  }
+
+  function numberToChinese(num) {
+    const n = Math.round(Number(num) || 0);
     if (n === 0) return '零元整';
-    const digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
-    const units = ['', '拾', '佰', '仟'];
-    const bigUnits = ['', '萬', '億'];
-    let str = '';
-    let zeroFlag = false;
-    const s = String(n);
-    const len = s.length;
-    for (let i = 0; i < len; i++) {
-      const num = parseInt(s[i], 10);
-      const pos = len - 1 - i;
-      const unitIdx = pos % 4;
-      const bigIdx = Math.floor(pos / 4);
-      if (num === 0) {
-        zeroFlag = true;
-      } else {
-        if (zeroFlag) {
-          str += '零';
-          zeroFlag = false;
+    const digits = ['零','壹','貳','參','肆','伍','陸','柒','捌','玖'];
+    const units = ['','拾','佰','仟'];
+    const bigUnits = ['','萬','億'];
+    let str = String(Math.abs(n));
+    let parts = [];
+    let bigIdx = 0;
+    while (str.length > 0) {
+      const seg = str.slice(-4);
+      str = str.slice(0, -4);
+      let segStr = '';
+      for (let i = 0; i < seg.length; i++) {
+        const d = parseInt(seg[i], 10);
+        const uIdx = seg.length - 1 - i;
+        if (d !== 0) {
+          segStr += digits[d] + units[uIdx];
+        } else if (!segStr.endsWith('零')) {
+          segStr += '零';
         }
-        str += digits[num] + units[unitIdx];
       }
-      if (unitIdx === 0 && bigIdx > 0) {
-        str += bigUnits[bigIdx];
-        zeroFlag = false;
-      }
+      segStr = segStr.replace(/零+$/, '');
+      if (segStr) parts.unshift(segStr + bigUnits[bigIdx]);
+      bigIdx++;
     }
-    return str + '元整';
+    return (n < 0 ? '負' : '') + parts.join('') + '元整';
   }
 
-  async function loadExpenses() {
-    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
-    const statusEl = document.getElementById('statusText');
-    statusEl.textContent = '載入中...';
-
-    const [expRes, hoursRes] = await Promise.all([
-      supabaseClient
-        .from('monthly_business_expenses')
-        .select('*')
-        .eq('program_type', '關懷')
-        .eq('roc_year', rocYear),
-      supabaseClient
-        .from('temp_staff_hours')
-        .select('month, role_label, staff_name, work_days, hours_per_day, hourly_rate')
-        .eq('roc_year', rocYear)
-    ]);
-
-    if (expRes.error) {
-      statusEl.style.color = '#dc2626';
-      statusEl.textContent = '讀取失敗：' + expRes.error.message;
-      return;
+  function evalSumExpr(rawVal) {
+    const s = String(rawVal ?? '').trim();
+    if (!s) return { sum: 0, count: 0, isExpr: false };
+    const clean = s.startsWith('=') ? s.slice(1).trim() : s;
+    const tokens = clean.split('+').map(t => t.trim()).filter(t => t !== '');
+    if (tokens.length === 0) return { sum: 0, count: 0, isExpr: false };
+    let total = 0;
+    let validCount = 0;
+    for (const tok of tokens) {
+      const n = Number(tok.replace(/,/g, ''));
+      if (Number.isFinite(n)) {
+        total += n;
+        validCount++;
+      }
     }
+    const isExpr = clean.includes('+') && validCount >= 2;
+    return { sum: Math.round(total), count: validCount, isExpr };
+  }
 
-    // 計算「3. 臨時人員時數記錄」各月實領金額總計
-    const linkedTempLaborMap = {};
-    const linkedTempDetailMap = {};
-    for (let m = 1; m <= 12; m++) {
-      linkedTempLaborMap[m] = 0;
-      linkedTempDetailMap[m] = [];
-    }
-    if (!hoursRes.error && hoursRes.data) {
-      hoursRes.data.forEach(h => {
-        const days = Number(h.work_days) || 0;
-        const hrs = days * (Number(h.hours_per_day) || 3);
-        const rate = Number(h.hourly_rate) || 196;
-        const pay = Math.round(hrs * rate);
-        linkedTempLaborMap[h.month] = (linkedTempLaborMap[h.month] || 0) + pay;
-        if (pay > 0) {
-          linkedTempDetailMap[h.month].push(`${h.role_label || ''}${h.staff_name ? '(' + h.staff_name + ')' : ''} ${pay.toLocaleString()}`);
-        }
-      });
-    }
-
-    monthDataMap = {};
-    for (let m = 1; m <= 12; m++) {
+  function ensureMonthRow(m) {
+    if (!monthDataMap[m]) {
       monthDataMap[m] = {
-        program_type: '關懷', roc_year: rocYear, month: m,
-        food_fee: 0, gas_fee: 0, internet_fee: 0, phone_fee: 0,
-        electricity_fee: 0, water_fee: 0,
-        temp_labor_fee: linkedTempLaborMap[m] || 0,
-        linked_temp_detail: linkedTempDetailMap[m].join(' + '),
-        remark: '', detail_formulas: {}
+        month: m,
+        food_fee: 0,
+        gas_fee: '',
+        internet_fee: 0,
+        phone_fee: '',
+        electricity_fee: '',
+        water_fee: '',
+        temp_staff_fee: 0,
+        remark: ''
       };
     }
-    (expRes.data || []).forEach(r => {
-      const formulas = r.detail_formulas || {};
-      MULTI_FIELDS.forEach(f => {
-        if (!formulas[f] && Number(r[f]) > 0) {
-          formulas[f] = String(r[f]);
+  }
+
+  async function loadFoodTotalsFromCloud() {
+    foodTotalsByMonth = {};
+    for (let m = 1; m <= 12; m++) foodTotalsByMonth[m] = 0;
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('food_receipt_items')
+        .select('month, total_price')
+        .eq('roc_year', String(currentYear))
+        .eq('plan_type', 'care');
+      if (!error && Array.isArray(data)) {
+        data.forEach(r => {
+          const mo = parseInt(r.month, 10);
+          if (mo >= 1 && mo <= 12) {
+            foodTotalsByMonth[mo] = (foodTotalsByMonth[mo] || 0) + (Number(r.total_price) || 0);
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  async function loadTempStaffTotalsFromCloud() {
+    tempStaffTotalsByMonth = {};
+    for (let m = 1; m <= 12; m++) tempStaffTotalsByMonth[m] = 0;
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('temp_staff_hour_records')
+        .select('month, actual_pay')
+        .eq('roc_year', currentYear);
+      if (!error && Array.isArray(data)) {
+        data.forEach(r => {
+          const mo = parseInt(r.month, 10);
+          if (mo >= 1 && mo <= 12) {
+            tempStaffTotalsByMonth[mo] = (tempStaffTotalsByMonth[mo] || 0) + (Number(r.actual_pay) || 0);
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  async function loadAllFromCloud() {
+    monthDataMap = {};
+    for (let m = 1; m <= 12; m++) ensureMonthRow(m);
+
+    await Promise.all([loadFoodTotalsFromCloud(), loadTempStaffTotalsFromCloud()]);
+
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('care_monthly_business_expenses')
+          .select('*')
+          .eq('roc_year', currentYear);
+        if (!error && Array.isArray(data)) {
+          data.forEach(r => {
+            const mo = parseInt(r.month, 10);
+            if (mo >= 1 && mo <= 12) {
+              monthDataMap[mo] = {
+                month: mo,
+                food_fee: Number(r.food_fee) || 0,
+                gas_fee: r.gas_fee ?? '',
+                internet_fee: Number(r.internet_fee) || 0,
+                phone_fee: r.phone_fee ?? '',
+                electricity_fee: r.electricity_fee ?? '',
+                water_fee: r.water_fee ?? '',
+                temp_staff_fee: Number(r.temp_staff_fee) || 0,
+                remark: r.remark || ''
+              };
+            }
+          });
         }
-      });
-      // 臨時酬勞費優先採用「3. 臨時人員時數記錄」的最新實領金額總計（若時數表該月尚無任何資料才保留原存值）
-      const syncedTempFee = (hoursRes.data && hoursRes.data.some(h => h.month === r.month))
-        ? (linkedTempLaborMap[r.month] || 0)
-        : (Number(r.temp_labor_fee) || 0);
+      } catch (e) {}
+    }
 
-      monthDataMap[r.month] = {
-        ...monthDataMap[r.month],
-        ...r,
-        temp_labor_fee: syncedTempFee,
-        linked_temp_detail: linkedTempDetailMap[r.month].join(' + '),
-        detail_formulas: formulas
-      };
-    });
+    for (let m = 1; m <= 12; m++) {
+      if (Number(foodTotalsByMonth[m] || 0) > 0) {
+        monthDataMap[m].food_fee = Math.round(Number(foodTotalsByMonth[m]));
+      }
+      if (Number(tempStaffTotalsByMonth[m] || 0) > 0) {
+        monthDataMap[m].temp_staff_fee = Math.round(Number(tempStaffTotalsByMonth[m]));
+      }
+    }
 
-    statusEl.style.color = '#166534';
-    statusEl.textContent = '資料已同步（已連動臨時人員實領總計）';
+    renderTable();
+    setStatus(`已同步 ${currentYear} 年關懷食材費與每月業務費`);
+  }
+
+  async function syncFoodFeeFromReceipts() {
+    await loadFoodTotalsFromCloud();
+    for (let m = 1; m <= 12; m++) {
+      ensureMonthRow(m);
+      monthDataMap[m].food_fee = Math.round(Number(foodTotalsByMonth[m] || 0));
+    }
+    renderTable();
+    setStatus(`已重新同步 ${currentYear} 年各月關懷核銷食材費總計`);
+  }
+
+  async function syncTempStaffFee() {
+    await loadTempStaffTotalsFromCloud();
+    for (let m = 1; m <= 12; m++) {
+      ensureMonthRow(m);
+      monthDataMap[m].temp_staff_fee = Math.round(Number(tempStaffTotalsByMonth[m] || 0));
+    }
+    renderTable();
+    setStatus(`已重新同步 ${currentYear} 年各月臨時酬勞費`);
+  }
+
+  function onFieldChange(m, field, val) {
+    ensureMonthRow(m);
+    if (field === 'food_fee' || field === 'internet_fee' || field === 'temp_staff_fee') {
+      monthDataMap[m][field] = evalSumExpr(val).sum;
+    } else {
+      monthDataMap[m][field] = val;
+    }
     renderTable();
   }
 
-  function getVisibleMonths() {
-    const q = document.getElementById('quarterSelect').value;
-    if (q === '1') return [1, 2, 3];
-    if (q === '2') return [4, 5, 6];
-    if (q === '3') return [7, 8, 9];
-    if (q === '4') return [10, 11, 12];
-    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  }
-
-  function onSingleFieldChange(m, field, val) {
-    if (field === 'remark') {
-      monthDataMap[m].remark = val;
-    } else {
-      monthDataMap[m][field] = parseFloat(val) || 0;
-    }
-    recalcTotals();
-  }
-
-  function onFormulaFieldChange(m, field, rawVal) {
-    const parsed = parseFormulaExpression(rawVal);
-    monthDataMap[m][field] = parsed.sum;
-    monthDataMap[m].detail_formulas[field] = parsed.cleanExpr;
-
-    const metaEl = document.getElementById(`meta-${m}-${field}`);
-    if (metaEl) {
-      if (parsed.count > 1) {
-        metaEl.className = 'formula-meta multi';
-        metaEl.textContent = `= ${parsed.sum.toLocaleString()} 元（共 ${parsed.count} 筆）`;
-      } else if (parsed.count === 1) {
-        metaEl.className = 'formula-meta';
-        metaEl.textContent = `1 筆`;
-      } else {
-        metaEl.className = 'formula-meta';
-        metaEl.textContent = '';
-      }
-    }
-    recalcTotals();
-  }
-
-  function recalcTotals() {
-    const months = getVisibleMonths();
-    const colTotals = { food_fee: 0, gas_fee: 0, internet_fee: 0, phone_fee: 0, electricity_fee: 0, water_fee: 0, temp_labor_fee: 0 };
-    let grandTotal = 0;
-
-    months.forEach(m => {
-      const row = monthDataMap[m];
-      let rowSum = 0;
-      ALL_FIELDS.forEach(f => {
-        const v = Number(row[f]) || 0;
-        rowSum += v;
-        colTotals[f] += v;
-      });
-      grandTotal += rowSum;
-      const cell = document.getElementById(`row-sum-${m}`);
-      if (cell) cell.textContent = rowSum.toLocaleString();
-    });
-
-    ALL_FIELDS.forEach(f => {
-      const fCell = document.getElementById(`col-sum-${f}`);
-      if (fCell) fCell.textContent = colTotals[f].toLocaleString();
-    });
-    const gCell = document.getElementById('grand-sum-cell');
-    if (gCell) gCell.textContent = grandTotal.toLocaleString();
-
-    document.getElementById('periodTotalNum').textContent = `${grandTotal.toLocaleString()} 元`;
-    document.getElementById('periodTotalChinese').textContent = numberToChineseCurrency(grandTotal);
+  function calcMonthTotal(m) {
+    const r = monthDataMap[m];
+    if (!r) return 0;
+    return (
+      evalSumExpr(r.food_fee).sum +
+      evalSumExpr(r.gas_fee).sum +
+      evalSumExpr(r.internet_fee).sum +
+      evalSumExpr(r.phone_fee).sum +
+      evalSumExpr(r.electricity_fee).sum +
+      evalSumExpr(r.water_fee).sum +
+      evalSumExpr(r.temp_staff_fee).sum
+    );
   }
 
   function renderTable() {
-    const months = getVisibleMonths();
-    const tbody = document.getElementById('expenseBody');
-    tbody.innerHTML = months.map(m => {
+    const qKey = document.getElementById('quarterSelect').value;
+    const qInfo = QUARTER_MONTHS[qKey] || QUARTER_MONTHS.Q4;
+    const months = qInfo.months;
+
+    let periodSum = 0;
+    months.forEach(m => { periodSum += calcMonthTotal(m); });
+    document.getElementById('periodBanner').innerHTML =
+      `本區間關懷業務費合計：<span style="color:#dc2626;font-size:1.25rem;">${fmt(periodSum)}</span> 元　　大寫：<span style="color:#b91c1c;">${numberToChinese(periodSum)}</span>`;
+
+    const sums = { food: 0, gas: 0, net: 0, phone: 0, elec: 0, water: 0, staff: 0, total: 0 };
+
+    const rowsHtml = months.map(m => {
       const r = monthDataMap[m];
-      const cellsHtml = ALL_FIELDS.map(f => {
-        if (MULTI_FIELDS.includes(f)) {
-          const expr = r.detail_formulas[f] || (Number(r[f]) > 0 ? String(r[f]) : '');
-          const parsed = parseFormulaExpression(expr);
-          let metaHtml = '';
-          if (parsed.count > 1) {
-            metaHtml = `<div class="formula-meta multi" id="meta-${m}-${f}">= ${parsed.sum.toLocaleString()} 元（共 ${parsed.count} 筆）</div>`;
-          } else if (parsed.count === 1) {
-            metaHtml = `<div class="formula-meta" id="meta-${m}-${f}">1 筆</div>`;
-          } else {
-            metaHtml = `<div class="formula-meta" id="meta-${m}-${f}"></div>`;
-          }
-          return `
-            <td>
-              <input type="text" value="${expr}" placeholder="0 或 315+256" oninput="onFormulaFieldChange(${m}, '${f}', this.value)">
-              ${metaHtml}
-            </td>
-          `;
-        } else if (f === 'temp_labor_fee') {
-          const val = Number(r[f]) || 0;
-          const detailTip = r.linked_temp_detail ? `連動：${r.linked_temp_detail}` : '連動時數記錄';
-          return `
-            <td style="background:#f0fdfa;">
-              <input type="number" id="input-temp-${m}" value="${val === 0 ? '' : val}" placeholder="0" style="font-weight:bold; color:#0f766e;" oninput="onSingleFieldChange(${m}, '${f}', this.value)" title="${detailTip}">
-              <div class="formula-meta" style="color:#0f766e; font-size:0.75rem;">${val > 0 ? '已連動時數表' : '時數表為 0'}</div>
-            </td>
-          `;
-        } else {
-          const val = Number(r[f]) || 0;
-          return `<td><input type="number" value="${val === 0 ? '' : val}" placeholder="0" oninput="onSingleFieldChange(${m}, '${f}', this.value)"></td>`;
-        }
-      }).join('');
+      const foodVal = evalSumExpr(r.food_fee).sum;
+      const gasEval = evalSumExpr(r.gas_fee);
+      const netVal = evalSumExpr(r.internet_fee).sum;
+      const phoneEval = evalSumExpr(r.phone_fee);
+      const elecEval = evalSumExpr(r.electricity_fee);
+      const waterEval = evalSumExpr(r.water_fee);
+      const staffVal = evalSumExpr(r.temp_staff_fee).sum;
+      const rowTotal = foodVal + gasEval.sum + netVal + phoneEval.sum + elecEval.sum + waterEval.sum + staffVal;
+
+      sums.food += foodVal;
+      sums.gas += gasEval.sum;
+      sums.net += netVal;
+      sums.phone += phoneEval.sum;
+      sums.elec += elecEval.sum;
+      sums.water += waterEval.sum;
+      sums.staff += staffVal;
+      sums.total += rowTotal;
+
+      const badge = (evObj) => evObj.isExpr
+        ? `<div class="expr-badge">= ${fmt(evObj.sum)} 元（共 ${evObj.count} 筆）</div>`
+        : (evObj.count === 1 ? `<div style="font-size:0.75rem;color:#64748b;text-align:right;margin-top:2px;">1 筆</div>` : '');
+
+      const linkedFood = Number(foodTotalsByMonth[m] || 0);
+      const foodBadge = linkedFood > 0
+        ? `<div class="food-sync-badge">已連動食材費 ${fmt(linkedFood)}</div>`
+        : `<div style="font-size:0.75rem;color:#64748b;text-align:right;margin-top:2px;">尚未匯入食材費</div>`;
 
       return `
         <tr>
-          <td style="vertical-align:middle;"><strong>${m} 月</strong></td>
-          ${cellsHtml}
-          <td class="total-col" id="row-sum-${m}">0</td>
-          <td><input type="text" value="${r.remark || ''}" placeholder="備註" style="text-align:left;" oninput="onSingleFieldChange(${m}, 'remark', this.value)"></td>
+          <td class="center-col" style="font-weight:bold;">${m} 月</td>
+          <td>
+            <input type="text" class="num-input" value="${foodVal}" onchange="onFieldChange(${m}, 'food_fee', this.value)">
+            ${foodBadge}
+          </td>
+          <td>
+            <input type="text" class="num-input" value="${r.gas_fee}" placeholder="0 或 315+256" onchange="onFieldChange(${m}, 'gas_fee', this.value)">
+            ${badge(gasEval)}
+          </td>
+          <td>
+            <input type="text" class="num-input" value="${netVal}" onchange="onFieldChange(${m}, 'internet_fee', this.value)">
+          </td>
+          <td>
+            <input type="text" class="num-input" value="${r.phone_fee}" placeholder="0 或 315+256" onchange="onFieldChange(${m}, 'phone_fee', this.value)">
+            ${badge(phoneEval)}
+          </td>
+          <td>
+            <input type="text" class="num-input" value="${r.electricity_fee}" placeholder="0 或 315+256" onchange="onFieldChange(${m}, 'electricity_fee', this.value)">
+            ${badge(elecEval)}
+          </td>
+          <td>
+            <input type="text" class="num-input" value="${r.water_fee}" placeholder="0 或 315+256" onchange="onFieldChange(${m}, 'water_fee', this.value)">
+            ${badge(waterEval)}
+          </td>
+          <td class="num-col">
+            <div style="font-weight:bold;color:#0284c7;">${fmt(staffVal)}</div>
+            <div style="font-size:0.75rem;color:#64748b;">${staffVal > 0 ? '已連動時數表' : '時數表為 0'}</div>
+          </td>
+          <td class="num-col" style="font-weight:bold;background:#f0fdf4;">${fmt(rowTotal)}</td>
+          <td>
+            <input type="text" value="${r.remark || ''}" placeholder="備註" onchange="onFieldChange(${m}, 'remark', this.value)" style="width:100%;padding:6px 8px;border:1px solid #cbd5e1;border-radius:4px;">
+          </td>
         </tr>
       `;
     }).join('');
 
-    const tfoot = document.getElementById('expenseFoot');
-    tfoot.innerHTML = `
-      <tr class="grand-row">
-        <td>合計</td>
-        ${ALL_FIELDS.map(f => `<td id="col-sum-${f}" style="text-align:right;">0</td>`).join('')}
-        <td id="grand-sum-cell" style="text-align:right; color:#b91c1c;">0</td>
-        <td></td>
-      </tr>
+    document.getElementById('expenseTable').innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:76px;">月份</th>
+          <th style="width:130px;">食材費</th>
+          <th style="width:145px;">瓦斯費<br><span style="font-size:0.75rem;font-weight:normal;">(可輸入 + 算式)</span></th>
+          <th style="width:110px;">網路費</th>
+          <th style="width:145px;">電話費<br><span style="font-size:0.75rem;font-weight:normal;">(可輸入 + 算式)</span></th>
+          <th style="width:145px;">電費<br><span style="font-size:0.75rem;font-weight:normal;">(可輸入 + 算式)</span></th>
+          <th style="width:145px;">水費<br><span style="font-size:0.75rem;font-weight:normal;">(可輸入 + 算式)</span></th>
+          <th style="width:125px;">臨時酬勞費<br><span style="font-size:0.75rem;font-weight:normal;">(連動時數記錄)</span></th>
+          <th style="width:115px;">單月合計</th>
+          <th>備註</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        <tr class="total-row">
+          <td class="center-col">合計</td>
+          <td class="num-col">${fmt(sums.food)}</td>
+          <td class="num-col">${fmt(sums.gas)}</td>
+          <td class="num-col">${fmt(sums.net)}</td>
+          <td class="num-col">${fmt(sums.phone)}</td>
+          <td class="num-col">${fmt(sums.elec)}</td>
+          <td class="num-col">${fmt(sums.water)}</td>
+          <td class="num-col">${fmt(sums.staff)}</td>
+          <td class="num-col" style="color:#dc2626;">${fmt(sums.total)}</td>
+          <td></td>
+        </tr>
+      </tbody>
     `;
-    recalcTotals();
   }
 
-  async function syncTempLaborFromHours(showMsg = false) {
-    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
-    const statusEl = document.getElementById('statusText');
-    if (showMsg) statusEl.textContent = '正在從臨時人員時數記錄同步...';
-
-    const { data, error } = await supabaseClient
-      .from('temp_staff_hours')
-      .select('month, role_label, staff_name, work_days, hours_per_day, hourly_rate')
-      .eq('roc_year', rocYear);
-
-    if (error) {
-      if (showMsg) alert('同步失敗：' + error.message);
+  async function saveAllToCloud() {
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
       return;
     }
-
-    const sumMap = {};
-    const detailMap = {};
-    for (let m = 1; m <= 12; m++) { sumMap[m] = 0; detailMap[m] = []; }
-    (data || []).forEach(h => {
-      const days = Number(h.work_days) || 0;
-      const hrs = days * (Number(h.hours_per_day) || 3);
-      const rate = Number(h.hourly_rate) || 196;
-      const pay = Math.round(hrs * rate);
-      sumMap[h.month] = (sumMap[h.month] || 0) + pay;
-      if (pay > 0) {
-        detailMap[h.month].push(`${h.role_label || ''}${h.staff_name ? '(' + h.staff_name + ')' : ''} ${pay.toLocaleString()}`);
-      }
-    });
-
+    const payload = [];
     for (let m = 1; m <= 12; m++) {
-      if (monthDataMap[m]) {
-        monthDataMap[m].temp_labor_fee = sumMap[m] || 0;
-        monthDataMap[m].linked_temp_detail = detailMap[m].join(' + ');
-      }
+      ensureMonthRow(m);
+      const r = monthDataMap[m];
+      payload.push({
+        roc_year: currentYear,
+        month: m,
+        food_fee: evalSumExpr(r.food_fee).sum,
+        gas_fee: String(r.gas_fee ?? ''),
+        internet_fee: evalSumExpr(r.internet_fee).sum,
+        phone_fee: String(r.phone_fee ?? ''),
+        electricity_fee: String(r.electricity_fee ?? ''),
+        water_fee: String(r.water_fee ?? ''),
+        temp_staff_fee: evalSumExpr(r.temp_staff_fee).sum,
+        monthly_total: calcMonthTotal(m),
+        remark: r.remark || '',
+        updated_at: new Date().toISOString()
+      });
     }
 
-    renderTable();
-    if (showMsg) {
-      statusEl.style.color = '#166534';
-      statusEl.textContent = '已成功同步臨時人員時數實領金額（請記得按儲存）！';
-    }
-  }
-
-  async function saveAllExpenses() {
-    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
-    const months = getVisibleMonths();
-    const payload = months.map(m => ({
-      program_type: '關懷',
-      roc_year: rocYear,
-      month: m,
-      food_fee: Number(monthDataMap[m].food_fee) || 0,
-      gas_fee: Number(monthDataMap[m].gas_fee) || 0,
-      internet_fee: Number(monthDataMap[m].internet_fee) || 0,
-      phone_fee: Number(monthDataMap[m].phone_fee) || 0,
-      electricity_fee: Number(monthDataMap[m].electricity_fee) || 0,
-      water_fee: Number(monthDataMap[m].water_fee) || 0,
-      temp_labor_fee: Number(monthDataMap[m].temp_labor_fee) || 0,
-      remark: monthDataMap[m].remark || null,
-      detail_formulas: monthDataMap[m].detail_formulas || {}
-    }));
-
-    const statusEl = document.getElementById('statusText');
-    statusEl.textContent = '儲存中...';
-
-    const { error } = await supabaseClient
-      .from('monthly_business_expenses')
-      .upsert(payload, { onConflict: 'program_type,roc_year,month' });
-
-    if (error) {
-      alert('儲存失敗：' + error.message);
-      statusEl.textContent = '儲存失敗';
-    } else {
-      statusEl.style.color = '#166534';
-      statusEl.textContent = '已成功儲存至雲端！';
+    try {
+      const { error } = await supabaseClient
+        .from('care_monthly_business_expenses')
+        .upsert(payload, { onConflict: 'roc_year,month' });
+      if (error) throw error;
+      setStatus(`已儲存 ${currentYear} 年每月業務費記錄至資料庫`);
+      alert(`已儲存 ${currentYear} 年每月業務費記錄至資料庫！`);
+    } catch (e) {
+      alert('儲存失敗：' + (e.message || e));
     }
   }
 
-  loadExpenses();
+  async function onYearChange() {
+    currentYear = parseInt(document.getElementById('yearSelect').value, 10) || 115;
+    await loadAllFromCloud();
+  }
+
+  (async function init() {
+    currentYear = parseInt(document.getElementById('yearSelect').value, 10) || 115;
+    await loadAllFromCloud();
+  })();
 </script>
 </body>
 </html>
