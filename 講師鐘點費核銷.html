@@ -59,11 +59,6 @@
       padding-bottom: 12px; margin-bottom: 16px;
     }
     h1 { color: var(--primary-dark); font-size: 1.32rem; margin: 0; }
-    h2.section-title {
-      font-size: 1.08rem; color: var(--primary-dark); margin: 0 0 10px 0;
-      padding-left: 10px; border-left: 4px solid var(--primary);
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
-    }
 
     .toolbar-row {
       display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
@@ -79,7 +74,7 @@
     }
 
     .btn {
-      padding: 7px 12px; border: none; border-radius: 6px; font-weight: bold;
+      padding: 7px 13px; border: none; border-radius: 6px; font-weight: bold;
       cursor: pointer; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 4px;
       transition: background 0.15s ease;
     }
@@ -93,30 +88,28 @@
     .btn-amber:hover { background: #b45309; }
     .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
     .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
-    .btn-danger { background: #dc2626; color: #fff; }
-    .btn-danger:hover { background: #b91c1c; }
-    .btn-sm { padding: 5px 10px; font-size: 0.83rem; }
+    .btn-sm { padding: 6px 12px; font-size: 0.86rem; }
 
-    .section-card {
-      border: 1px solid var(--border); border-radius: 10px;
-      padding: 14px 16px; margin-bottom: 20px; background: #fff;
+    .sheet-title-banner {
+      text-align: center; font-size: 1.15rem; font-weight: bold;
+      color: #0f172a; padding: 10px 0 12px 0;
     }
 
     .excel-table {
-      width: 100%; border-collapse: collapse; font-size: 0.9rem; background: #fff;
+      width: 100%; border-collapse: collapse; font-size: 0.92rem; background: #fff;
     }
     .excel-table th {
       background: #ffe4e6; color: #881337; font-weight: bold;
-      border: 1px solid #94a3b8; padding: 7px 8px; text-align: center;
+      border: 1px solid #94a3b8; padding: 8px 10px; text-align: center;
       white-space: nowrap;
     }
     .excel-table td {
-      border: 1px solid #94a3b8; padding: 6px 8px; vertical-align: middle;
+      border: 1px solid #94a3b8; padding: 7px 10px; vertical-align: middle;
     }
     .excel-table td.num-col { text-align: right; font-variant-numeric: tabular-nums; }
     .excel-table td.center-col { text-align: center; }
     .excel-table tr.total-row td {
-      background: #fecdd3; font-weight: bold; font-size: 0.95rem; color: #881337;
+      background: #fecdd3; font-weight: bold; font-size: 0.96rem; color: #881337;
     }
     .excel-table tr.sub-total-row td {
       background: #fff1f2; font-weight: bold; color: #9f1239;
@@ -152,7 +145,7 @@
 
     .period-grid {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
-      gap: 16px; margin-top: 10px;
+      gap: 16px; margin-top: 12px;
     }
     .period-card {
       border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #fff;
@@ -164,15 +157,12 @@
     }
     .period-card-title { font-weight: bold; font-size: 1rem; color: #0f172a; }
 
-    .copy-toast {
-      font-size: 0.82rem; color: #0f766e; font-weight: bold;
-    }
+    .copy-toast { font-size: 0.82rem; color: #0f766e; font-weight: bold; }
 
     @media print {
       nav.topbar, .no-print { display: none !important; }
       body { background: #fff; }
       .container { max-width: 100%; margin: 0; padding: 0; border: none; box-shadow: none; }
-      .section-card { break-inside: avoid; }
     }
   </style>
 </head>
@@ -248,49 +238,44 @@
   <div class="header-bar">
     <h1>長照及延緩核銷 — 講師鐘點費核銷與所得稅統計</h1>
     <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <span id="statusText" style="font-size:0.86rem; font-weight:bold; color:#0f766e;"></span>
+      <span id="statusText" style="font-size:0.86rem; font-weight:bold; color:#0f766e;">已同步資料庫「鐘點費-核銷」設定</span>
       <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">列印</button>
     </div>
   </div>
 
-  <!-- 頂部全域條件列 -->
+  <!-- 操作列（與圖2按鈕布局一致，並保留年度/計畫/勾選講師） -->
   <div class="toolbar-row no-print">
-    <div class="toolbar-group">
+    <button type="button" class="btn btn-primary btn-sm" id="btnToggleRateEditor" onclick="toggleRateEditorArea()">展開／收合鐘點費-核銷設定表</button>
+    <button type="button" class="btn btn-outline btn-sm" id="btnToggleGeneratedTable" onclick="toggleGeneratedValueTable()">顯示／隱藏核銷統計數值表</button>
+    <button type="button" class="btn btn-teal btn-sm" onclick="reloadAllFromCloud()">重新載入</button>
+    <button type="button" class="btn btn-blue btn-sm" onclick="saveAllToCloud()">儲存設定</button>
+
+    <div class="toolbar-group" style="margin-left:auto;">
       <label class="ctrl-label" for="globalYearSelect">年度：</label>
       <select id="globalYearSelect" onchange="onYearChange(this.value)">
         <option value="115">115 年</option>
         <option value="116">116 年</option>
         <option value="117">117 年</option>
       </select>
-    </div>
 
-    <div class="toolbar-group">
       <label class="ctrl-label" for="globalPlanFilter">計畫別：</label>
       <select id="globalPlanFilter" onchange="renderAllSections()">
         <option value="ALL">全部計畫</option>
         <option value="LTC">長照課程（1-4季）</option>
         <option value="DELAY">延緩課程（1-3期）</option>
       </select>
-    </div>
 
-    <div class="toolbar-group">
       <div class="picker-dropdown-wrap">
         <button type="button" class="btn btn-outline btn-sm" id="teacherPickerBtn" onclick="togglePickerPanel(event, 'teacherPickerPanel')">勾選講師 ▾</button>
         <div class="picker-panel" id="teacherPickerPanel" onclick="event.stopPropagation()"></div>
       </div>
     </div>
-
-    <div class="toolbar-group" style="margin-left:auto;">
-      <button type="button" class="btn btn-teal btn-sm" onclick="reloadAllFromCloud()">重新載入</button>
-      <button type="button" class="btn btn-blue btn-sm" onclick="saveAllToCloud()">儲存全部至資料庫</button>
-    </div>
   </div>
 
-  <!-- 區塊一：年度/各月計畫鐘點費基準設定（整年固定或特定月份變動） -->
-  <section class="section-card">
-    <h2 class="section-title">
-      <span>一、年度／各月計畫鐘點費基準設定</span>
-      <div class="toolbar-group no-print">
+  <!-- 可展開／收合的「鐘點費-核銷設定表」（支援整年固定與各月變動設定、新增／修改計畫欄） -->
+  <div id="rateEditorArea" style="display:none; margin-bottom:20px;">
+    <div class="toolbar-row no-print" style="background:#f8fafc; border-color:#e2e8f0;">
+      <div class="toolbar-group">
         <label class="ctrl-label" for="rateScopeSelect">生效範圍：</label>
         <select id="rateScopeSelect" onchange="onRateScopeChange(this.value)">
           <option value="YEAR">整年度固定基準（預設）</option>
@@ -307,54 +292,63 @@
           <option value="M11">11 月變動設定</option>
           <option value="M12">12 月變動設定</option>
         </select>
-        <button type="button" class="btn btn-amber btn-sm" id="btnResetMonthOverride" onclick="resetCurrentMonthOverride()" style="display:none;">清除此月變動（改回整年基準）</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="copyCurrentRateTableToClipboard()">複製基準數值</button>
-        <span class="copy-toast" id="rateCopyToast"></span>
+        <button type="button" class="btn btn-amber btn-sm" id="btnResetMonthOverride" onclick="resetCurrentMonthOverride()" style="display:none;">清除此月變動</button>
       </div>
-    </h2>
 
-    <div class="toolbar-row no-print" style="margin-bottom:10px; background:#f8fafc; border-color:#e2e8f0;">
       <div class="toolbar-group">
-        <label class="ctrl-label" for="newPlanInput">新增計畫欄：</label>
-        <input type="text" id="newPlanInput" placeholder="例如：延緩3期" style="width:130px;">
+        <label class="ctrl-label" for="newPlanInput">新增計畫：</label>
+        <input type="text" id="newPlanInput" placeholder="如：延緩3期" style="width:125px;">
         <button type="button" class="btn btn-outline btn-sm" onclick="addPlanColumn()">＋ 新增</button>
       </div>
+
       <div class="toolbar-group">
-        <label class="ctrl-label" for="renamePlanSelect">修改計畫欄：</label>
+        <label class="ctrl-label" for="renamePlanSelect">修改名稱：</label>
         <select id="renamePlanSelect" style="width:120px;"></select>
-        <input type="text" id="renamePlanInput" placeholder="新名稱" style="width:120px;">
+        <input type="text" id="renamePlanInput" placeholder="新計畫名稱" style="width:120px;">
         <button type="button" class="btn btn-outline btn-sm" onclick="renamePlanColumn()">修改</button>
+      </div>
+
+      <div class="toolbar-group" style="margin-left:auto;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyGeneratedTableToClipboard()">複製數值表</button>
+        <span class="copy-toast" id="rateCopyToast"></span>
       </div>
     </div>
 
     <div style="overflow-x:auto;">
       <table class="excel-table" id="rateBenchmarkTable"></table>
     </div>
-  </section>
+  </div>
 
-  <!-- 區塊二：單月／每季核銷與個人所得稅彙總（直接套用基準並可一鍵複製數值） -->
-  <section class="section-card">
-    <h2 class="section-title">
-      <span>二、單月／每季核銷與個人所得稅彙總</span>
-      <div class="toolbar-group no-print">
+  <!-- 預設顯示的「鐘點費-核銷產生數值表（供帶入核銷統計）」（與圖2一致） -->
+  <div id="generatedValueTableArea" style="margin-bottom:24px;">
+    <div class="sheet-title-banner">鐘點費-核銷產生數值表（供帶入核銷統計）</div>
+    <div style="overflow-x:auto;">
+      <table class="excel-table" id="generatedValueTable"></table>
+    </div>
+  </div>
+
+  <!-- 單月／每季核銷套用與年度所得稅彙總（供複製套用至每季或單月核銷文件） -->
+  <div id="periodAndTaxArea" style="padding-top:16px; border-top:2px solid var(--border);">
+    <div class="toolbar-row no-print">
+      <strong style="color:var(--primary-dark);">每季／單月核銷套用與所得稅彙總</strong>
+      <div class="toolbar-group" style="margin-left:auto;">
         <button type="button" class="btn btn-primary btn-sm" onclick="applyBenchmarkToAllVisiblePeriods()">全部套用基準</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="copyTaxSummaryToClipboard()">複製所得稅彙總</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyTaxSummaryToClipboard()">複製彙總數值</button>
         <span class="copy-toast" id="summaryCopyToast"></span>
       </div>
-    </h2>
+    </div>
 
     <div id="periodSheetsContainer" class="period-grid"></div>
 
-    <!-- 全年／篩選範圍 講師個人所得稅統計彙總 -->
-    <div style="margin-top:20px; padding-top:14px; border-top:2px solid var(--border);">
+    <div style="margin-top:20px; padding-top:14px; border-top:1px solid var(--border);">
       <div class="period-card-header" style="border-bottom:none; margin-bottom:6px;">
-        <span class="period-card-title" id="taxSummaryTitle">年度講師核銷所得稅彙總（依勾選講師與計畫計算）</span>
+        <span class="period-card-title" id="taxSummaryTitle">年度講師核銷所得稅彙總</span>
       </div>
       <div style="overflow-x:auto;">
         <table class="excel-table" id="taxSummaryTable"></table>
       </div>
     </div>
-  </section>
+  </div>
 </div>
 
 <script>
@@ -373,15 +367,72 @@
   const DEFAULT_PLANS = ['長照課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
   let plans = [...DEFAULT_PLANS];
 
+  // 與圖2一致的預設鐘點費基準數值（合計：長照 6,600、多元 13,800、延緩1期 2,400、延緩2期 2,400、伯公 12,000、樂齡 0、單堂小計 37,200）
   const INITIAL_SEED_RATES = {
-    '林熙鈴': { '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩2期': { mode: 'per_hour', rate: 2400, hours: 1 }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
-    '張國堂': { '長照課程': { mode: 'per_hour', rate: 2000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
-    '鄧美續': { '長照課程': { mode: 'per_hour', rate: 1600, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 2000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
-    '蔡牡連': { '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
-    '黃仲慧': { '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
-    '吳貴英': { '長照課程': { mode: 'none', rate: '', hours: '' }, '多元課程': { mode: 'none', rate: '', hours: '' }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 4000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
-    '詹細珍': { '長照課程': { mode: 'none', rate: '', hours: '' }, '多元課程': { mode: 'none', rate: '', hours: '' }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 4000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
-    '詹益誠': { '長照課程': { mode: 'none', rate: '', hours: '' }, '多元課程': { mode: 'none', rate: '', hours: '' }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 2000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } }
+    '林熙鈴': {
+      '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 },
+      '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 },
+      '延緩1期': { mode: 'per_hour', rate: 2400, hours: 1 },
+      '延緩2期': { mode: 'per_hour', rate: 2400, hours: 1 },
+      '伯公課程': { mode: 'none', rate: '', hours: '' },
+      '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' }
+    },
+    '張國堂': {
+      '長照課程': { mode: 'per_hour', rate: 2000, hours: 1 },
+      '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 },
+      '延緩1期': { mode: 'none', rate: '', hours: '' },
+      '延緩2期': { mode: 'none', rate: '', hours: '' },
+      '伯公課程': { mode: 'none', rate: '', hours: '' },
+      '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' }
+    },
+    '鄧美續': {
+      '長照課程': { mode: 'per_hour', rate: 1600, hours: 1 },
+      '多元課程': { mode: 'per_hour', rate: 2400, hours: 1 },
+      '延緩1期': { mode: 'none', rate: '', hours: '' },
+      '延緩2期': { mode: 'none', rate: '', hours: '' },
+      '伯公課程': { mode: 'per_hour', rate: 2000, hours: 1 },
+      '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' }
+    },
+    '蔡牡連': {
+      '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 },
+      '多元課程': { mode: 'per_hour', rate: 2400, hours: 1 },
+      '延緩1期': { mode: 'none', rate: '', hours: '' },
+      '延緩2期': { mode: 'none', rate: '', hours: '' },
+      '伯公課程': { mode: 'none', rate: '', hours: '' },
+      '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' }
+    },
+    '黃仲慧': {
+      '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 },
+      '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 },
+      '延緩1期': { mode: 'none', rate: '', hours: '' },
+      '延緩2期': { mode: 'none', rate: '', hours: '' },
+      '伯公課程': { mode: 'none', rate: '', hours: '' },
+      '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' }
+    },
+    '吳貴英': {
+      '長照課程': { mode: 'none', rate: '', hours: '' },
+      '多元課程': { mode: 'none', rate: '', hours: '' },
+      '延緩1期': { mode: 'none', rate: '', hours: '' },
+      '延緩2期': { mode: 'none', rate: '', hours: '' },
+      '伯公課程': { mode: 'per_hour', rate: 4000, hours: 1 },
+      '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' }
+    },
+    '詹細珍': {
+      '長照課程': { mode: 'none', rate: '', hours: '' },
+      '多元課程': { mode: 'none', rate: '', hours: '' },
+      '延緩1期': { mode: 'none', rate: '', hours: '' },
+      '延緩2期': { mode: 'none', rate: '', hours: '' },
+      '伯公課程': { mode: 'per_hour', rate: 4000, hours: 1 },
+      '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' }
+    },
+    '詹益誠': {
+      '長照課程': { mode: 'none', rate: '', hours: '' },
+      '多元課程': { mode: 'none', rate: '', hours: '' },
+      '延緩1期': { mode: 'none', rate: '', hours: '' },
+      '延緩2期': { mode: 'none', rate: '', hours: '' },
+      '伯公課程': { mode: 'per_hour', rate: 2000, hours: 1 },
+      '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' }
+    }
   };
 
   let yearRateData = {};
@@ -438,6 +489,27 @@
   document.addEventListener('click', () => {
     document.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('open'));
   });
+
+  function toggleRateEditorArea() {
+    const area = document.getElementById('rateEditorArea');
+    if (!area) return;
+    const willOpen = area.style.display === 'none';
+    area.style.display = willOpen ? 'block' : 'none';
+    if (willOpen) {
+      populateRenameSelect();
+      renderRateBenchmarkTable();
+    }
+  }
+
+  function toggleGeneratedValueTable() {
+    const area = document.getElementById('generatedValueTableArea');
+    if (!area) return;
+    const willOpen = area.style.display === 'none';
+    area.style.display = willOpen ? 'block' : 'none';
+    if (willOpen) {
+      renderGeneratedValueTable();
+    }
+  }
 
   function sortByMaster(arr) {
     const orderMap = new Map(masterInstructors.map((m, idx) => [m.name, idx]));
@@ -529,7 +601,6 @@
       { name: '張國堂', status: '服務中', hire_type: '外聘' },
       { name: '鄧美續', status: '服務中', hire_type: '內聘' },
       { name: '蔡牡連', status: '服務中', hire_type: '內聘' },
-      { name: '吳佩珊', status: '暫停', hire_type: '外聘' },
       { name: '黃仲慧', status: '服務中', hire_type: '外聘' },
       { name: '吳貴英', status: '服務中', hire_type: '' },
       { name: '詹細珍', status: '服務中', hire_type: '' },
@@ -548,7 +619,9 @@
         }
       } catch (e) {}
     }
-    selectedTeachers = sortByMaster(masterInstructors.filter(i => i.status === '服務中').map(i => i.name));
+    const seedNames = Object.keys(INITIAL_SEED_RATES);
+    const activeNames = masterInstructors.filter(i => i.status === '服務中' && seedNames.includes(i.name)).map(i => i.name);
+    selectedTeachers = sortByMaster(activeNames.length > 0 ? activeNames : seedNames);
   }
 
   function onTeacherCheckChange(name, checked) {
@@ -619,7 +692,7 @@
     }
     inp.value = '';
     populateRenameSelect();
-    renderRateBenchmarkTable();
+    renderAllSections();
   }
 
   function renamePlanColumn() {
@@ -658,7 +731,7 @@
     inp.value = '';
     populateRenameSelect();
     renderAllSections();
-    setStatus(`已將「${oldName}」修改為「${newName}」（記得按「儲存全部至資料庫」）`);
+    setStatus(`已將「${oldName}」修改為「${newName}」（記得按「儲存設定」）`);
   }
 
   function onRateScopeChange(val) {
@@ -668,6 +741,7 @@
       resetBtn.style.display = (rateScope !== 'YEAR') ? 'inline-flex' : 'none';
     }
     renderRateBenchmarkTable();
+    renderGeneratedValueTable();
   }
 
   function resetCurrentMonthOverride() {
@@ -677,6 +751,7 @@
       delete yearRateData[currentYear].months[rateScope];
     }
     renderRateBenchmarkTable();
+    renderGeneratedValueTable();
     setStatus(`已清除 ${currentYear} 年 ${rateScope.replace('M', '')} 月變動設定，恢復為整年基準`);
   }
 
@@ -704,6 +779,7 @@
     }
     setRateRule(currentYear, rateScope, instName, planName, updated);
     renderRateBenchmarkTable();
+    renderGeneratedValueTable();
     renderPeriodSheets();
     renderTaxSummaryTable();
   }
@@ -761,10 +837,7 @@
 
       return `
         <tr>
-          <td class="center-col" style="font-weight:bold; background:#f8fafc;">
-            <div>${escapeHtml(instName)}</div>
-            <div style="font-size:0.74rem; color:#64748b; font-weight:normal;">(${escapeHtml(inst.status || '服務中')})</div>
-          </td>
+          <td class="center-col" style="font-weight:bold; background:#f8fafc;">${escapeHtml(instName)}</td>
           ${tds}
           <td class="num-col" style="font-weight:bold;">${fmtNum(rowTotal)}</td>
         </tr>
@@ -774,7 +847,7 @@
     const grandTotal = Object.values(colTotals).reduce((a, b) => a + b, 0);
     const totalRow = `
       <tr class="total-row">
-        <td class="center-col">單堂合計</td>
+        <td class="center-col">合計</td>
         ${plans.map(p => `<td class="num-col">${fmtNum(colTotals[p])}</td>`).join('')}
         <td class="num-col">${fmtNum(grandTotal)}</td>
       </tr>
@@ -783,33 +856,94 @@
     tbl.innerHTML = `
       <thead>
         <tr>
-          <th style="width:110px;">講師姓名</th>
+          <th style="width:120px;">講師姓名</th>
           ${headCells}
-          <th style="width:105px;">單堂小計</th>
+          <th style="width:110px;">單堂小計</th>
         </tr>
       </thead>
       <tbody>${bodyRows}${totalRow}</tbody>
     `;
   }
 
-  function copyCurrentRateTableToClipboard() {
-    const list = selectedTeachers;
-    const scopeLabel = rateScope === 'YEAR' ? `${currentYear}年度固定基準` : `${currentYear}年${parseInt(rateScope.slice(1), 10)}月變動`;
-    const lines = [`[${scopeLabel}] 講師	${plans.join('	')}	單堂小計`];
-    list.forEach(instName => {
+  function renderGeneratedValueTable() {
+    const tbl = document.getElementById('generatedValueTable');
+    if (!tbl) return;
+
+    const list = selectedTeachers.map(name => masterInstructors.find(m => m.name === name) || { name, status: '服務中' });
+    if (list.length === 0) {
+      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:16px; color:#64748b;">請先勾選要顯示的講師</td></tr></tbody>';
+      return;
+    }
+
+    const headCells = plans.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+    const colTotals = {};
+    plans.forEach(p => { colTotals[p] = 0; });
+
+    const bodyRows = list.map(inst => {
+      const instName = inst.name;
+      let rowTotal = 0;
+      const tds = plans.map(plan => {
+        const rule = getRateRule(currentYear, rateScope, instName, plan);
+        const amt = calcSingleSessionAmount(rule);
+        rowTotal += amt;
+        colTotals[plan] += amt;
+        return `<td class="num-col">${fmtNum(amt)}</td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td>${escapeHtml(instName)}</td>
+          ${tds}
+          <td class="num-col" style="font-weight:bold;">${fmtNum(rowTotal)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const grandTotal = Object.values(colTotals).reduce((a, b) => a + b, 0);
+    const totalRow = `
+      <tr class="total-row">
+        <td class="center-col">合計</td>
+        ${plans.map(p => `<td class="num-col">${fmtNum(colTotals[p])}</td>`).join('')}
+        <td class="num-col">${fmtNum(grandTotal)}</td>
+      </tr>
+    `;
+
+    tbl.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:130px;">講師姓名</th>
+          ${headCells}
+          <th style="width:120px;">單堂小計</th>
+        </tr>
+      </thead>
+      <tbody>${bodyRows}${totalRow}</tbody>
+    `;
+  }
+
+  function copyGeneratedTableToClipboard() {
+    const lines = [`講師姓名	${plans.join('	')}	單堂小計`];
+    const colTotals = {};
+    plans.forEach(p => { colTotals[p] = 0; });
+    let grand = 0;
+
+    selectedTeachers.forEach(instName => {
       let rowSum = 0;
       const vals = plans.map(p => {
         const amt = calcSingleSessionAmount(getRateRule(currentYear, rateScope, instName, p));
         rowSum += amt;
+        colTotals[p] += amt;
         return amt;
       });
+      grand += rowSum;
       lines.push(`${instName}	${vals.join('	')}	${rowSum}`);
     });
+    lines.push(`合計	${plans.map(p => colTotals[p]).join('	')}	${grand}`);
+
     navigator.clipboard?.writeText(lines.join('
 ')).then(() => {
-      showToast('rateCopyToast', '已複製基準數值（可直接貼上）');
+      showToast('rateCopyToast', '已複製數值表');
     }).catch(() => {
-      showToast('rateCopyToast', '已準備複製內容');
+      showToast('rateCopyToast', '已準備數值表');
     });
   }
 
@@ -842,7 +976,7 @@
     const planFilter = document.getElementById('globalPlanFilter')?.value || 'ALL';
     const blocks = PERIOD_BLOCKS.filter(b => planFilter === 'ALL' || b.program === planFilter);
     blocks.forEach(b => applyBenchmarkToPeriod(b.periodKey));
-    setStatus(`已將鐘點費基準套用至目前顯示的所有期別`);
+    setStatus('已將鐘點費基準套用至目前顯示的所有期別');
   }
 
   function onPeriodPlanChange(periodKey, colKey, instName, newPlanName) {
@@ -1015,7 +1149,7 @@
     const blocks = PERIOD_BLOCKS.filter(b => planFilter === 'ALL' || b.program === planFilter);
     if (titleEl) {
       const scopeTxt = planFilter === 'LTC' ? '長照課程（1–4季）' : (planFilter === 'DELAY' ? '延緩課程（1–3期）' : '全部計畫');
-      titleEl.textContent = `${currentYear}年度講師核銷與所得稅彙總（${scopeTxt}）`;
+      titleEl.textContent = `${currentYear}年度講師核銷所得稅彙總（${scopeTxt}）`;
     }
 
     if (selectedTeachers.length === 0) {
@@ -1051,7 +1185,7 @@
 
     const totalRow = `
       <tr class="total-row">
-        <td class="center-col">年度核銷金額合計</td>
+        <td class="center-col">核銷金額合計</td>
         ${selectedTeachers.map(n => `<td class="num-col">${fmtNum(instTotals[n])}</td>`).join('')}
       </tr>
     `;
@@ -1101,9 +1235,9 @@
 
     navigator.clipboard?.writeText(lines.join('
 ')).then(() => {
-      showToast('summaryCopyToast', '已複製彙總表數值');
+      showToast('summaryCopyToast', '已複製彙總數值');
     }).catch(() => {
-      showToast('summaryCopyToast', '已準備彙總表數值');
+      showToast('summaryCopyToast', '已準備彙總數值');
     });
   }
 
@@ -1111,6 +1245,7 @@
     populateRenameSelect();
     renderTeacherPicker();
     renderRateBenchmarkTable();
+    renderGeneratedValueTable();
     renderPeriodSheets();
     renderTaxSummaryTable();
   }
@@ -1195,7 +1330,7 @@
     }
 
     renderAllSections();
-    if (showMsg) setStatus(`已載入 ${currentYear} 年度鐘點費基準與核銷資料`);
+    if (showMsg) setStatus(`已同步資料庫「鐘點費-核銷」設定（${currentYear}年度）`);
   }
 
   async function saveAllToCloud() {
@@ -1259,7 +1394,7 @@
         if (cErr) throw cErr;
       }
 
-      setStatus(`已同步儲存 ${currentYear} 年度鐘點費基準與核銷資料至資料庫`);
+      setStatus(`已同步資料庫「鐘點費-核銷」設定（${currentYear}年度）`);
       alert(`已儲存 ${currentYear} 年度鐘點費基準與核銷資料至資料庫！`);
     } catch (e) {
       setStatus('雲端儲存部分失敗，已保留本機資料', true);
