@@ -386,66 +386,68 @@
     </div>
   </section>
 
-  <!-- 區塊二：單月／每季核銷與個人所得稅彙總（長照分季/單月 + 延緩分期 1-3 期，預設當年度當月季） -->
+  <!-- 區塊二：長照核銷與延緩核銷表格（分開顯示，直接連動上方鐘點費設定，純文字顯示） -->
   <section class="section-card">
     <h2 class="section-title">
-      <span>二、單月／每季核銷與個人所得稅彙總</span>
+      <span>二、長照核銷與延緩核銷</span>
       <div class="toolbar-group no-print">
-        <button type="button" class="btn btn-primary btn-sm" onclick="applyBenchmarkToCurrentView()">套用基準至目前表格</button>
         <button type="button" class="btn btn-blue btn-sm" onclick="saveAllToCloud()">儲存至資料庫</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="copyCurrentPeriodToClipboard()">複製目前表格數值</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyLtcPeriodToClipboard()">複製長照表格數值</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="copyDelayPeriodToClipboard()">複製延緩表格數值</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="copyTaxSummaryToClipboard()">複製所得稅彙總</button>
         <span class="copy-toast" id="summaryCopyToast"></span>
       </div>
     </h2>
 
-    <!-- 篩選列：長照（選季或單月）與 延緩（選 1-3 期） -->
-    <div class="toolbar-row no-print">
-      <div class="toolbar-group">
-        <label class="ctrl-label" for="viewCategorySelect">顯示類別：</label>
-        <select id="viewCategorySelect" onchange="onViewCategoryChange(this.value)">
-          <option value="LTC">長照（分季／單月）</option>
-          <option value="DELAY">延緩（分期 1–3 期）</option>
-        </select>
+    <!-- 1. 長照核銷區塊（分季／單月，直接連動上方鐘點費設定「長照課程」，純文字顯示） -->
+    <div style="margin-bottom:22px;">
+      <div class="toolbar-row no-print" style="margin-bottom:10px;">
+        <div class="toolbar-group">
+          <span class="ctrl-label" style="color:#9f1239;">長照核銷（分季／單月）：</span>
+          <label class="ctrl-label" for="ltcPeriodSelect">季／單月：</label>
+          <select id="ltcPeriodSelect" onchange="renderLtcPeriodView(); renderTaxSummaryTable();">
+            <option value="Q1">第1季（1–3月）</option>
+            <option value="Q2">第2季（4–6月）</option>
+            <option value="Q3">第3季（7–9月）</option>
+            <option value="Q4" selected>第4季（10–12月）</option>
+            <option value="M01">1月（單月）</option>
+            <option value="M02">2月（單月）</option>
+            <option value="M03">3月（單月）</option>
+            <option value="M04">4月（單月）</option>
+            <option value="M05">5月（單月）</option>
+            <option value="M06">6月（單月）</option>
+            <option value="M07">7月（單月）</option>
+            <option value="M08">8月（單月）</option>
+            <option value="M09">9月（單月）</option>
+            <option value="M10">10月（單月）</option>
+            <option value="M11">11月（單月）</option>
+            <option value="M12">12月（單月）</option>
+          </select>
+        </div>
+        <span style="font-size:0.82rem; color:#64748b;">（直接連動上方設定「長照課程」金額與堂數，純文字顯示）</span>
       </div>
-
-      <div class="toolbar-group" id="ltcSelectorGroup">
-        <label class="ctrl-label" for="ltcPeriodSelect">長照季／單月：</label>
-        <select id="ltcPeriodSelect" onchange="renderActivePeriodView()">
-          <option value="Q1">第1季（1–3月）</option>
-          <option value="Q2">第2季（4–6月）</option>
-          <option value="Q3">第3季（7–9月）</option>
-          <option value="Q4">第4季（10–12月）</option>
-          <option value="M01">1月（單月）</option>
-          <option value="M02">2月（單月）</option>
-          <option value="M03">3月（單月）</option>
-          <option value="M04">4月（單月）</option>
-          <option value="M05">5月（單月）</option>
-          <option value="M06">6月（單月）</option>
-          <option value="M07">7月（單月）</option>
-          <option value="M08">8月（單月）</option>
-          <option value="M09">9月（單月）</option>
-          <option value="M10">10月（單月）</option>
-          <option value="M11">11月（單月）</option>
-          <option value="M12">12月（單月）</option>
-        </select>
-      </div>
-
-      <div class="toolbar-group" id="delaySelectorGroup" style="display:none;">
-        <label class="ctrl-label" for="delayTermSelect">延緩期別：</label>
-        <select id="delayTermSelect" onchange="renderActivePeriodView()">
-          <option value="T1">延緩第1期</option>
-          <option value="T2">延緩第2期</option>
-          <option value="T3">延緩第3期</option>
-        </select>
-      </div>
+      <div id="ltcPeriodSheetContainer"></div>
     </div>
 
-    <!-- 單一目標表格呈現區（一次只顯示目前選擇的一張表） -->
-    <div id="activePeriodSheetContainer"></div>
+    <!-- 2. 延緩核銷區塊（分期 1–3 期，置於下方獨立表格呈現，直接連動上方鐘點費設定「延緩1期／延緩2期」，純文字顯示） -->
+    <div style="margin-top:20px; padding-top:16px; border-top:2px solid var(--border);">
+      <div class="toolbar-row no-print" style="margin-bottom:10px; background:#fff7ed; border-color:#fed7aa;">
+        <div class="toolbar-group">
+          <span class="ctrl-label" style="color:#9a3412;">延緩核銷（分期 1–3 期）：</span>
+          <label class="ctrl-label" for="delayTermSelect">延緩期別：</label>
+          <select id="delayTermSelect" onchange="renderDelayPeriodView(); renderTaxSummaryTable();">
+            <option value="T1" selected>延緩第1期</option>
+            <option value="T2">延緩第2期</option>
+            <option value="T3">延緩第3期</option>
+          </select>
+        </div>
+        <span style="font-size:0.82rem; color:#64748b;">（直接連動上方設定「延緩1期／延緩2期」金額與堂數，純文字顯示）</span>
+      </div>
+      <div id="delayPeriodSheetContainer"></div>
+    </div>
 
-    <!-- 講師核銷與個人所得稅彙總 -->
-    <div style="margin-top:20px; padding-top:14px; border-top:2px solid var(--border);">
+    <!-- 3. 講師核銷與個人所得稅彙總 -->
+    <div style="margin-top:22px; padding-top:14px; border-top:2px solid var(--border);">
       <div class="period-card-header" style="border-bottom:none; margin-bottom:6px;">
         <span class="period-card-title" id="taxSummaryTitle">年度講師核銷與個人所得稅彙總</span>
       </div>
@@ -519,22 +521,54 @@
     '10月': 'M10', '11月': 'M11', '12月': 'M12'
   };
 
-  function getActivePeriodDef() {
-    const cat = document.getElementById('viewCategorySelect')?.value || 'LTC';
-    if (cat === 'DELAY') {
-      const termKey = document.getElementById('delayTermSelect')?.value || 'T1';
-      return DELAY_TERM_DEFS[termKey] || DELAY_TERM_DEFS.T1;
-    }
+  function getLtcPeriodDef() {
     const pKey = document.getElementById('ltcPeriodSelect')?.value || 'Q4';
     return LTC_PERIOD_DEFS[pKey] || LTC_PERIOD_DEFS.Q4;
   }
 
-  function onViewCategoryChange(catVal) {
-    const ltcGrp = document.getElementById('ltcSelectorGroup');
-    const delayGrp = document.getElementById('delaySelectorGroup');
-    if (ltcGrp) ltcGrp.style.display = (catVal === 'LTC') ? 'inline-flex' : 'none';
-    if (delayGrp) delayGrp.style.display = (catVal === 'DELAY') ? 'inline-flex' : 'none';
-    renderActivePeriodView();
+  function getDelayPeriodDef() {
+    const termKey = document.getElementById('delayTermSelect')?.value || 'T1';
+    return DELAY_TERM_DEFS[termKey] || DELAY_TERM_DEFS.T1;
+  }
+
+  function resolveLinkedPlanForCell(blk, colKey, instName) {
+    if (blk.program === 'LTC') {
+      return '長照課程';
+    }
+    const scopeFromMonth = MONTH_COL_TO_SCOPE[colKey] || 'YEAR';
+    const candidatePlans = [
+      blk.defaultPlan,
+      ...(blk.periodKey === 'T1' ? ['延緩1期', '延緩2期'] : ['延緩2期', '延緩1期']),
+      ...plans.filter(p => p.includes('延緩'))
+    ];
+    const uniqueCandidates = [...new Set(candidatePlans)];
+    for (const pName of uniqueCandidates) {
+      const rule = getRateRule(currentYear, scopeFromMonth, instName, pName);
+      if (calcSingleSessionAmount(rule) > 0) {
+        return pName;
+      }
+    }
+    return blk.defaultPlan;
+  }
+
+  function getLinkedCellData(blk, colKey, instName) {
+    const pName = resolveLinkedPlanForCell(blk, colKey, instName);
+    const scopeFromMonth = MONTH_COL_TO_SCOPE[colKey] || 'YEAR';
+    const rule = getRateRule(currentYear, scopeFromMonth, instName, pName);
+    const unitAmt = calcSingleSessionAmount(rule);
+    ensureYearStore(currentYear);
+    const savedKey = `${blk.periodKey}__${colKey}__${instName}`;
+    const savedEntry = claimData[currentYear][savedKey];
+    const sess = (savedEntry && savedEntry.sessions !== undefined && savedEntry.sessions !== null && Number(savedEntry.sessions) > 0)
+      ? Number(savedEntry.sessions)
+      : (unitAmt > 0 ? 1 : 0);
+    const amt = Math.round(unitAmt * sess);
+    return {
+      planName: pName,
+      unitAmt,
+      sessions: sess,
+      amount: amt
+    };
   }
 
   function fmtNum(n) {
@@ -633,13 +667,8 @@
   }
 
   function getClaimEntry(yr, periodKey, colKey, instName, defaultPlanName) {
-    ensureYearStore(yr);
-    const key = `${periodKey}__${colKey}__${instName}`;
-    if (claimData[yr][key]) return claimData[yr][key];
-    const scopeFromMonth = MONTH_COL_TO_SCOPE[colKey] || 'YEAR';
-    const rule = getRateRule(yr, scopeFromMonth, instName, defaultPlanName);
-    const unitAmt = calcSingleSessionAmount(rule);
-    return { sessions: 0, amount: 0, unitAmt, planName: defaultPlanName };
+    const defObj = LTC_PERIOD_DEFS[periodKey] || DELAY_TERM_DEFS[periodKey] || { program: 'LTC', periodKey, defaultPlan: defaultPlanName || '長照課程' };
+    return getLinkedCellData(defObj, colKey, instName);
   }
 
   function setClaimEntry(yr, periodKey, colKey, instName, entry) {
@@ -803,6 +832,9 @@
     }
     renderRateBenchmarkTable();
     renderGeneratedValueTable();
+    renderLtcPeriodView();
+    renderDelayPeriodView();
+    renderTaxSummaryTable();
   }
 
   function resetCurrentMonthOverride() {
@@ -813,6 +845,9 @@
     }
     renderRateBenchmarkTable();
     renderGeneratedValueTable();
+    renderLtcPeriodView();
+    renderDelayPeriodView();
+    renderTaxSummaryTable();
     setStatus(`已清除 ${currentYear} 年 ${rateScope.replace('M', '')} 月變動設定，恢復為整年基準`);
   }
 
@@ -841,7 +876,8 @@
     setRateRule(currentYear, rateScope, instName, planName, updated);
     renderRateBenchmarkTable();
     renderGeneratedValueTable();
-    renderActivePeriodView();
+    renderLtcPeriodView();
+    renderDelayPeriodView();
     renderTaxSummaryTable();
   }
 
@@ -920,7 +956,7 @@
     tbl.innerHTML = `
       <thead>
         <tr>
-          <th style="width:115px;">講師 \\ 計畫</th>
+          <th style="width:115px;">講師 \ 計畫</th>
           ${headCells}
           <th style="width:110px;">單堂小計</th>
         </tr>
@@ -987,7 +1023,7 @@
   function copyCurrentRateTableToClipboard() {
     const list = selectedTeachers;
     const scopeLabel = rateScope === 'YEAR' ? `${currentYear}年度固定基準` : `${currentYear}年${parseInt(rateScope.slice(1), 10)}月變動`;
-    const lines = [`[${scopeLabel}] 講師\t${plans.join('\t')}\t單堂小計`];
+    const lines = [`[${scopeLabel}] 講師	${plans.join('	')}	單堂小計`];
     list.forEach(instName => {
       let rowSum = 0;
       const vals = plans.map(p => {
@@ -995,106 +1031,13 @@
         rowSum += amt;
         return amt;
       });
-      lines.push(`${instName}\t${vals.join('\t')}\t${rowSum}`);
+      lines.push(`${instName}	${vals.join('	')}	${rowSum}`);
     });
-    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
+    navigator.clipboard?.writeText(lines.join('
+')).then(() => {
       showToast('rateCopyToast', '已複製基準數值（可直接貼上）');
     }).catch(() => {
       showToast('rateCopyToast', '已準備複製內容');
-    });
-  }
-
-  function applyBenchmarkToCurrentView() {
-    const blk = getActivePeriodDef();
-    if (!blk) return;
-    ensureYearStore(currentYear);
-    selectedTeachers.forEach(instName => {
-      blk.cols.forEach(colKey => {
-        const cur = getClaimEntry(currentYear, blk.periodKey, colKey, instName, blk.defaultPlan);
-        const planToUse = cur.planName || blk.defaultPlan;
-        const scopeFromMonth = MONTH_COL_TO_SCOPE[colKey] || 'YEAR';
-        const rule = getRateRule(currentYear, scopeFromMonth, instName, planToUse);
-        const unitAmt = calcSingleSessionAmount(rule);
-        const sess = cur.sessions > 0 ? cur.sessions : 1;
-        setClaimEntry(currentYear, blk.periodKey, colKey, instName, {
-          sessions: sess,
-          amount: Math.round(unitAmt * sess),
-          unitAmt,
-          planName: planToUse
-        });
-      });
-    });
-    renderActivePeriodView();
-    renderTaxSummaryTable();
-    setStatus(`已將鐘點費基準套用至 ${currentYear}年度 ${blk.title}`);
-  }
-
-  function onPeriodPlanChange(periodKey, colKey, instName, newPlanName) {
-    const cur = getClaimEntry(currentYear, periodKey, colKey, instName, newPlanName);
-    const scopeFromMonth = MONTH_COL_TO_SCOPE[colKey] || 'YEAR';
-    const rule = getRateRule(currentYear, scopeFromMonth, instName, newPlanName);
-    const unitAmt = calcSingleSessionAmount(rule);
-    const sess = Number(cur.sessions || 0);
-    setClaimEntry(currentYear, periodKey, colKey, instName, {
-      sessions: sess,
-      amount: Math.round(unitAmt * sess),
-      unitAmt,
-      planName: newPlanName
-    });
-    renderActivePeriodView();
-    renderTaxSummaryTable();
-  }
-
-  function onPeriodSessionChange(periodKey, colKey, instName, defaultPlanName, rawSessions) {
-    const cleaned = String(rawSessions || '').replace(/,/g, '').trim();
-    const sess = cleaned === '' ? 0 : (Number.isFinite(Number(cleaned)) ? Math.max(0, Number(cleaned)) : 0);
-    const cur = getClaimEntry(currentYear, periodKey, colKey, instName, defaultPlanName);
-    const planToUse = cur.planName || defaultPlanName;
-    const scopeFromMonth = MONTH_COL_TO_SCOPE[colKey] || 'YEAR';
-    const rule = getRateRule(currentYear, scopeFromMonth, instName, planToUse);
-    const unitAmt = calcSingleSessionAmount(rule);
-    setClaimEntry(currentYear, periodKey, colKey, instName, {
-      sessions: sess,
-      amount: Math.round(unitAmt * sess),
-      unitAmt,
-      planName: planToUse
-    });
-    renderActivePeriodView();
-    renderTaxSummaryTable();
-  }
-
-  function onPeriodAmountChange(periodKey, colKey, instName, defaultPlanName, rawAmt) {
-    const cleaned = String(rawAmt || '').replace(/,/g, '').trim();
-    const amt = cleaned === '' ? 0 : (Number.isFinite(Number(cleaned)) ? Number(cleaned) : 0);
-    const cur = getClaimEntry(currentYear, periodKey, colKey, instName, defaultPlanName);
-    setClaimEntry(currentYear, periodKey, colKey, instName, {
-      sessions: Number(cur.sessions || 0),
-      amount: Math.round(amt),
-      unitAmt: cur.unitAmt || 0,
-      planName: cur.planName || defaultPlanName
-    });
-    renderActivePeriodView();
-    renderTaxSummaryTable();
-  }
-
-  function copyCurrentPeriodToClipboard() {
-    const blk = getActivePeriodDef();
-    if (!blk) return;
-    const lines = [`${currentYear}年度 ${blk.title}\t講師\t${blk.cols.join('\t')}\t小計`];
-    selectedTeachers.forEach(instName => {
-      let rowSum = 0;
-      const vals = blk.cols.map(colKey => {
-        const entry = getClaimEntry(currentYear, blk.periodKey, colKey, instName, blk.defaultPlan);
-        const amt = Number(entry.amount || 0);
-        rowSum += amt;
-        return amt;
-      });
-      lines.push(`${blk.title}\t${instName}\t${vals.join('\t')}\t${rowSum}`);
-    });
-    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
-      showToast('summaryCopyToast', `已複製「${blk.title}」數值`);
-    }).catch(() => {
-      showToast('summaryCopyToast', `已準備「${blk.title}」數值`);
     });
   }
 
@@ -1140,14 +1083,9 @@
     return `${neg}${out || '零'}元整`;
   }
 
-  function renderActivePeriodView() {
-    const wrap = document.getElementById('activePeriodSheetContainer');
-    if (!wrap) return;
-    const blk = getActivePeriodDef();
-
+  function buildPeriodSheetHtml(blk, badgeLabel, headerBg) {
     if (selectedTeachers.length === 0) {
-      wrap.innerHTML = '<div style="text-align:center; padding:16px; color:#64748b;">請先勾選要顯示的講師</div>';
-      return;
+      return `<div class="period-card"><div style="text-align:center; padding:16px; color:#64748b;">請先勾選要顯示的講師</div></div>`;
     }
 
     const colTotals = {};
@@ -1157,23 +1095,17 @@
     const rowsHtml = selectedTeachers.map(instName => {
       let rowTotal = 0;
       const colCells = blk.cols.map(colKey => {
-        const entry = getClaimEntry(currentYear, blk.periodKey, colKey, instName, blk.defaultPlan);
-        const amt = Number(entry.amount || 0);
-        const sess = Number(entry.sessions || 0);
-        const pName = entry.planName || blk.defaultPlan;
-        rowTotal += amt;
-        colTotals[colKey] += amt;
+        const cell = getLinkedCellData(blk, colKey, instName);
+        rowTotal += cell.amount;
+        colTotals[colKey] += cell.amount;
 
-        const planOpts = plans.map(p => `<option value="${escapeAttr(p)}" ${p === pName ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
         return `
           <td style="min-width:155px;">
-            <div style="display:flex; flex-direction:column; gap:4px;">
-              <select onchange="onPeriodPlanChange('${blk.periodKey}', '${escapeAttr(colKey)}', '${escapeAttr(instName)}', this.value)" style="font-size:0.8rem; padding:3px 5px;">
-                ${planOpts}
-              </select>
-              <div style="font-size:0.85rem; color:#1e293b; line-height:1.45; display:flex; justify-content:space-between; align-items:center; gap:6px; padding:2px 2px;">
-                <span style="color:#475569; white-space:nowrap;">堂數：<strong>${fmtNum(sess)}</strong></span>
-                <span style="white-space:nowrap;"><strong>${fmtNum(amt)}</strong> 元</span>
+            <div style="display:flex; flex-direction:column; gap:3px; line-height:1.45;">
+              <div style="font-size:0.78rem; color:#9f1239; font-weight:bold;">${escapeHtml(cell.planName)}</div>
+              <div style="font-size:0.85rem; color:#1e293b; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                <span style="color:#475569; white-space:nowrap;">堂數：<strong>${fmtNum(cell.sessions)}</strong></span>
+                <span style="white-space:nowrap;"><strong>${fmtNum(cell.amount)}</strong> 元</span>
               </div>
             </div>
           </td>
@@ -1195,23 +1127,19 @@
     const footCells = blk.cols.map(c => `<td class="num-col">${fmtNum(colTotals[c])}</td>`).join('');
     const grandUpperChinese = numberToChineseUpper(periodGrandTotal);
 
-    wrap.innerHTML = `
+    return `
       <div class="period-card">
         <div class="period-card-header">
-          <span class="period-card-title">${currentYear}年度 ${escapeHtml(blk.title)}</span>
-          <div class="toolbar-group no-print">
-            <button type="button" class="btn btn-outline btn-sm" onclick="applyBenchmarkToCurrentView()">套用基準</button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="copyCurrentPeriodToClipboard()">複製數值</button>
-          </div>
+          <span class="period-card-title">${escapeHtml(badgeLabel)} — ${currentYear}年度 ${escapeHtml(blk.title)}</span>
         </div>
         <div style="overflow-x:auto;">
           <table class="excel-table">
             <thead>
               <tr>
-                <th style="width:110px;">講師</th>
-                ${blk.cols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}
-                <th style="width:110px;">合計</th>
-                <th style="width:170px;">大寫金額</th>
+                <th style="width:110px;${headerBg ? ` background:${headerBg};` : ''}">講師</th>
+                ${blk.cols.map(c => `<th${headerBg ? ` style="background:${headerBg};"` : ''}>${escapeHtml(c)}</th>`).join('')}
+                <th style="width:110px;${headerBg ? ` background:${headerBg};` : ''}">合計</th>
+                <th style="width:175px;${headerBg ? ` background:${headerBg};` : ''}">大寫金額</th>
               </tr>
             </thead>
             <tbody>
@@ -1229,18 +1157,71 @@
     `;
   }
 
+  function renderLtcPeriodView() {
+    const wrap = document.getElementById('ltcPeriodSheetContainer');
+    if (!wrap) return;
+    const blk = getLtcPeriodDef();
+    wrap.innerHTML = buildPeriodSheetHtml(blk, '長照核銷', '');
+  }
+
+  function renderDelayPeriodView() {
+    const wrap = document.getElementById('delayPeriodSheetContainer');
+    if (!wrap) return;
+    const blk = getDelayPeriodDef();
+    wrap.innerHTML = buildPeriodSheetHtml(blk, '延緩核銷', '#ffedd5');
+  }
+
+  function copyLtcPeriodToClipboard() {
+    const blk = getLtcPeriodDef();
+    const lines = [`長照核銷 ${currentYear}年度 ${blk.title}	講師	${blk.cols.join('	')}	合計	大寫金額`];
+    selectedTeachers.forEach(instName => {
+      let rowSum = 0;
+      const vals = blk.cols.map(colKey => {
+        const cell = getLinkedCellData(blk, colKey, instName);
+        rowSum += cell.amount;
+        return `${cell.planName}(${cell.sessions}堂) ${cell.amount}元`;
+      });
+      lines.push(`${instName}	${vals.join('	')}	${rowSum}	${numberToChineseUpper(rowSum)}`);
+    });
+    navigator.clipboard?.writeText(lines.join('
+')).then(() => {
+      showToast('summaryCopyToast', `已複製長照「${blk.title}」數值`);
+    }).catch(() => {
+      showToast('summaryCopyToast', `已準備長照「${blk.title}」數值`);
+    });
+  }
+
+  function copyDelayPeriodToClipboard() {
+    const blk = getDelayPeriodDef();
+    const lines = [`延緩核銷 ${currentYear}年度 ${blk.title}	講師	${blk.cols.join('	')}	合計	大寫金額`];
+    selectedTeachers.forEach(instName => {
+      let rowSum = 0;
+      const vals = blk.cols.map(colKey => {
+        const cell = getLinkedCellData(blk, colKey, instName);
+        rowSum += cell.amount;
+        return `${cell.planName}(${cell.sessions}堂) ${cell.amount}元`;
+      });
+      lines.push(`${instName}	${vals.join('	')}	${rowSum}	${numberToChineseUpper(rowSum)}`);
+    });
+    navigator.clipboard?.writeText(lines.join('
+')).then(() => {
+      showToast('summaryCopyToast', `已複製延緩「${blk.title}」數值`);
+    }).catch(() => {
+      showToast('summaryCopyToast', `已準備延緩「${blk.title}」數值`);
+    });
+  }
+
   function renderTaxSummaryTable() {
     const tbl = document.getElementById('taxSummaryTable');
     const titleEl = document.getElementById('taxSummaryTitle');
     if (!tbl) return;
 
-    const cat = document.getElementById('viewCategorySelect')?.value || 'LTC';
-    const blocks = cat === 'DELAY'
-      ? [DELAY_TERM_DEFS.T1, DELAY_TERM_DEFS.T2, DELAY_TERM_DEFS.T3]
-      : [LTC_PERIOD_DEFS.Q1, LTC_PERIOD_DEFS.Q2, LTC_PERIOD_DEFS.Q3, LTC_PERIOD_DEFS.Q4];
+    const ltcBlocks = [LTC_PERIOD_DEFS.Q1, LTC_PERIOD_DEFS.Q2, LTC_PERIOD_DEFS.Q3, LTC_PERIOD_DEFS.Q4];
+    const delayBlocks = [DELAY_TERM_DEFS.T1, DELAY_TERM_DEFS.T2, DELAY_TERM_DEFS.T3];
+    const allBlocks = [...ltcBlocks, ...delayBlocks];
 
     if (titleEl) {
-      titleEl.textContent = `${currentYear}年度講師核銷與個人所得稅彙總（${cat === 'DELAY' ? '延緩 1–3 期' : '長照分季'}，由上方核銷金額自動帶入）`;
+      titleEl.textContent = `${currentYear}年度講師核銷與個人所得稅彙總（長照分季＋延緩 1–3 期，由上方核銷金額自動帶入）`;
     }
 
     if (selectedTeachers.length === 0) {
@@ -1253,14 +1234,15 @@
     const instSessions = {};
     selectedTeachers.forEach(n => { instTotals[n] = 0; instSessions[n] = 0; });
 
-    const bodyRows = blocks.map(blk => {
+    const bodyRows = allBlocks.map(blk => {
+      const prefix = blk.program === 'DELAY' ? '【延緩】' : '【長照】';
       const cells = selectedTeachers.map(instName => {
         let sumAmt = 0;
         let sumSess = 0;
         blk.cols.forEach(colKey => {
-          const entry = getClaimEntry(currentYear, blk.periodKey, colKey, instName, blk.defaultPlan);
-          sumAmt += Number(entry.amount || 0);
-          sumSess += Number(entry.sessions || 0);
+          const cell = getLinkedCellData(blk, colKey, instName);
+          sumAmt += Number(cell.amount || 0);
+          sumSess += Number(cell.sessions || 0);
         });
         instTotals[instName] += sumAmt;
         instSessions[instName] += sumSess;
@@ -1268,7 +1250,7 @@
       }).join('');
       return `
         <tr>
-          <td style="font-weight:bold;">${escapeHtml(blk.title)}</td>
+          <td style="font-weight:bold;">${escapeHtml(prefix + blk.title)}</td>
           ${cells}
         </tr>
       `;
@@ -1288,7 +1270,6 @@
       </tr>
     `;
 
-    // 個人所得稅自動帶入列（依年度累計核銷金額試算：未達 20,000 元免扣 10% 所得稅為 0 元；達 20,000 元以上依累計金額 10% 試算，供核對參考）
     const taxAutoRow = `
       <tr>
         <td class="center-col" style="font-weight:bold; color:#0f766e;">個人所得稅（自動帶入試算）</td>
@@ -1314,7 +1295,7 @@
     tbl.innerHTML = `
       <thead>
         <tr>
-          <th style="width:185px;">期別／項目</th>
+          <th style="width:195px;">期別／項目</th>
           ${headerCols}
         </tr>
       </thead>
@@ -1333,7 +1314,8 @@
     renderTeacherPicker();
     renderRateBenchmarkTable();
     renderGeneratedValueTable();
-    renderActivePeriodView();
+    renderLtcPeriodView();
+    renderDelayPeriodView();
     renderTaxSummaryTable();
   }
 
