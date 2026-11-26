@@ -183,6 +183,49 @@
     @media print { .section-subnav { display: none !important; } }
 
   
+    .section-subnav {
+      background: #f0fdfa;
+      border-bottom: 1px solid #99f6e4;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(15, 118, 110, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: #115e59;
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #99f6e4;
+      background: #ffffff;
+      color: #115e59;
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #ccfbf1;
+      border-color: #0f766e;
+    }
+    .section-subnav a.active {
+      background: #0f766e;
+      color: #ffffff;
+      border-color: #0f766e;
+      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.22);
+    }
+    @media print { .section-subnav { display: none !important; } }
+
     .preset-dot { font-size: 0.74rem; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 8px; border: 1px solid #fde68a; }
     .mode-pill { font-size: 0.8rem; padding: 3px 9px; border-radius: 12px; font-weight: bold; }
     .mode-pill-preset { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
@@ -205,13 +248,12 @@
 </head>
 <body>
 
-
 <!-- 已有電話問安記錄名單 Modal -->
 <div class="preset-modal-backdrop" id="presetListModal" onclick="if(event.target===this)closePresetListModal()">
   <div class="preset-modal-box">
     <div class="preset-modal-hdr">
       <div>
-        <strong style="font-size:1.05rem;">已有電話問安記錄名單（原始設定檔）</strong>
+        <strong style="font-size:1.05rem;">已有電話問安記錄名單（雲端同步設定檔）</strong>
         <span id="modalPresetSummary" style="font-size:0.84rem; margin-left:10px; opacity:0.92;"></span>
       </div>
       <button type="button" class="btn btn-gray" style="padding:5px 12px; font-size:0.85rem;" onclick="closePresetListModal()">關閉</button>
@@ -245,6 +287,7 @@
     </div>
   </div>
 </div>
+
 
 <script>
   if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
@@ -320,6 +363,19 @@
     </div>
   </div>
 </nav>
+<!-- 常駐人事資料快速切換列 -->
+<div class="section-subnav no-print" aria-label="人事資料快速切換">
+  <span class="section-subnav-label">人事資料快速切換：</span>
+  <a href="個案資料管理.html">個案資料管理</a>
+  <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+  <a href="講師資料.html">講師資料管理</a>
+  <a href="臨時人員資料.html">臨時人員資料管理</a>
+  <a href="志工資料管理.html">志工資料管理</a>
+  <a href="電話問安管理.html" class="active">電話問安記錄</a>
+  <a href="延緩前測管理.html">延緩課程前測記錄</a>
+  <a href="聯絡電話.html">聯絡電話</a>
+</div>
+
 <!-- 常駐人事資料快速切換列 -->
 <div class="section-subnav no-print" aria-label="人事資料快速切換">
   <span class="section-subnav-label">人事資料快速切換：</span>
@@ -1243,7 +1299,18 @@
     "remark": "感冒"
   }
 ];
+  let currentPresetsList = DEFAULT_CASE_PRESETS.slice();
   let casePresetMap = {};
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function escapeAttrVal(v) {
+    return String(v ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
 
   function rebuildPresetMap(list) {
     casePresetMap = {};
@@ -1259,7 +1326,6 @@
     if (badge) badge.textContent = String(uniqNames.size);
   }
 
-  let currentPresetsList = DEFAULT_CASE_PRESETS.slice();
   rebuildPresetMap(currentPresetsList);
 
   async function syncPresetsFromCloud() {
@@ -1269,6 +1335,7 @@
       const { data, error } = await sb
         .from('phone_checkin_presets')
         .select('*')
+        .order('sort_order', { ascending: true })
         .order('id', { ascending: true });
       if (!error && Array.isArray(data) && data.length > 0) {
         currentPresetsList = data.map(function(r) {
@@ -1297,6 +1364,8 @@
         if (document.getElementById('presetListModal')?.classList.contains('open')) {
           renderPresetModalTable();
         }
+      } else if (error) {
+        console.warn('phone_checkin_presets 尚未建立或同步中：', error.message);
       }
     } catch (e) {}
   }
@@ -1327,13 +1396,15 @@
           remark: item.remark || null
         };
       });
-      await sb.from('phone_checkin_presets').delete().neq('id', 0);
+      const { error: delErr } = await sb.from('phone_checkin_presets').delete().not('id', 'is', null);
+      if (delErr) throw delErr;
       if (rows.length > 0) {
-        const { error } = await sb.from('phone_checkin_presets').insert(rows);
-        if (error) throw error;
+        const { error: insErr } = await sb.from('phone_checkin_presets').insert(rows);
+        if (insErr) throw insErr;
       }
       return true;
     } catch (e) {
+      alert('雲端儲存設定名單失敗（請確認 Supabase 已建立 phone_checkin_presets 資料表）：' + e.message);
       return false;
     }
   }
@@ -1509,13 +1580,13 @@
           return;
         }
         currentPresetsList = parsedList;
-        await savePresetsToCloud(parsedList);
+        const ok = await savePresetsToCloud(parsedList);
         rebuildPresetMap(parsedList);
         renderCasePicker();
         if (selectedCase && findPresetForCase(selectedCase)) {
           applyCasePresetToForm(true);
         }
-        alert('已成功匯入 ' + parsedList.length + ' 筆電話問安原始設定！');
+        if (ok) alert('已同步 ' + parsedList.length + ' 筆電話問安原始設定至雲端資料庫！');
       } catch (err) {
         alert('解析 Excel 失敗：' + err.message);
       }
@@ -1614,8 +1685,6 @@
     XLSX.writeFile(wb, '電話問安記錄＿已有記錄名單.xlsx');
   }
 
-  function pad2(n) { return String(n).padStart(2, '0'); }
-
   function setNowRocDatetime() {
     const now = new Date();
     const rocY = now.getFullYear() - 1911;
@@ -1668,7 +1737,7 @@
           .order('id', { ascending: false });
         latestStatusMap = {};
         (stData || []).forEach(r => {
-          if (!latestStatusMap[r.case_id]) latestStatusMap[r.case_id] = r.status;
+          if (!latestStatusMap[String(r.case_id)]) latestStatusMap[String(r.case_id)] = r.status;
         });
       } catch (e) {
         latestStatusMap = {};
@@ -1705,7 +1774,7 @@
       if (error) {
         monthCheckins = [];
         statusEl.style.color = '#b45309';
-        statusEl.textContent = '提示：尚未建立 phone_checkins 資料表（仍可先搜尋長輩）';
+        statusEl.textContent = '讀取 phone_checkins 失敗：' + error.message;
       } else {
         monthCheckins = data || [];
         statusEl.style.color = '#0f766e';
@@ -1759,7 +1828,7 @@
     }
 
     const filtered = allCases.filter(c => {
-      const st = latestStatusMap[c.id] || '服務中';
+      const st = latestStatusMap[String(c.id)] || '服務中';
       if (st.startsWith('已結案')) return false;
       if (onlyRegular && hasAnyRegularInDb && !isRegularCase(c)) return false;
       if (hideDone && doneNames.has(c.name)) return false;
@@ -1783,7 +1852,7 @@
       const hasPreset = Boolean(findPresetForCase(c));
       const phoneTxt = [c.phone, c.mobile].filter(Boolean).join(' / ');
       return `
-        <div class="case-pick-row ${isSel ? 'selected' : ''}" onclick="selectCase('${String(c.id).replace(/'/g, "\\'")}')">
+        <div class="case-pick-row ${isSel ? 'selected' : ''}" onclick="selectCase('${String(c.id).replace(/'/g, "\'")}')">
           <div>
             <div><strong>${c.case_number || ''}</strong> ${c.name || ''} ${isRegularCase(c) ? '<span class="reg-dot">常來</span>' : ''}</div>
             <div style="font-size:0.8rem; color:#475569;">${phoneTxt || '無電話'}</div>
@@ -1824,6 +1893,7 @@
     ['other_answer', 'other_speech', 'other_health', 'other_life', 'other_interaction', 'other_mental', 'remarkInput'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    setFormModeBadge(true);
   }
 
   function getRadioVal(name) {
@@ -1881,16 +1951,9 @@
       return;
     }
 
-    applyNormalPreset();
+    clearFormToBlank();
+    setNowRocDatetime();
     await loadMonthCheckins();
-  }
-
-  function escapeAttrVal(v) {
-    return String(v ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/"/g, '&quot;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
   }
 
   function parseCombinedField(codeVal, othVal) {
@@ -2083,12 +2146,50 @@
 
     const noteRow = [
       '注意事項：', '', '', '',
-      '接聽情形：請填寫1,2,3,4\n親自接聽為1\n親友接聽為2\n無人接聽為3\n電話故障為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
-      '口頭表達：請填寫1,2,3,4\n表達清晰為1\n表達尚可為2\n口語不清為3\n無法表達為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
-      '健康情況：請填寫1,2,3,4\n健康良好為1\n稍有病痛為2\n按時用藥為3\n定期門診為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
-      '生活狀況：請填寫1,2,3,4\n三餐定時為1\n餐不定時為2\n參與活動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
-      '親友互動：請填寫1,2,3,4\n常有互動為1\n偶有互動為2\n很少互動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
-      '精神狀況：請填寫1,2,3,4\n精神愉快為1\n尚可為2\n精神不佳為3\n輕生念頭為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '接聽情形：請填寫1,2,3,4
+親自接聽為1
+親友接聽為2
+無人接聽為3
+電話故障為4
+其他請填5，並且在後一欄位填寫原因
+只可包含一個數字', '',
+      '口頭表達：請填寫1,2,3,4
+表達清晰為1
+表達尚可為2
+口語不清為3
+無法表達為4
+其他請填5，並且在後一欄位填寫原因
+只可包含一個數字', '',
+      '健康情況：請填寫1,2,3,4
+健康良好為1
+稍有病痛為2
+按時用藥為3
+定期門診為4
+其他請填5，並且在後一欄位填寫原因
+可包含多個數字
+請用逗號分隔', '',
+      '生活狀況：請填寫1,2,3,4
+三餐定時為1
+餐不定時為2
+參與活動為3
+極少互動為4
+其他請填5，並且在後一欄位填寫原因
+可包含多個數字
+請用逗號分隔', '',
+      '親友互動：請填寫1,2,3,4
+常有互動為1
+偶有互動為2
+很少互動為3
+極少互動為4
+其他請填5，並且在後一欄位填寫原因
+只可包含一個數字', '',
+      '精神狀況：請填寫1,2,3,4
+精神愉快為1
+尚可為2
+精神不佳為3
+輕生念頭為4
+其他請填5，並且在後一欄位填寫原因
+只可包含一個數字', '',
       '填寫欲補充之資料'
     ];
     const headerRow = [
