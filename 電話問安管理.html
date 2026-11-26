@@ -1283,6 +1283,10 @@
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
+  function normalizePersonName(v) {
+    return String(v === null || v === undefined ? '' : v).replace(/[\s\u3000]+/g, '').trim();
+  }
+
   function escHtml(v) {
     return String(v ?? '')
       .replace(/&/g, '&amp;')
@@ -1661,7 +1665,7 @@
       return '<tr>' +
         '<td style="text-align:center;">' + (idx + 1) + '</td>' +
         '<td>' + escHtml(item.code) + '</td>' +
-        '<td style="white-space:nowrap; min-width:86px;"><strong>' + escHtml(item.name) + '</strong></td>' +
+        '<td style="white-space:nowrap; min-width:86px;"><strong>' + escHtml(normalizePersonName(item.name)) + '</strong></td>' +
         '<td style="text-align:center;">' + escHtml(item.gender) + '</td>' +
         '<td style="text-align:center;">' + escHtml(fmtP(item.answer_status, item.answer_other)) + '</td>' +
         '<td style="text-align:center;">' + escHtml(fmtP(item.speech_status, item.speech_other)) + '</td>' +
@@ -1875,7 +1879,7 @@
       const phoneTxt = [c.phone, c.mobile].filter(Boolean).join(' / ');
       return '<div class="case-pick-row ' + (isSel ? 'selected' : '') + '" data-case-id="' + escHtml(c.id) + '">' +
         '<div>' +
-          '<div><strong>' + escHtml(c.case_number || '') + '</strong> ' + escHtml(c.name || '') + ' ' + (isRegularCase(c) ? '<span class="reg-dot">常來</span>' : '') + '</div>' +
+          '<div><strong>' + escHtml(c.case_number || '') + '</strong> ' + escHtml(normalizePersonName(c.name)) + ' ' + (isRegularCase(c) ? '<span class="reg-dot">常來</span>' : '') + '</div>' +
           '<div style="font-size:0.8rem; color:#475569;">' + escHtml(phoneTxt || '無電話') + '</div>' +
         '</div>' +
         '<div style="display:flex; gap:4px; align-items:center;">' +
@@ -1890,7 +1894,7 @@
     const found = allCases.find(function(c) { return String(c.id) === String(caseId); });
     if (!found) return;
     selectedCase = found;
-    document.getElementById('selCaseName').textContent = found.name || '';
+    document.getElementById('selCaseName').textContent = normalizePersonName(found.name);
     document.getElementById('selCaseCode').textContent = found.gov_system_id || found.case_number || '';
     document.getElementById('selCaseGender').textContent = found.gender || '';
     document.getElementById('selCasePhone').textContent = [found.phone, found.mobile].filter(Boolean).join(' / ') || '未登錄電話';
@@ -1945,7 +1949,7 @@
     const payload = {
       case_id: selectedCase.id,
       case_code: selectedCase.gov_system_id || selectedCase.case_number || '',
-      case_name: selectedCase.name,
+      case_name: normalizePersonName(selectedCase.name),
       gender: selectedCase.gender || '',
       call_datetime: callDt,
       roc_year: ym.year,
@@ -2033,7 +2037,7 @@
       setStatusPart('checkins', '「' + item.case_name + '」的日期已改到 ' + ym.year + ' 年 ' + ym.month + ' 月，已一併移過去（' + tStr + '）', false);
       return;
     }
-    setStatusPart('checkins', '已更新「' + item.case_name + '」記錄（' + tStr + '）', false);
+    setStatusPart('checkins', '已即時儲存「' + normalizePersonName(item.case_name) + '」修改至雲端（' + tStr + '）', false);
     if (showToast) alert('已更新「' + item.case_name + '」的電話問安記錄！');
   }
 
@@ -2068,14 +2072,13 @@
       return '<tr>' +
         '<td style="text-align:center;">' + (idx + 1) + '</td>' +
         '<td>' + escHtml(r.case_code || '') + '</td>' +
-        '<td style="white-space:nowrap; min-width:86px;"><strong>' + escHtml(r.case_name || '') + '</strong></td>' +
+        '<td style="white-space:nowrap; min-width:86px;"><strong>' + escHtml(normalizePersonName(r.case_name)) + '</strong></td>' +
         '<td style="text-align:center;">' + escHtml(r.gender || '') + '</td>' +
         '<td>' + box(r, 'call_datetime', r.call_datetime || '', inpStyle + ' min-width:148px;') + '</td>' +
         codeCell(r, 'answer') + codeCell(r, 'speech') + codeCell(r, 'health') +
         codeCell(r, 'life') + codeCell(r, 'interaction') + codeCell(r, 'mental') +
         '<td>' + box(r, 'remark', r.remark || '', inpStyle + ' min-width:140px;') + '</td>' +
         '<td style="text-align:center; white-space:nowrap;">' +
-          '<button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.82rem; margin-right:4px;" data-act="save" data-id="' + escHtml(r.id) + '">儲存</button>' +
           '<button type="button" class="btn btn-del" data-act="del" data-id="' + escHtml(r.id) + '">刪除</button>' +
         '</td>' +
       '</tr>';
@@ -2091,16 +2094,32 @@
     await loadMonthCheckins();
   }
 
+  const inlineSaveTimers = {};
+  function scheduleInlineCloudSave(id) {
+    const key = String(id);
+    if (inlineSaveTimers[key]) clearTimeout(inlineSaveTimers[key]);
+    setStatusPart('checkins', '正在即時儲存修改至雲端...', false);
+    inlineSaveTimers[key] = setTimeout(function() {
+      delete inlineSaveTimers[key];
+      saveInlineRow(id, false);
+    }, 500);
+  }
+
   function bindUiEvents() {
     const tb = document.getElementById('checkinTableBody');
     if (tb) {
       tb.addEventListener('input', function(ev) {
         const t = ev.target;
-        if (t.dataset && t.dataset.col) onInlineEdit(t.dataset.id, t.dataset.col, t.value);
+        if (t.dataset && t.dataset.col) {
+          onInlineEdit(t.dataset.id, t.dataset.col, t.value);
+          scheduleInlineCloudSave(t.dataset.id);
+        }
       });
       tb.addEventListener('change', function(ev) {
         const t = ev.target;
         if (t.dataset && t.dataset.col) {
+          const key = String(t.dataset.id);
+          if (inlineSaveTimers[key]) { clearTimeout(inlineSaveTimers[key]); delete inlineSaveTimers[key]; }
           onInlineEdit(t.dataset.id, t.dataset.col, t.value);
           saveInlineRow(t.dataset.id, false);
         }
@@ -2108,8 +2127,7 @@
       tb.addEventListener('click', function(ev) {
         const b = ev.target.closest('button[data-act]');
         if (!b) return;
-        if (b.dataset.act === 'save') saveInlineRow(b.dataset.id, true);
-        else if (b.dataset.act === 'del') deleteCheckin(b.dataset.id);
+        if (b.dataset.act === 'del') deleteCheckin(b.dataset.id);
       });
     }
     const picker = document.getElementById('casePickerList');
