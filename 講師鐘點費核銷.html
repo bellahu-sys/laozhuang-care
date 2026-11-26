@@ -101,7 +101,7 @@
     }
 
     .sheet-title-banner {
-      text-align: center; font-size: 1.1rem; font-weight: bold;
+      text-align: center; font-size: 1.12rem; font-weight: bold;
       color: #0f172a; padding: 6px 0 10px 0;
     }
 
@@ -287,7 +287,7 @@
     </div>
   </div>
 
-  <!-- 區塊一：年度/各月計畫鐘點費基準設定 -->
+  <!-- 區塊一：年度/各月計畫鐘點費基準設定 + 產生數值表 -->
   <section class="section-card">
     <h2 class="section-title">
       <span>一、年度／各月計畫鐘點費基準設定</span>
@@ -328,8 +328,17 @@
       </div>
     </div>
 
-    <div style="overflow-x:auto;">
+    <!-- 明細設定表 -->
+    <div style="overflow-x:auto; margin-bottom:18px;">
       <table class="excel-table" id="rateBenchmarkTable"></table>
+    </div>
+
+    <!-- 圖2：鐘點費-核銷產生數值表（供帶入核銷統計） -->
+    <div style="padding-top:12px; border-top:1px dashed #fda4af;">
+      <div class="sheet-title-banner">鐘點費-核銷產生數值表（供帶入核銷統計）</div>
+      <div style="overflow-x:auto;">
+        <table class="excel-table" id="generatedValueTable"></table>
+      </div>
     </div>
   </section>
 
@@ -512,7 +521,6 @@
     return s;
   }
 
-  // 對齊舊.講師鐘點費核銷.html 的 instructors 讀取邏輯
   async function loadInstructorsFromHr() {
     if (supabaseClient) {
       try {
@@ -693,6 +701,7 @@
       resetBtn.style.display = (rateScope !== 'YEAR') ? 'inline-flex' : 'none';
     }
     renderRateBenchmarkTable();
+    renderGeneratedValueTable();
   }
 
   function resetCurrentMonthOverride() {
@@ -702,6 +711,7 @@
       delete yearRateData[currentYear].months[rateScope];
     }
     renderRateBenchmarkTable();
+    renderGeneratedValueTable();
     setStatus(`已清除 ${currentYear} 年 ${rateScope.replace('M', '')} 月變動設定，恢復為整年基準`);
   }
 
@@ -729,6 +739,7 @@
     }
     setRateRule(currentYear, rateScope, instName, planName, updated);
     renderRateBenchmarkTable();
+    renderGeneratedValueTable();
     renderPeriodSheets();
     renderTaxSummaryTable();
   }
@@ -808,7 +819,62 @@
     tbl.innerHTML = `
       <thead>
         <tr>
-          <th style="width:115px;">講師 \ 計畫</th>
+          <th style="width:115px;">講師 \\ 計畫</th>
+          ${headCells}
+          <th style="width:110px;">單堂小計</th>
+        </tr>
+      </thead>
+      <tbody>${bodyRows}${totalRow}</tbody>
+    `;
+  }
+
+  function renderGeneratedValueTable() {
+    const tbl = document.getElementById('generatedValueTable');
+    if (!tbl) return;
+
+    const list = selectedTeachers.map(name => masterInstructors.find(m => m.name === name) || { name, status: '服務中' });
+    if (list.length === 0) {
+      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:16px; color:#64748b;">尚無勾選講師</td></tr></tbody>';
+      return;
+    }
+
+    const headCells = plans.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+    const colTotals = {};
+    plans.forEach(p => { colTotals[p] = 0; });
+
+    const bodyRows = list.map(inst => {
+      const instName = inst.name;
+      let rowTotal = 0;
+      const tds = plans.map(plan => {
+        const rule = getRateRule(currentYear, rateScope, instName, plan);
+        const amt = calcSingleSessionAmount(rule);
+        rowTotal += amt;
+        colTotals[plan] += amt;
+        return `<td class="num-col">${fmtNum(amt)}</td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td style="font-weight:bold;">${escapeHtml(instName)}</td>
+          ${tds}
+          <td class="num-col" style="font-weight:bold;">${fmtNum(rowTotal)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const grandTotal = Object.values(colTotals).reduce((a, b) => a + b, 0);
+    const totalRow = `
+      <tr class="total-row">
+        <td class="center-col">合計</td>
+        ${plans.map(p => `<td class="num-col">${fmtNum(colTotals[p])}</td>`).join('')}
+        <td class="num-col">${fmtNum(grandTotal)}</td>
+      </tr>
+    `;
+
+    tbl.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:120px;">講師姓名</th>
           ${headCells}
           <th style="width:110px;">單堂小計</th>
         </tr>
@@ -820,7 +886,7 @@
   function copyCurrentRateTableToClipboard() {
     const list = selectedTeachers;
     const scopeLabel = rateScope === 'YEAR' ? `${currentYear}年度固定基準` : `${currentYear}年${parseInt(rateScope.slice(1), 10)}月變動`;
-    const lines = [`[${scopeLabel}] 講師	${plans.join('	')}	單堂小計`];
+    const lines = [`[${scopeLabel}] 講師\t${plans.join('\t')}\t單堂小計`];
     list.forEach(instName => {
       let rowSum = 0;
       const vals = plans.map(p => {
@@ -828,10 +894,9 @@
         rowSum += amt;
         return amt;
       });
-      lines.push(`${instName}	${vals.join('	')}	${rowSum}`);
+      lines.push(`${instName}\t${vals.join('\t')}\t${rowSum}`);
     });
-    navigator.clipboard?.writeText(lines.join('
-')).then(() => {
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
       showToast('rateCopyToast', '已複製基準數值（可直接貼上）');
     }).catch(() => {
       showToast('rateCopyToast', '已準備複製內容');
@@ -923,7 +988,7 @@
   function copyPeriodToClipboard(periodKey) {
     const blk = PERIOD_BLOCKS.find(b => b.periodKey === periodKey);
     if (!blk) return;
-    const lines = [`${currentYear}年度 ${blk.title}	講師	${blk.cols.join('	')}	小計`];
+    const lines = [`${currentYear}年度 ${blk.title}\t講師\t${blk.cols.join('\t')}\t小計`];
     selectedTeachers.forEach(instName => {
       let rowSum = 0;
       const vals = blk.cols.map(colKey => {
@@ -932,10 +997,9 @@
         rowSum += amt;
         return amt;
       });
-      lines.push(`${blk.title}	${instName}	${vals.join('	')}	${rowSum}`);
+      lines.push(`${blk.title}\t${instName}\t${vals.join('\t')}\t${rowSum}`);
     });
-    navigator.clipboard?.writeText(lines.join('
-')).then(() => {
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
       showToast('summaryCopyToast', `已複製「${blk.title}」核銷數值`);
     }).catch(() => {
       showToast('summaryCopyToast', `已準備「${blk.title}」數值`);
@@ -1106,7 +1170,7 @@
   function copyTaxSummaryToClipboard() {
     const planFilter = document.getElementById('globalPlanFilter')?.value || 'ALL';
     const blocks = PERIOD_BLOCKS.filter(b => planFilter === 'ALL' || b.program === planFilter);
-    const lines = [`${currentYear}年度講師核銷彙總	${selectedTeachers.join('	')}`];
+    const lines = [`${currentYear}年度講師核銷彙總\t${selectedTeachers.join('\t')}`];
     const totals = {};
     selectedTeachers.forEach(n => { totals[n] = 0; });
 
@@ -1120,12 +1184,11 @@
         totals[instName] += sumAmt;
         return sumAmt;
       });
-      lines.push(`${blk.title}	${vals.join('	')}`);
+      lines.push(`${blk.title}\t${vals.join('\t')}`);
     });
-    lines.push(`核銷金額合計	${selectedTeachers.map(n => totals[n]).join('	')}`);
+    lines.push(`核銷金額合計\t${selectedTeachers.map(n => totals[n]).join('\t')}`);
 
-    navigator.clipboard?.writeText(lines.join('
-')).then(() => {
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
       showToast('summaryCopyToast', '已複製彙總表數值');
     }).catch(() => {
       showToast('summaryCopyToast', '已準備彙總表數值');
@@ -1136,6 +1199,7 @@
     populateRenameSelect();
     renderTeacherPicker();
     renderRateBenchmarkTable();
+    renderGeneratedValueTable();
     renderPeriodSheets();
     renderTaxSummaryTable();
   }
@@ -1147,7 +1211,6 @@
     await reloadAllFromCloud(true);
   }
 
-  // 對齊舊.講師鐘點費核銷.html 的 instructor_reimburse_rate_configs 與 instructor_reimburse_claims 欄位讀取
   async function reloadAllFromCloud(showMsg = true) {
     ensureYearStore(currentYear);
     if (showMsg) setStatus('正在從資料庫讀取「鐘點費-核銷」設定...');
@@ -1177,7 +1240,6 @@
     }
 
     if (supabaseClient) {
-      // 1. 讀取 instructor_reimburse_rate_configs（同時相容舊表無 roc_year/scope_key 與新表有 roc_year/scope_key）
       try {
         const { data: rateRows, error: rErr } = await supabaseClient
           .from('instructor_reimburse_rate_configs')
@@ -1201,7 +1263,6 @@
         }
       } catch (e) {}
 
-      // 2. 讀取 instructor_reimburse_claims（相容舊表 '1月講師' 與新表 '1月'）
       try {
         const { data: claimRows, error: cErr } = await supabaseClient
           .from('instructor_reimburse_claims')
@@ -1235,7 +1296,6 @@
     if (showMsg) setStatus(`已同步資料庫「鐘點費-核銷」設定（${currentYear} 年度）`);
   }
 
-  // 對齊舊.講師鐘點費核銷.html 的 instructor_reimburse_rate_configs（pay_mode, rate, hours, onConflict: 'instructor_name,plan_name'）與 instructor_reimburse_claims
   async function saveAllToCloud() {
     ensureYearStore(currentYear);
     localStorage.setItem('lz_reb_unified_plans', JSON.stringify(plans));
@@ -1249,7 +1309,6 @@
     }
 
     try {
-      // 1. 儲存基準設定至 instructor_reimburse_rate_configs
       const rateUpserts = [];
       const yStore = yearRateData[currentYear];
       const yDefault = yStore.yearDefault || {};
@@ -1277,7 +1336,6 @@
         if (rErr) throw rErr;
       }
 
-      // 2. 儲存核銷明細至 instructor_reimburse_claims（相容舊表欄位：roc_year, program_type, period_key, col_key, instructor_name, amount, updated_at）
       const claimPayload = [];
       PERIOD_BLOCKS.forEach(blk => {
         blk.cols.forEach(colKey => {
