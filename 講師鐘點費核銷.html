@@ -70,7 +70,7 @@
       background: var(--primary-soft); border: 1px solid var(--border);
       padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;
     }
-    .toolbar-group { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .toolbar-group { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; position: relative; }
     label.ctrl-label { font-weight: bold; font-size: 0.9rem; color: #334155; }
 
     select, input[type="text"], input[type="number"] {
@@ -135,12 +135,12 @@
       border: 1px solid #fcd34d; border-radius: 4px; padding: 1px 5px; font-weight: bold;
     }
 
-    .picker-dropdown-wrap { position: relative; display: inline-block; }
+    .picker-dropdown-wrap { position: relative; display: inline-block; z-index: 350; }
     .picker-panel {
-      display: none; position: absolute; top: 100%; left: 0;
-      min-width: 260px; max-height: 320px; overflow-y: auto;
+      display: none; position: absolute; top: calc(100% + 4px); left: 0;
+      min-width: 270px; max-height: 340px; overflow-y: auto;
       background: #fff; border: 1px solid #94a3b8; border-radius: 8px;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.16); padding: 10px; z-index: 400; margin-top: 4px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18); padding: 10px; z-index: 450;
     }
     .picker-panel.open { display: block; }
     .picker-item {
@@ -275,8 +275,8 @@
 
     <div class="toolbar-group">
       <div class="picker-dropdown-wrap">
-        <button type="button" class="btn btn-outline btn-sm" id="teacherPickerBtn" onclick="togglePickerPanel('teacherPickerPanel')">勾選講師 ▾</button>
-        <div class="picker-panel" id="teacherPickerPanel"></div>
+        <button type="button" class="btn btn-outline btn-sm" id="teacherPickerBtn" onclick="togglePickerPanel(event, 'teacherPickerPanel')">勾選講師 ▾</button>
+        <div class="picker-panel" id="teacherPickerPanel" onclick="event.stopPropagation()"></div>
       </div>
     </div>
 
@@ -366,16 +366,25 @@
   }
 
   let currentYear = 115;
-  let rateScope = 'YEAR'; // 'YEAR' or 'M01'..'M12'
+  let rateScope = 'YEAR';
   let masterInstructors = [];
   let selectedTeachers = [];
 
   const DEFAULT_PLANS = ['長照課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
   let plans = [...DEFAULT_PLANS];
 
-  // 年度基準：yearRateData[year] = { yearDefault: { [inst]: { [plan]: { mode, rate, hours } } }, months: { M01: ... } }
+  const INITIAL_SEED_RATES = {
+    '林熙鈴': { '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩2期': { mode: 'per_hour', rate: 2400, hours: 1 }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '張國堂': { '長照課程': { mode: 'per_hour', rate: 2000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '鄧美續': { '長照課程': { mode: 'per_hour', rate: 1600, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 2000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '蔡牡連': { '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '黃仲慧': { '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '吳貴英': { '長照課程': { mode: 'none', rate: '', hours: '' }, '多元課程': { mode: 'none', rate: '', hours: '' }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 4000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '詹細珍': { '長照課程': { mode: 'none', rate: '', hours: '' }, '多元課程': { mode: 'none', rate: '', hours: '' }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 4000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '詹益誠': { '長照課程': { mode: 'none', rate: '', hours: '' }, '多元課程': { mode: 'none', rate: '', hours: '' }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 2000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } }
+  };
+
   let yearRateData = {};
-  // 核銷與堂數資料：claimData[year][`${periodKey}__${colKey}__${instName}`] = { sessions: number, amount: number, manualAmount: boolean }
   let claimData = {};
 
   const PERIOD_BLOCKS = [
@@ -419,17 +428,15 @@
     el._timer = setTimeout(() => { el.textContent = ''; }, 2400);
   }
 
-  function togglePickerPanel(panelId) {
+  function togglePickerPanel(ev, panelId) {
+    if (ev) ev.stopPropagation();
     const panel = document.getElementById(panelId);
-    document.querySelectorAll('.picker-panel').forEach(p => {
-      if (p.id !== panelId) p.classList.remove('open');
-    });
-    if (panel) panel.classList.toggle('open');
+    const willOpen = panel && !panel.classList.contains('open');
+    document.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('open'));
+    if (panel && willOpen) panel.classList.add('open');
   }
-  document.addEventListener('click', (ev) => {
-    if (!ev.target.closest('.picker-dropdown-wrap')) {
-      document.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('open'));
-    }
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('open'));
   });
 
   function sortByMaster(arr) {
@@ -439,7 +446,7 @@
 
   function ensureYearStore(yr) {
     if (!yearRateData[yr]) {
-      yearRateData[yr] = { yearDefault: {}, months: {} };
+      yearRateData[yr] = { yearDefault: JSON.parse(JSON.stringify(INITIAL_SEED_RATES)), months: {} };
     }
     if (!claimData[yr]) {
       claimData[yr] = {};
@@ -535,7 +542,7 @@
     if (saved) {
       try {
         const arr = JSON.parse(saved);
-        if (Array.isArray(arr)) {
+        if (Array.isArray(arr) && arr.length > 0) {
           selectedTeachers = sortByMaster(arr);
           return;
         }
@@ -556,11 +563,28 @@
     renderAllSections();
   }
 
+  function setAllTeachers(selectAll) {
+    if (selectAll) {
+      selectedTeachers = sortByMaster(masterInstructors.map(m => m.name));
+    } else {
+      selectedTeachers = [];
+    }
+    localStorage.setItem(`lz_reb_unified_teachers_${currentYear}`, JSON.stringify(selectedTeachers));
+    renderTeacherPicker();
+    renderAllSections();
+  }
+
   function renderTeacherPicker() {
     const panel = document.getElementById('teacherPickerPanel');
     const btn = document.getElementById('teacherPickerBtn');
     if (panel) {
-      panel.innerHTML = masterInstructors.map(m => {
+      const quickBar = `
+        <div style="display:flex; gap:6px; padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0;">
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="setAllTeachers(true)">全選</button>
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="setAllTeachers(false)">全不選</button>
+        </div>
+      `;
+      const itemsHtml = masterInstructors.map(m => {
         const chk = selectedTeachers.includes(m.name);
         return `
           <div class="picker-item">
@@ -572,6 +596,7 @@
           </div>
         `;
       }).join('');
+      panel.innerHTML = quickBar + itemsHtml;
     }
     if (btn) btn.textContent = `勾選講師 (${selectedTeachers.length}) ▾`;
   }
