@@ -1309,6 +1309,47 @@
     `;
   }
 
+  function copyTaxSummaryToClipboard() {
+    const ltcBlocks = [LTC_PERIOD_DEFS.Q1, LTC_PERIOD_DEFS.Q2, LTC_PERIOD_DEFS.Q3, LTC_PERIOD_DEFS.Q4];
+    const delayBlocks = [DELAY_TERM_DEFS.T1, DELAY_TERM_DEFS.T2, DELAY_TERM_DEFS.T3];
+    const allBlocks = [...ltcBlocks, ...delayBlocks];
+    const lines = [`${currentYear}年度講師核銷與個人所得稅彙總\t${selectedTeachers.join('\t')}`];
+    const totals = {};
+    const sessions = {};
+    selectedTeachers.forEach(n => { totals[n] = 0; sessions[n] = 0; });
+
+    allBlocks.forEach(blk => {
+      const prefix = blk.program === 'DELAY' ? '【延緩】' : '【長照】';
+      const vals = selectedTeachers.map(instName => {
+        let sumAmt = 0;
+        let sumSess = 0;
+        blk.cols.forEach(colKey => {
+          const cell = getLinkedCellData(blk, colKey, instName);
+          sumAmt += Number(cell.amount || 0);
+          sumSess += Number(cell.sessions || 0);
+        });
+        totals[instName] += sumAmt;
+        sessions[instName] += sumSess;
+        return sumAmt;
+      });
+      lines.push(`${prefix}${blk.title}\t${vals.join('\t')}`);
+    });
+    lines.push(`核銷金額合計\t${selectedTeachers.map(n => totals[n]).join('\t')}`);
+    lines.push(`累計上課堂數\t${selectedTeachers.map(n => sessions[n]).join('\t')}`);
+    lines.push(`個人所得稅（自動帶入試算）\t${selectedTeachers.map(n => (totals[n] >= 20000 ? Math.round(totals[n] * 0.1) : 0)).join('\t')}`);
+    lines.push(`扣除所得稅後淨額（參考）\t${selectedTeachers.map(n => {
+      const tot = totals[n] || 0;
+      const tax = tot >= 20000 ? Math.round(tot * 0.1) : 0;
+      return tot - tax;
+    }).join('\t')}`);
+
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
+      showToast('summaryCopyToast', '已複製所得稅彙總數值');
+    }).catch(() => {
+      showToast('summaryCopyToast', '已準備所得稅彙總數值');
+    });
+  }
+
   function renderAllSections() {
     populateRenameSelect();
     renderTeacherPicker();
