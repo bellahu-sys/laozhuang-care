@@ -287,10 +287,13 @@
     </div>
   </div>
 
-  <!-- 區塊一：年度/各月計畫鐘點費基準設定 + 產生數值表 -->
+  <!-- 區塊一：年度/各月計畫鐘點費基準設定（預設收合） + 產生數值表 -->
   <section class="section-card">
-    <h2 class="section-title">
-      <span>一、年度／各月計畫鐘點費基準設定</span>
+    <h2 class="section-title" style="margin-bottom:0;">
+      <div class="toolbar-group">
+        <span>一、年度／各月計畫鐘點費基準設定</span>
+        <button type="button" class="btn btn-primary btn-sm no-print" id="btnToggleRateBenchmark" onclick="toggleRateBenchmarkBody()">展開設定</button>
+      </div>
       <div class="toolbar-group no-print">
         <label class="ctrl-label" for="rateScopeSelect">生效範圍：</label>
         <select id="rateScopeSelect" onchange="onRateScopeChange(this.value)">
@@ -314,27 +317,30 @@
       </div>
     </h2>
 
-    <div class="toolbar-row no-print" style="margin-bottom:10px; background:#f8fafc; border-color:#e2e8f0;">
-      <div class="toolbar-group">
-        <label class="ctrl-label" for="newPlanInput">新增計畫欄：</label>
-        <input type="text" id="newPlanInput" placeholder="例如：延緩3期" style="width:130px;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="addPlanColumn()">＋ 新增</button>
+    <!-- 預設收合的設定內容區 -->
+    <div id="rateBenchmarkCollapsibleArea" style="display:none; margin-top:12px;">
+      <div class="toolbar-row no-print" style="margin-bottom:10px; background:#f8fafc; border-color:#e2e8f0;">
+        <div class="toolbar-group">
+          <label class="ctrl-label" for="newPlanInput">新增計畫欄：</label>
+          <input type="text" id="newPlanInput" placeholder="例如：延緩3期" style="width:130px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="addPlanColumn()">＋ 新增</button>
+        </div>
+        <div class="toolbar-group">
+          <label class="ctrl-label" for="renamePlanSelect">修改計畫欄：</label>
+          <select id="renamePlanSelect" style="width:120px;"></select>
+          <input type="text" id="renamePlanInput" placeholder="新名稱" style="width:120px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="renamePlanColumn()">修改</button>
+        </div>
       </div>
-      <div class="toolbar-group">
-        <label class="ctrl-label" for="renamePlanSelect">修改計畫欄：</label>
-        <select id="renamePlanSelect" style="width:120px;"></select>
-        <input type="text" id="renamePlanInput" placeholder="新名稱" style="width:120px;">
-        <button type="button" class="btn btn-outline btn-sm" onclick="renamePlanColumn()">修改</button>
+
+      <!-- 明細設定表 -->
+      <div style="overflow-x:auto; margin-bottom:18px;">
+        <table class="excel-table" id="rateBenchmarkTable"></table>
       </div>
     </div>
 
-    <!-- 明細設定表 -->
-    <div style="overflow-x:auto; margin-bottom:18px;">
-      <table class="excel-table" id="rateBenchmarkTable"></table>
-    </div>
-
-    <!-- 圖2：鐘點費-核銷產生數值表（供帶入核銷統計） -->
-    <div style="padding-top:12px; border-top:1px dashed #fda4af;">
+    <!-- 鐘點費-核銷產生數值表（供帶入核銷統計） -->
+    <div style="margin-top:14px; padding-top:12px; border-top:1px dashed #fda4af;">
       <div class="sheet-title-banner">鐘點費-核銷產生數值表（供帶入核銷統計）</div>
       <div style="overflow-x:auto;">
         <table class="excel-table" id="generatedValueTable"></table>
@@ -435,6 +441,15 @@
     el.textContent = msg;
     clearTimeout(el._timer);
     el._timer = setTimeout(() => { el.textContent = ''; }, 2400);
+  }
+
+  function toggleRateBenchmarkBody() {
+    const area = document.getElementById('rateBenchmarkCollapsibleArea');
+    const btn = document.getElementById('btnToggleRateBenchmark');
+    if (!area || !btn) return;
+    const isHidden = area.style.display === 'none';
+    area.style.display = isHidden ? 'block' : 'none';
+    btn.textContent = isHidden ? '收合設定' : '展開設定';
   }
 
   function togglePickerPanel(ev, panelId) {
