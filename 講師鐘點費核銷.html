@@ -1195,7 +1195,7 @@
       : [LTC_PERIOD_DEFS.Q1, LTC_PERIOD_DEFS.Q2, LTC_PERIOD_DEFS.Q3, LTC_PERIOD_DEFS.Q4];
 
     if (titleEl) {
-      titleEl.textContent = `${currentYear}年度講師核銷與個人所得稅彙總（${cat === 'DELAY' ? '延緩 1–3 期' : '長照分季'}）`;
+      titleEl.textContent = `${currentYear}年度講師核銷與個人所得稅彙總（${cat === 'DELAY' ? '延緩 1–3 期' : '長照分季'}，由上方核銷金額自動帶入）`;
     }
 
     if (selectedTeachers.length === 0) {
@@ -1243,10 +1243,33 @@
       </tr>
     `;
 
+    // 個人所得稅自動帶入列（依年度累計核銷金額試算：未達 20,000 元免扣 10% 所得稅為 0 元；達 20,000 元以上依累計金額 10% 試算，供核對參考）
+    const taxAutoRow = `
+      <tr>
+        <td class="center-col" style="font-weight:bold; color:#0f766e;">個人所得稅（自動帶入試算）</td>
+        ${selectedTeachers.map(n => {
+          const tot = instTotals[n] || 0;
+          const estTax = tot >= 20000 ? Math.round(tot * 0.1) : 0;
+          return `<td class="num-col" style="font-weight:bold; color:#0f766e;" title="年度累計 ${fmtNum(tot)} 元（20,000元以上按10%試算）">${fmtNum(estTax)}</td>`;
+        }).join('')}
+      </tr>
+    `;
+
+    const netAfterTaxRow = `
+      <tr class="sub-total-row">
+        <td class="center-col">扣除所得稅後淨額（參考）</td>
+        ${selectedTeachers.map(n => {
+          const tot = instTotals[n] || 0;
+          const estTax = tot >= 20000 ? Math.round(tot * 0.1) : 0;
+          return `<td class="num-col">${fmtNum(tot - estTax)}</td>`;
+        }).join('')}
+      </tr>
+    `;
+
     tbl.innerHTML = `
       <thead>
         <tr>
-          <th style="width:160px;">期別／項目</th>
+          <th style="width:185px;">期別／項目</th>
           ${headerCols}
         </tr>
       </thead>
@@ -1254,38 +1277,10 @@
         ${bodyRows}
         ${totalRow}
         ${sessionRow}
+        ${taxAutoRow}
+        ${netAfterTaxRow}
       </tbody>
     `;
-  }
-
-  function copyTaxSummaryToClipboard() {
-    const cat = document.getElementById('viewCategorySelect')?.value || 'LTC';
-    const blocks = cat === 'DELAY'
-      ? [DELAY_TERM_DEFS.T1, DELAY_TERM_DEFS.T2, DELAY_TERM_DEFS.T3]
-      : [LTC_PERIOD_DEFS.Q1, LTC_PERIOD_DEFS.Q2, LTC_PERIOD_DEFS.Q3, LTC_PERIOD_DEFS.Q4];
-    const lines = [`${currentYear}年度講師核銷彙總\t${selectedTeachers.join('\t')}`];
-    const totals = {};
-    selectedTeachers.forEach(n => { totals[n] = 0; });
-
-    blocks.forEach(blk => {
-      const vals = selectedTeachers.map(instName => {
-        let sumAmt = 0;
-        blk.cols.forEach(colKey => {
-          const entry = getClaimEntry(currentYear, blk.periodKey, colKey, instName, blk.defaultPlan);
-          sumAmt += Number(entry.amount || 0);
-        });
-        totals[instName] += sumAmt;
-        return sumAmt;
-      });
-      lines.push(`${blk.title}\t${vals.join('\t')}`);
-    });
-    lines.push(`核銷金額合計\t${selectedTeachers.map(n => totals[n]).join('\t')}`);
-
-    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
-      showToast('summaryCopyToast', '已複製彙總表數值');
-    }).catch(() => {
-      showToast('summaryCopyToast', '已準備彙總表數值');
-    });
   }
 
   function renderAllSections() {
