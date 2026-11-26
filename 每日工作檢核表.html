@@ -213,6 +213,50 @@
       body { background: #fff; }
       .page-card, .group-card, .monthly-card { box-shadow: none; border-color: #94a3b8; }
     }
+  
+    .section-subnav {
+      background: #fffbeb;
+      border-bottom: 1px solid #fde68a;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(180, 83, 9, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: #92400e;
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #fde68a;
+      background: #ffffff;
+      color: #92400e;
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #fef3c7;
+      border-color: #b45309;
+    }
+    .section-subnav a.active {
+      background: #b45309;
+      color: #ffffff;
+      border-color: #b45309;
+      box-shadow: 0 2px 6px rgba(180, 83, 9, 0.22);
+    }
+    @media print { .section-subnav { display: none !important; } }
+
   </style>
 </head>
 <body>
@@ -287,6 +331,16 @@
     </div>
   </div>
 </nav>
+<!-- 常駐行政類與每日記錄快速切換列 -->
+<div class="section-subnav no-print" aria-label="行政類與每日記錄快速切換">
+  <span class="section-subnav-label">行政類與每日記錄快速切換：</span>
+  <a href="每日工作檢核表.html" class="active">每日工作檢核表</a>
+  <a href="零用金管理中心.html">零用金清點記錄</a>
+  <a href="每日菜單管理.html">每日菜單管理</a>
+  <a href="公文編號記錄.html">公文編號記錄</a>
+  <a href="資料庫臨時記錄.html">資料庫臨時記錄</a>
+</div>
+
 
 <div class="container">
   <div class="page-card">

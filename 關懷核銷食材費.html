@@ -135,6 +135,50 @@
       .container { max-width: 100%; margin: 0; padding: 0; }
       .card { border: none; box-shadow: none; padding: 0; }
     }
+  
+    .section-subnav {
+      background: #fff1f2;
+      border-bottom: 1px solid #fecdd3;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(190, 18, 60, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: #9f1239;
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #fecdd3;
+      background: #ffffff;
+      color: #9f1239;
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #ffe4e6;
+      border-color: #be123c;
+    }
+    .section-subnav a.active {
+      background: #be123c;
+      color: #ffffff;
+      border-color: #be123c;
+      box-shadow: 0 2px 6px rgba(190, 18, 60, 0.22);
+    }
+    @media print { .section-subnav { display: none !important; } }
+
   </style>
   <script>
     window.addEventListener('error', function(ev) {
@@ -224,6 +268,16 @@
     </div>
   </div>
 </nav>
+<!-- 常駐關懷核銷快速切換列 -->
+<div class="section-subnav no-print" aria-label="關懷核銷快速切換">
+  <span class="section-subnav-label">關懷核銷快速切換：</span>
+  <a href="關懷核銷食材費.html" class="active">關懷核銷食材費</a>
+  <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+  <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+  <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+  <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+</div>
+
 
 <div class="container">
   <div class="card no-print">

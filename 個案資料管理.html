@@ -136,6 +136,50 @@
     .sub-table th, .sub-table td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 0.92rem; text-align: left; }
     .sub-table th { background: #ccfbf1; color: #134e4a; }
     .btn-del-sub { background: #ef4444; color: white; border: none; border-radius: 4px; padding: 3px 8px; font-size: 0.8rem; cursor: pointer; }
+  
+    .section-subnav {
+      background: #f0fdfa;
+      border-bottom: 1px solid #99f6e4;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(15, 118, 110, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: #115e59;
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #99f6e4;
+      background: #ffffff;
+      color: #115e59;
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #ccfbf1;
+      border-color: #0f766e;
+    }
+    .section-subnav a.active {
+      background: #0f766e;
+      color: #ffffff;
+      border-color: #0f766e;
+      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.22);
+    }
+    @media print { .section-subnav { display: none !important; } }
+
   </style>
 </head>
 <body>
@@ -176,6 +220,19 @@
     </div>
   </div>
 </nav>
+<!-- 常駐人事資料快速切換列 -->
+<div class="section-subnav no-print" aria-label="人事資料快速切換">
+  <span class="section-subnav-label">人事資料快速切換：</span>
+  <a href="個案資料管理.html" class="active">個案資料管理</a>
+  <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+  <a href="講師資料.html">講師資料管理</a>
+  <a href="臨時人員資料.html">臨時人員資料管理</a>
+  <a href="志工資料管理.html">志工資料管理</a>
+  <a href="電話問安管理.html">電話問安記錄</a>
+  <a href="延緩前測管理.html">延緩課程前測記錄</a>
+  <a href="聯絡電話.html">聯絡電話</a>
+</div>
+
 
 <!-- 仿 Access 單一表單翻頁導覽列 -->
 <div class="pager-bar">

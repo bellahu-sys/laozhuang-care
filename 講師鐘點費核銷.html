@@ -171,6 +171,50 @@
       .container { max-width: 100%; margin: 0; padding: 0; border: none; box-shadow: none; }
       .section-card { break-inside: avoid; }
     }
+  
+    .section-subnav {
+      background: #fff1f2;
+      border-bottom: 1px solid #fecdd3;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(190, 18, 60, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: #9f1239;
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #fecdd3;
+      background: #ffffff;
+      color: #9f1239;
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #ffe4e6;
+      border-color: #be123c;
+    }
+    .section-subnav a.active {
+      background: #be123c;
+      color: #ffffff;
+      border-color: #be123c;
+      box-shadow: 0 2px 6px rgba(190, 18, 60, 0.22);
+    }
+    @media print { .section-subnav { display: none !important; } }
+
   </style>
 </head>
 <body>
@@ -240,6 +284,16 @@
     </div>
   </div>
 </nav>
+<!-- 常駐長照與延緩核銷快速切換列 -->
+<div class="section-subnav no-print" aria-label="長照與延緩核銷快速切換">
+  <span class="section-subnav-label">長照與延緩核銷快速切換：</span>
+  <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+  <a href="長照核銷食材費.html">長照核銷食材費</a>
+  <a href="講師鐘點費核銷.html" class="active">2. 講師鐘點費核銷</a>
+  <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+  <a href="長照與延緩核銷統計.html?plan=delay">3. 延緩核銷統計</a>
+</div>
+
 
 <div class="container">
   <div class="header-bar">

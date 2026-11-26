@@ -218,6 +218,50 @@
         border: none !important;
       }
     }
+
+    .section-subnav {
+      background: #eef2ff;
+      border-bottom: 1px solid #c7d2fe;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(67, 56, 202, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: #3730a3;
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #c7d2fe;
+      background: #ffffff;
+      color: #3730a3;
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #e0e7ff;
+      border-color: #4338ca;
+    }
+    .section-subnav a.active {
+      background: #4338ca;
+      color: #ffffff;
+      border-color: #4338ca;
+      box-shadow: 0 2px 6px rgba(67, 56, 202, 0.22);
+    }
+    @media print { .section-subnav { display: none !important; } }
+
   </style>
 </head>
 <body>
@@ -259,6 +303,19 @@
     </div>
   </div>
 </nav>
+<!-- 常駐課程安排與報表套印快速切換列 -->
+<div class="section-subnav no-print" aria-label="課程安排與報表套印快速切換">
+  <span class="section-subnav-label">課程安排與報表套印快速切換：</span>
+  <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+  <a href="課程活動表.html">課程活動表</a>
+  <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+  <a href="個案基本資料表套印.html" class="active">個案基本資料表套印</a>
+  <a href="健康管理表套印.html">長輩健康管理表套印</a>
+  <a href="月報表套印中心.html">簽到表套印</a>
+  <a href="常來名冊報表.html">常來個案名冊與報表</a>
+</div>
+
+
 
 <div class="control-panel">
   <div class="panel-header">
