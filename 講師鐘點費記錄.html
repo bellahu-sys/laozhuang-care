@@ -337,10 +337,11 @@
 
     <div class="mode-tabs no-print">
       <button type="button" class="mode-tab" id="tabSettings" onclick="switchTab('settings')">講師鐘點費設定</button>
-      <button type="button" class="mode-tab active" id="tabFee" onclick="switchTab('fee')">1. 鐘點費計算</button>
+      <button type="button" class="mode-tab active" id="tabFeeCal" onclick="switchTab('fee_cal')">鐘點費計算_依行事曆</button>
+      <button type="button" class="mode-tab" id="tabFeeMan" onclick="switchTab('fee_man')">手動輸入</button>
     </div>
 
-    <!-- 講師鐘點費設定（已合併自原 講師鐘點費設定.html） -->
+    <!-- 講師鐘點費設定 -->
     <div id="panelSettings" style="display:none;">
       <div class="controls-row no-print">
         <label style="font-weight:bold;">新增計畫欄位：</label>
@@ -366,11 +367,9 @@
           <table class="excel-table" id="salaryRateTable"></table>
         </div>
       </div>
-
-
     </div>
 
-    <!-- 1. 鐘點費計算 -->
+    <!-- 鐘點費計算_依行事曆 & 手動輸入 -->
     <div id="panelFee">
       <div class="controls-row no-print">
         <label style="font-weight:bold;">年度：</label>
@@ -398,13 +397,13 @@
       <div class="sub-box no-print">
         <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
           <div style="display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span id="feeModeBadge" class="mode-pill-cal">預設：依行事曆代入天數</span>
-            <button type="button" class="btn btn-outline btn-sm" id="btnSwitchToManual" onclick="setFeeInputMode('manual')">手動輸入</button>
-            <button type="button" class="btn btn-teal btn-sm" id="btnSwitchToCalendar" style="display:none;" onclick="setFeeInputMode('calendar')">依行事曆代入天數</button>
+            <span id="feeModeBadge" class="mode-pill-cal">鐘點費計算_依行事曆</span>
+            <button type="button" class="btn btn-outline btn-sm" id="btnSwitchToManual" onclick="switchTab('fee_man')">手動輸入</button>
+            <button type="button" class="btn btn-teal btn-sm" id="btnSwitchToCalendar" style="display:none;" onclick="switchTab('fee_cal')">鐘點費計算_依行事曆</button>
             <button type="button" class="btn btn-blue btn-sm" onclick="switchTab('settings')">講師鐘點費設定</button>
           </div>
 
-          <!-- 依行事曆代入天數：薪資計算期間 / 算到哪一天 選項 -->
+          <!-- 依行事曆代入天數：計算期間 / 算到哪一天 選項 -->
           <div id="calendarPeriodControls" style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
             <div class="period-filter-box">
               <label style="font-weight:bold; font-size:0.86rem; color:#0f172a;">計算期間／算到哪一天：</label>
@@ -446,8 +445,6 @@
         </div>
 
         <div id="calPeriodSummaryBar" style="margin-top:8px; font-size:0.83rem; color:#0f766e; font-weight:bold;"></div>
-
-
       </div>
 
       <div class="sync-hint-banner no-print" id="cloudSyncNotice">
@@ -1184,16 +1181,23 @@
   }
 
   async function setFeeInputMode(mode) {
-    feeInputMode = mode;
-    const isManual = (mode === 'manual');
+    feeInputMode = (mode === 'manual') ? 'manual' : 'calendar';
+    const isManual = (feeInputMode === 'manual');
     const badge = document.getElementById('feeModeBadge');
     const btnToManual = document.getElementById('btnSwitchToManual');
     const btnToCal = document.getElementById('btnSwitchToCalendar');
     const calCtrl = document.getElementById('calendarPeriodControls');
     const manCtrl = document.getElementById('manualModeControls');
+    const tCal = document.getElementById('tabFeeCal');
+    const tMan = document.getElementById('tabFeeMan');
+    const tSet = document.getElementById('tabSettings');
+
+    if (tSet) tSet.classList.remove('active');
+    if (tCal) tCal.classList.toggle('active', !isManual);
+    if (tMan) tMan.classList.toggle('active', isManual);
 
     if (badge) {
-      badge.textContent = isManual ? '目前模式：手動輸入（獨立存檔）' : '預設：依行事曆代入天數';
+      badge.textContent = isManual ? '手動輸入' : '鐘點費計算_依行事曆';
       badge.className = isManual ? 'mode-pill-man' : 'mode-pill-cal';
     }
     if (btnToManual) btnToManual.style.display = isManual ? 'none' : 'inline-block';
@@ -1828,20 +1832,26 @@
     resizeAllPeriodTextareas();
   }
 
-  function switchTab(tab) {
-    activeTab = (tab === 'settings') ? 'settings' : 'fee';
-    document.getElementById('tabSettings').classList.toggle('active', activeTab === 'settings');
-    document.getElementById('tabFee').classList.toggle('active', activeTab === 'fee');
-
-    document.getElementById('panelSettings').style.display = (activeTab === 'settings') ? 'block' : 'none';
-    document.getElementById('panelFee').style.display = (activeTab === 'fee') ? 'block' : 'none';
-
-    if (activeTab === 'settings') {
-      cfgReloadFromDatabase();
-    } else {
-      document.getElementById('feeYearSelect').value = String(currentYear);
-      onFeeContextChange();
+  async function switchTab(tab) {
+    if (tab === 'settings') {
+      activeTab = 'settings';
+      document.getElementById('tabSettings')?.classList.add('active');
+      document.getElementById('tabFeeCal')?.classList.remove('active');
+      document.getElementById('tabFeeMan')?.classList.remove('active');
+      document.getElementById('panelSettings').style.display = 'block';
+      document.getElementById('panelFee').style.display = 'none';
+      await cfgReloadFromDatabase();
+      return;
     }
+
+    activeTab = 'fee';
+    document.getElementById('panelSettings').style.display = 'none';
+    document.getElementById('panelFee').style.display = 'block';
+    document.getElementById('feeYearSelect').value = String(currentYear);
+    const targetMode = (tab === 'fee_man') ? 'manual' : 'calendar';
+    feeInputMode = targetMode;
+    await onFeeContextChange();
+    await setFeeInputMode(targetMode);
   }
 
   // ==================== 講師鐘點費設定（鐘點費-薪資 & 鐘點費-核銷，直接寫入 Supabase 資料庫） ====================
