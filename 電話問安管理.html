@@ -182,9 +182,69 @@
     }
     @media print { .section-subnav { display: none !important; } }
 
+  
+    .preset-dot { font-size: 0.74rem; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 8px; border: 1px solid #fde68a; }
+    .mode-pill { font-size: 0.8rem; padding: 3px 9px; border-radius: 12px; font-weight: bold; }
+    .mode-pill-preset { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+    .mode-pill-blank { background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; }
+    .preset-modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5);
+      z-index: 900; justify-content: center; align-items: center; padding: 16px;
+    }
+    .preset-modal-backdrop.open { display: flex; }
+    .preset-modal-box {
+      background: #fff; border-radius: 12px; max-width: 980px; width: 100%; max-height: 86vh;
+      display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.25); overflow: hidden;
+    }
+    .preset-modal-hdr {
+      background: var(--primary); color: #fff; padding: 14px 20px;
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    }
+    .preset-modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
   </style>
 </head>
 <body>
+
+
+<!-- 已有電話問安記錄名單 Modal -->
+<div class="preset-modal-backdrop" id="presetListModal" onclick="if(event.target===this)closePresetListModal()">
+  <div class="preset-modal-box">
+    <div class="preset-modal-hdr">
+      <div>
+        <strong style="font-size:1.05rem;">已有電話問安記錄名單（原始設定檔）</strong>
+        <span id="modalPresetSummary" style="font-size:0.84rem; margin-left:10px; opacity:0.92;"></span>
+      </div>
+      <button type="button" class="btn btn-gray" style="padding:5px 12px; font-size:0.85rem;" onclick="closePresetListModal()">關閉</button>
+    </div>
+    <div class="preset-modal-body">
+      <div class="toolbar" style="margin-bottom:12px;">
+        <input type="text" id="presetSearchInput" placeholder="搜尋姓名、編號或備註..." oninput="renderPresetModalTable()" style="flex:1; min-width:200px;">
+        <button type="button" class="btn btn-blue" style="padding:6px 12px; font-size:0.84rem;" onclick="exportPresetExcel()">匯出目前設定名單 (.xlsx)</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>項次</th>
+              <th>編號</th>
+              <th style="min-width:86px; white-space:nowrap;">姓名</th>
+              <th>性別</th>
+              <th>接聽</th>
+              <th>口頭</th>
+              <th>健康</th>
+              <th>生活</th>
+              <th>親友</th>
+              <th>精神</th>
+              <th>備註</th>
+              <th style="white-space:nowrap;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="presetModalTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
   if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
@@ -338,12 +398,24 @@
           <div><strong>電話／手機：</strong><span id="selCasePhone" style="color:#b45309; font-weight:bold;">-</span></div>
         </div>
 
-        <div class="toolbar" style="margin-bottom:12px;">
+        <div class="toolbar" style="margin-bottom:10px;">
+          <span id="formFillModePill" class="mode-pill mode-pill-blank">目前：空白表單模式</span>
           <label><strong>電訪日期時間（民國年/月/日 時:分:秒）：</strong>
-            <input type="text" id="callDatetimeInput" style="width:195px; font-weight:bold;" placeholder="115/11/23 09:30:00">
+            <input type="text" id="callDatetimeInput" style="width:185px; font-weight:bold;" placeholder="115/11/23 09:30:00">
           </label>
           <button type="button" class="btn btn-gray" style="padding:6px 10px; font-size:0.84rem;" onclick="setNowRocDatetime()">重設為現在時間</button>
+          <button type="button" class="btn btn-gray" style="padding:6px 10px; font-size:0.84rem;" onclick="clearFormToBlank()">清空為空白表單</button>
           <button type="button" class="btn btn-blue" style="padding:6px 10px; font-size:0.84rem;" onclick="applyNormalPreset()">一鍵帶入「一切正常」常用選項</button>
+        </div>
+
+        <div class="toolbar" style="margin-bottom:12px; background:#fffbeb; border-color:#fde68a;">
+          <button type="button" class="btn btn-amber" style="padding:6px 12px; font-size:0.85rem;" onclick="openPresetListModal()">已有電話問安記錄名單（<span id="presetCountBadge">0</span> 人）</button>
+          <button type="button" class="btn btn-blue" style="padding:6px 12px; font-size:0.85rem;" onclick="applyCasePresetToForm(false)">套用該個案原始設定</button>
+          <label class="btn btn-gray" style="padding:6px 11px; font-size:0.84rem; margin:0; cursor:pointer;">
+            上傳設定 Excel (.xlsx)
+            <input type="file" id="presetExcelInput" accept=".xlsx,.xls" style="display:none;" onchange="handlePresetExcelUpload(event)">
+          </label>
+          <span id="presetMatchInfo" style="font-size:0.82rem; color:#92400e;">未去電返據點時自動帶入空白表單；3 天到據點說明原因時可套用原始設定。</span>
         </div>
 
         <div class="q-grid">
@@ -485,6 +557,997 @@
   let selectedCase = null;
   let hasAnyRegularInDb = false;
 
+  const DEFAULT_CASE_PRESETS = [
+  {
+    "code": "110086915",
+    "name": "邱鳳廷",
+    "gender": "女",
+    "call_datetime": "115/06/25 14:12:00",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "1",
+    "health_other": "",
+    "life_status": "1",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110085791",
+    "name": "詹林月鳳",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "",
+    "life_status": "1",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "因腎臟問題定期回診"
+  },
+  {
+    "code": "110085864",
+    "name": "劉明光",
+    "gender": "男",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110085758",
+    "name": "吳英妹",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "2",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "3,4",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110088870",
+    "name": "蔡榮岳",
+    "gender": "男",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "2",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "",
+    "life_status": "1,4",
+    "life_other": "",
+    "interaction_status": "3",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110086525",
+    "name": "張世江",
+    "gender": "男",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110085787",
+    "name": "詹鍾春妹",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110085909",
+    "name": "邱英輝",
+    "gender": "男",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "115053980",
+    "name": "廖保美",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3",
+    "health_other": "高血壓",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "家有訪客就沒有來"
+  },
+  {
+    "code": "110093049",
+    "name": "詹陳火英",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "2",
+    "answer_other": "",
+    "speech_status": "3",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "大腿常會酸痛",
+    "life_status": "1",
+    "life_other": "",
+    "interaction_status": "3",
+    "interaction_other": "",
+    "mental_status": "3",
+    "mental_other": "",
+    "remark": "腳痛不想上課"
+  },
+  {
+    "code": "110088870",
+    "name": "蔡榮岳",
+    "gender": "男",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "2",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "",
+    "life_status": "1,4",
+    "life_other": "",
+    "interaction_status": "3",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "115026864",
+    "name": "詹連美玉",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "2",
+    "answer_other": "",
+    "speech_status": "2",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "",
+    "life_status": "1,4",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": "住院中"
+  },
+  {
+    "code": "115058948",
+    "name": "詹文達",
+    "gender": "男",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "中風, 頭痛",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": "白內障開刀、肩膀針灸"
+  },
+  {
+    "code": "110088885",
+    "name": "詹宋炳秋",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "1",
+    "health_other": "手會麻",
+    "life_status": "2",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "田裏種菜"
+  },
+  {
+    "code": "113013377",
+    "name": "楊金玉",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "血糖高、眼睛看不清",
+    "life_status": "2,3",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "回診看關節"
+  },
+  {
+    "code": "112016003",
+    "name": "賴詹秀蘭",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "2",
+    "answer_other": "",
+    "speech_status": "2",
+    "speech_other": "",
+    "health_status": "",
+    "health_other": "",
+    "life_status": "",
+    "life_other": "",
+    "interaction_status": "",
+    "interaction_other": "",
+    "mental_status": "",
+    "mental_other": "",
+    "remark": "回診"
+  },
+  {
+    "code": "115058952",
+    "name": "詹曾玉蓮",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "2",
+    "answer_other": "",
+    "speech_status": "2",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "失智,高血壓",
+    "life_status": "1",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": "到女兒家住"
+  },
+  {
+    "code": "113032408",
+    "name": "林楊雪里",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "腳痛、心臟病、泌尿科",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110094260",
+    "name": "劉炤櫻",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "慣性腳痛",
+    "life_status": "1",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "因為覺得當天會有小朋友參與課程,覺得空間太擠"
+  },
+  {
+    "code": "110092695",
+    "name": "江詹秀英",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "帕金森氏症",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "回診看報告"
+  },
+  {
+    "code": "112035497",
+    "name": "饒鳳美",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "車禍腦部動手術、頭痛、腰痛",
+    "life_status": "2",
+    "life_other": "",
+    "interaction_status": "3",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": "去剪頭髮沒來據點"
+  },
+  {
+    "code": "110085776",
+    "name": "賴郁兒",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "1",
+    "health_other": "",
+    "life_status": "1",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "採梨工作"
+  },
+  {
+    "code": "115053979",
+    "name": "黃秀美",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "1",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "",
+    "interaction_other": "1",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110085756",
+    "name": "徐阿足",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "高血壓,骨質疏鬆",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "感冒不舒服"
+  },
+  {
+    "code": "111001330",
+    "name": "蔡張菊英",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "膝蓋痛、高血壓",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110086245",
+    "name": "曾張瑞合",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "乳癌定期檢查",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "115067626",
+    "name": "徐碧珠",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "高血壓",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "人懶懶的不想出門"
+  },
+  {
+    "code": "113105530",
+    "name": "詹劉阿存",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "糖尿病",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "114108892",
+    "name": "古詹錦服",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "2",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "裝有心律節拍器、手指痛、",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "115019488",
+    "name": "陳椿茂",
+    "gender": "男",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "裝有心臟支架",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "111055159",
+    "name": "黃昌鑫",
+    "gender": "男",
+    "call_datetime": "",
+    "answer_status": "2",
+    "answer_other": "",
+    "speech_status": "2",
+    "speech_other": "",
+    "health_status": "腰痛、糖尿病",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "3",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110085809",
+    "name": "詹郭水柳",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "2",
+    "answer_other": "",
+    "speech_status": "2",
+    "speech_other": "",
+    "health_status": "2",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "2",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "114079793",
+    "name": "詹葉杏娘",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "2",
+    "answer_other": "",
+    "speech_status": "4",
+    "speech_other": "",
+    "health_status": "1",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "4",
+    "interaction_other": "",
+    "mental_status": "2",
+    "mental_other": "",
+    "remark": "死亡結案"
+  },
+  {
+    "code": "110085828",
+    "name": "詹劉品妹",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "2",
+    "answer_other": "",
+    "speech_status": "4",
+    "speech_other": "",
+    "health_status": "2,3,4",
+    "health_other": "腳痛、導尿管、糖尿病",
+    "life_status": "1,2",
+    "life_other": "",
+    "interaction_status": "4",
+    "interaction_other": "",
+    "mental_status": "3",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "110085800",
+    "name": "詹潤妹",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "2,3",
+    "health_other": "腳痛、糖尿病",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": ""
+  },
+  {
+    "code": "114079707",
+    "name": "謝林美貴",
+    "gender": "女",
+    "call_datetime": "",
+    "answer_status": "1",
+    "answer_other": "",
+    "speech_status": "1",
+    "speech_other": "",
+    "health_status": "3,4",
+    "health_other": "",
+    "life_status": "1,3",
+    "life_other": "",
+    "interaction_status": "1",
+    "interaction_other": "",
+    "mental_status": "1",
+    "mental_other": "",
+    "remark": "感冒"
+  }
+];
+  let casePresetMap = {};
+
+  function rebuildPresetMap(list) {
+    casePresetMap = {};
+    (list || []).forEach(function(item) {
+      const n = String(item.name || '').trim();
+      const c = String(item.code || '').trim();
+      if (!n) return;
+      if (!casePresetMap[n]) casePresetMap[n] = item;
+      if (c && !casePresetMap[c]) casePresetMap[c] = item;
+    });
+    const uniqNames = new Set((list || []).map(function(x) { return String(x.name || '').trim(); }).filter(Boolean));
+    const badge = document.getElementById('presetCountBadge');
+    if (badge) badge.textContent = String(uniqNames.size);
+  }
+
+  (function initPresetsStore() {
+    try {
+      const saved = localStorage.getItem('laozhuang_phone_checkin_presets_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          rebuildPresetMap(parsed);
+          return;
+        }
+      }
+    } catch (e) {}
+    rebuildPresetMap(DEFAULT_CASE_PRESETS);
+  })();
+
+  function getUniquePresetRows() {
+    const seen = new Set();
+    const out = [];
+    Object.values(casePresetMap).forEach(function(item) {
+      if (!item || !item.name) return;
+      const key = (item.code || '') + '__' + item.name;
+      if (!seen.has(key)) {
+        seen.add(key);
+        out.push(item);
+      }
+    });
+    return out;
+  }
+
+  function findPresetForCase(c) {
+    if (!c) return null;
+    const n = String(c.name || '').trim();
+    const govId = String(c.gov_system_id || '').trim();
+    const cNum = String(c.case_number || '').trim();
+    return casePresetMap[n] || casePresetMap[govId] || casePresetMap[cNum] || null;
+  }
+
+  function setFormModeBadge(isPreset) {
+    const pill = document.getElementById('formFillModePill');
+    if (!pill) return;
+    if (isPreset) {
+      pill.textContent = '目前：已套用原始設定';
+      pill.className = 'mode-pill mode-pill-preset';
+    } else {
+      pill.textContent = '目前：空白表單模式';
+      pill.className = 'mode-pill mode-pill-blank';
+    }
+  }
+
+  function clearFormToBlank() {
+    document.querySelectorAll('input[name="q_answer"]').forEach(function(r) { r.checked = false; });
+    document.querySelectorAll('input[name="q_speech"]').forEach(function(r) { r.checked = false; });
+    document.querySelectorAll('input[name="q_health"]').forEach(function(cb) { cb.checked = false; });
+    document.querySelectorAll('input[name="q_life"]').forEach(function(cb) { cb.checked = false; });
+    document.querySelectorAll('input[name="q_interaction"]').forEach(function(r) { r.checked = false; });
+    document.querySelectorAll('input[name="q_mental"]').forEach(function(r) { r.checked = false; });
+    ['other_answer', 'other_speech', 'other_health', 'other_life', 'other_interaction', 'other_mental', 'remarkInput'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    setFormModeBadge(false);
+  }
+
+  function applyPresetDataObject(p, keepNowDt) {
+    if (!p) return;
+    clearFormToBlank();
+    if (keepNowDt) {
+      setNowRocDatetime();
+    } else if (p.call_datetime) {
+      document.getElementById('callDatetimeInput').value = p.call_datetime;
+    }
+
+    if (p.answer_status) {
+      const el = document.querySelector('input[name="q_answer"][value="' + String(p.answer_status).trim() + '"]');
+      if (el) el.checked = true;
+    }
+    if (p.answer_other) document.getElementById('other_answer').value = p.answer_other;
+
+    if (p.speech_status) {
+      const el = document.querySelector('input[name="q_speech"][value="' + String(p.speech_status).trim() + '"]');
+      if (el) el.checked = true;
+    }
+    if (p.speech_other) document.getElementById('other_speech').value = p.speech_other;
+
+    if (p.health_status) {
+      String(p.health_status).split(/[,，]/).map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(v) {
+        const cb = document.querySelector('input[name="q_health"][value="' + v + '"]');
+        if (cb) cb.checked = true;
+      });
+    }
+    if (p.health_other) document.getElementById('other_health').value = p.health_other;
+
+    if (p.life_status) {
+      String(p.life_status).split(/[,，]/).map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(v) {
+        const cb = document.querySelector('input[name="q_life"][value="' + v + '"]');
+        if (cb) cb.checked = true;
+      });
+    }
+    if (p.life_other) document.getElementById('other_life').value = p.life_other;
+
+    if (p.interaction_status) {
+      const el = document.querySelector('input[name="q_interaction"][value="' + String(p.interaction_status).trim() + '"]');
+      if (el) el.checked = true;
+    }
+    if (p.interaction_other) document.getElementById('other_interaction').value = p.interaction_other;
+
+    if (p.mental_status) {
+      const el = document.querySelector('input[name="q_mental"][value="' + String(p.mental_status).trim() + '"]');
+      if (el) el.checked = true;
+    }
+    if (p.mental_other) document.getElementById('other_mental').value = p.mental_other;
+
+    if (p.remark) document.getElementById('remarkInput').value = p.remark;
+    setFormModeBadge(true);
+  }
+
+  function applyCasePresetToForm(silentIfMissing) {
+    if (!selectedCase) {
+      if (!silentIfMissing) alert('請先從左側點選一位長輩！');
+      return;
+    }
+    const p = findPresetForCase(selectedCase);
+    if (!p) {
+      if (!silentIfMissing) alert('「' + selectedCase.name + '」在已有記錄設定檔中尚無原始設定，已維持空白表單方便填寫。');
+      clearFormToBlank();
+      setNowRocDatetime();
+      return;
+    }
+    applyPresetDataObject(p, true);
+    const infoEl = document.getElementById('presetMatchInfo');
+    if (infoEl) infoEl.textContent = '已套用「' + selectedCase.name + '」原始設定（可直接修改備註或原因後儲存）';
+  }
+
+  function handlePresetExcelUpload(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const firstSheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+        if (!rows || rows.length < 2) {
+          alert('Excel 檔案內容不足！');
+          return;
+        }
+        let hdrIdx = 0;
+        for (let i = 0; i < Math.min(5, rows.length); i++) {
+          if (rows[i].some(function(cell) { return String(cell || '').includes('姓名'); })) {
+            hdrIdx = i;
+            break;
+          }
+        }
+        const parsedList = [];
+        for (let r = hdrIdx + 1; r < rows.length; r++) {
+          const row = rows[r];
+          if (!row) continue;
+          const codeVal = String(row[0] ?? '').trim();
+          const nameVal = String(row[1] ?? '').trim();
+          if (!nameVal) continue;
+          parsedList.push({
+            code: codeVal,
+            name: nameVal,
+            gender: String(row[2] ?? '').trim(),
+            call_datetime: String(row[3] ?? '').trim(),
+            answer_status: String(row[4] ?? '').trim(),
+            answer_other: String(row[5] ?? '').trim(),
+            speech_status: String(row[6] ?? '').trim(),
+            speech_other: String(row[7] ?? '').trim(),
+            health_status: String(row[8] ?? '').trim(),
+            health_other: String(row[9] ?? '').trim(),
+            life_status: String(row[10] ?? '').trim(),
+            life_other: String(row[11] ?? '').trim(),
+            interaction_status: String(row[12] ?? '').trim(),
+            interaction_other: String(row[13] ?? '').trim(),
+            mental_status: String(row[14] ?? '').trim(),
+            mental_other: String(row[15] ?? '').trim(),
+            remark: String(row[16] ?? '').trim()
+          });
+        }
+        if (parsedList.length === 0) {
+          alert('未解析到有效的長輩設定資料！');
+          return;
+        }
+        localStorage.setItem('laozhuang_phone_checkin_presets_v1', JSON.stringify(parsedList));
+        rebuildPresetMap(parsedList);
+        renderCasePicker();
+        if (selectedCase && findPresetForCase(selectedCase)) {
+          applyCasePresetToForm(true);
+        }
+        alert('已成功匯入 ' + parsedList.length + ' 筆電話問安原始設定！');
+      } catch (err) {
+        alert('解析 Excel 失敗：' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    ev.target.value = '';
+  }
+
+  function openPresetListModal() {
+    const m = document.getElementById('presetListModal');
+    if (m) m.classList.add('open');
+    renderPresetModalTable();
+  }
+
+  function closePresetListModal() {
+    const m = document.getElementById('presetListModal');
+    if (m) m.classList.remove('open');
+  }
+
+  function renderPresetModalTable() {
+    const kw = (document.getElementById('presetSearchInput')?.value || '').trim().toLowerCase();
+    const list = getUniquePresetRows().filter(function(item) {
+      if (!kw) return true;
+      return (item.name && item.name.toLowerCase().includes(kw)) ||
+        (item.code && item.code.toLowerCase().includes(kw)) ||
+        (item.remark && item.remark.toLowerCase().includes(kw));
+    });
+    const summary = document.getElementById('modalPresetSummary');
+    if (summary) summary.textContent = '（共 ' + list.length + ' 位長輩有原始設定）';
+
+    const fmtP = function(code, oth) { return oth ? ((code || '') + '（' + oth + '）') : (code || ''); };
+    const tbody = document.getElementById('presetModalTbody');
+    if (!tbody) return;
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:18px; color:#64748b;">查無符合的設定名單</td></tr>';
+      return;
+    }
+    tbody.innerHTML = list.map(function(item, idx) {
+      return '<tr>' +
+        '<td style="text-align:center;">' + (idx + 1) + '</td>' +
+        '<td>' + escapeAttrVal(item.code) + '</td>' +
+        '<td style="white-space:nowrap; min-width:86px;"><strong>' + escapeAttrVal(item.name) + '</strong></td>' +
+        '<td style="text-align:center;">' + escapeAttrVal(item.gender) + '</td>' +
+        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.answer_status, item.answer_other)) + '</td>' +
+        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.speech_status, item.speech_other)) + '</td>' +
+        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.health_status, item.health_other)) + '</td>' +
+        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.life_status, item.life_other)) + '</td>' +
+        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.interaction_status, item.interaction_other)) + '</td>' +
+        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.mental_status, item.mental_other)) + '</td>' +
+        '<td>' + escapeAttrVal(item.remark) + '</td>' +
+        '<td style="text-align:center; white-space:nowrap;"><button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.8rem;" onclick="selectCaseFromPreset('' + escapeAttrVal(item.name) + '')">帶入表單</button></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function selectCaseFromPreset(name) {
+    const matchedCase = allCases.find(function(c) { return String(c.name || '').trim() === String(name || '').trim(); });
+    if (matchedCase) {
+      selectedCase = matchedCase;
+      document.getElementById('selCaseName').textContent = matchedCase.name || '';
+      document.getElementById('selCaseCode').textContent = matchedCase.gov_system_id || matchedCase.case_number || '';
+      document.getElementById('selCaseGender').textContent = matchedCase.gender || '';
+      document.getElementById('selCasePhone').textContent = [matchedCase.phone, matchedCase.mobile].filter(Boolean).join(' / ') || '未登錄電話';
+    } else {
+      const p = casePresetMap[name];
+      document.getElementById('selCaseName').textContent = name || '';
+      document.getElementById('selCaseCode').textContent = p ? p.code : '-';
+      document.getElementById('selCaseGender').textContent = p ? p.gender : '-';
+      document.getElementById('selCasePhone').textContent = '-';
+    }
+    const p = casePresetMap[name];
+    if (p) applyPresetDataObject(p, true);
+    renderCasePicker();
+    closePresetListModal();
+  }
+
+  function exportPresetExcel() {
+    const list = getUniquePresetRows();
+    if (list.length === 0) { alert('目前無設定名單可匯出'); return; }
+    const header = [
+      '編號', '姓名', '性別(男/女)', '電訪日期(年/月/日 時:分:秒)',
+      '接聽情形', '其他', '口頭表達', '其他', '健康情況', '其他',
+      '生活狀況', '其他', '親友互動', '其他', '精神狀況', '其他', '備註'
+    ];
+    const rows = list.map(function(r) {
+      return [
+        r.code, r.name, r.gender, r.call_datetime,
+        r.answer_status, r.answer_other, r.speech_status, r.speech_other,
+        r.health_status, r.health_other, r.life_status, r.life_other,
+        r.interaction_status, r.interaction_other, r.mental_status, r.mental_other, r.remark
+      ];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([header].concat(rows));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '已有記錄名單');
+    XLSX.writeFile(wb, '電話問安記錄＿已有記錄名單.xlsx');
+  }
+
   function pad2(n) { return String(n).padStart(2, '0'); }
 
   function setNowRocDatetime() {
@@ -501,6 +1564,7 @@
     const ySel = document.getElementById('rocYearSelect');
     if ([...ySel.options].some(o => o.value === rocY)) ySel.value = rocY;
     document.getElementById('monthSelect').value = m;
+    clearFormToBlank();
     setNowRocDatetime();
   })();
 
@@ -649,6 +1713,7 @@
     box.innerHTML = filtered.map(c => {
       const isSel = selectedCase && selectedCase.id === c.id;
       const isDone = doneNames.has(c.name);
+      const hasPreset = Boolean(findPresetForCase(c));
       const phoneTxt = [c.phone, c.mobile].filter(Boolean).join(' / ');
       return `
         <div class="case-pick-row ${isSel ? 'selected' : ''}" onclick="selectCase(${c.id})">
@@ -656,21 +1721,29 @@
             <div><strong>${c.case_number || ''}</strong> ${c.name || ''} ${isRegularCase(c) ? '<span class="reg-dot">常來</span>' : ''}</div>
             <div style="font-size:0.8rem; color:#475569;">${phoneTxt || '無電話'}</div>
           </div>
-          ${isDone ? '<span class="done-dot">本月已訪</span>' : ''}
+          ${hasPreset ? '<span class="preset-dot">有設定</span>' : ''} ${isDone ? '<span class="done-dot">本月已訪</span>' : ''}
         </div>
       `;
     }).join('');
   }
 
   function selectCase(caseId) {
-    const found = allCases.find(c => c.id === caseId);
+    const found = allCases.find(function(c) { return c.id === caseId; });
     if (!found) return;
     selectedCase = found;
     document.getElementById('selCaseName').textContent = found.name || '';
     document.getElementById('selCaseCode').textContent = found.gov_system_id || found.case_number || '';
     document.getElementById('selCaseGender').textContent = found.gender || '';
     document.getElementById('selCasePhone').textContent = [found.phone, found.mobile].filter(Boolean).join(' / ') || '未登錄電話';
+    clearFormToBlank();
     setNowRocDatetime();
+    const p = findPresetForCase(found);
+    const infoEl = document.getElementById('presetMatchInfo');
+    if (infoEl) {
+      infoEl.textContent = p
+        ? '此個案有原始設定（3天後到據點說明原因時可按「套用該個案原始設定」帶入）'
+        : '此個案無原始設定，目前為空白表單方便填寫';
+    }
     renderCasePicker();
   }
 
