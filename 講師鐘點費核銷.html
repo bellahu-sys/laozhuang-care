@@ -93,8 +93,6 @@
     .btn-amber:hover { background: #b45309; }
     .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
     .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
-    .btn-danger { background: #dc2626; color: #fff; }
-    .btn-danger:hover { background: #b91c1c; }
     .btn-sm { padding: 5px 10px; font-size: 0.83rem; }
 
     .section-card {
@@ -164,9 +162,7 @@
     }
     .period-card-title { font-weight: bold; font-size: 1rem; color: #0f172a; }
 
-    .copy-toast {
-      font-size: 0.82rem; color: #0f766e; font-weight: bold;
-    }
+    .copy-toast { font-size: 0.82rem; color: #0f766e; font-weight: bold; }
 
     @media print {
       nav.topbar, .no-print { display: none !important; }
@@ -619,7 +615,7 @@
     }
     inp.value = '';
     populateRenameSelect();
-    renderRateBenchmarkTable();
+    renderAllSections();
   }
 
   function renamePlanColumn() {
@@ -842,7 +838,7 @@
     const planFilter = document.getElementById('globalPlanFilter')?.value || 'ALL';
     const blocks = PERIOD_BLOCKS.filter(b => planFilter === 'ALL' || b.program === planFilter);
     blocks.forEach(b => applyBenchmarkToPeriod(b.periodKey));
-    setStatus(`已將鐘點費基準套用至目前顯示的所有期別`);
+    setStatus('已將鐘點費基準套用至目前顯示的所有期別');
   }
 
   function onPeriodPlanChange(periodKey, colKey, instName, newPlanName) {
@@ -1153,15 +1149,18 @@
       try {
         const { data: rateRows, error: rErr } = await supabaseClient
           .from('instructor_reimburse_rate_configs')
-          .select('instructor_name, plan_name, rate, hours');
+          .select('roc_year, scope_key, instructor_name, plan_name, rate, hours');
         if (!rErr && Array.isArray(rateRows) && rateRows.length > 0) {
           rateRows.forEach(row => {
+            const rowYear = Number(row.roc_year || currentYear);
+            if (rowYear !== currentYear && row.roc_year !== undefined && row.roc_year !== null) return;
+            const scKey = (row.scope_key || 'YEAR').trim() || 'YEAR';
             const inst = (row.instructor_name || '').trim();
             let plan = (row.plan_name || '').trim();
             if (plan === '關懷課程') plan = '長照課程';
             if (!inst || !plan) return;
             if (!plans.includes(plan)) plans.push(plan);
-            setRateRule(currentYear, 'YEAR', inst, plan, {
+            setRateRule(currentYear, scKey, inst, plan, {
               mode: (row.rate === null && row.hours === null) ? 'none' : 'per_hour',
               rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
               hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
@@ -1182,12 +1181,12 @@
             const cKey = (r.col_key || '').trim();
             if (!inst || !pKey || !cKey) return;
             const blk = PERIOD_BLOCKS.find(b => b.periodKey === pKey);
-            const cur = getClaimEntry(currentYear, pKey, cKey, inst, blk ? blk.defaultPlan : '長照課程');
+            const cur = getClaimEntry(currentYear, pKey, cKey, inst, r.plan_name || (blk ? blk.defaultPlan : '長照課程'));
             setClaimEntry(currentYear, pKey, cKey, inst, {
-              sessions: cur.sessions || 0,
+              sessions: r.sessions !== null && r.sessions !== undefined ? Number(r.sessions) : (cur.sessions || 0),
               amount: Number(r.amount || 0),
               unitAmt: cur.unitAmt || 0,
-              planName: cur.planName || (blk ? blk.defaultPlan : '長照課程')
+              planName: (r.plan_name || '').trim() || cur.planName || (blk ? blk.defaultPlan : '長照課程')
             });
           });
         }
@@ -1212,11 +1211,14 @@
 
     try {
       const rateUpserts = [];
-      const yDefault = yearRateData[currentYear].yearDefault || {};
+      const yStore = yearRateData[currentYear];
+      const yDefault = yStore.yearDefault || {};
       Object.keys(yDefault).forEach(inst => {
         Object.keys(yDefault[inst] || {}).forEach(plan => {
           const rule = yDefault[inst][plan];
           rateUpserts.push({
+            roc_year: currentYear,
+            scope_key: 'YEAR',
             instructor_name: inst,
             plan_name: plan,
             rate: rule.mode === 'none' || rule.rate === '' ? null : Number(rule.rate),
@@ -1225,10 +1227,30 @@
           });
         });
       });
+
+      const mMap = yStore.months || {};
+      Object.keys(mMap).forEach(scKey => {
+        const instObj = mMap[scKey] || {};
+        Object.keys(instObj).forEach(inst => {
+          Object.keys(instObj[inst] || {}).forEach(plan => {
+            const rule = instObj[inst][plan];
+            rateUpserts.push({
+              roc_year: currentYear,
+              scope_key: scKey,
+              instructor_name: inst,
+              plan_name: plan,
+              rate: rule.mode === 'none' || rule.rate === '' ? null : Number(rule.rate),
+              hours: rule.mode === 'none' ? null : Number(rule.hours || 1),
+              updated_at: new Date().toISOString()
+            });
+          });
+        });
+      });
+
       if (rateUpserts.length > 0) {
         const { error } = await supabaseClient
           .from('instructor_reimburse_rate_configs')
-          .upsert(rateUpserts, { onConflict: 'instructor_name,plan_name' });
+          .upsert(rateUpserts, { onConflict: 'roc_year,scope_key,instructor_name,plan_name' });
         if (error) throw error;
       }
 
@@ -1238,13 +1260,16 @@
           selectedTeachers.forEach(instName => {
             const entry = getClaimEntry(currentYear, blk.periodKey, colKey, instName, blk.defaultPlan);
             const amt = Number(entry.amount || 0);
-            if (amt !== 0) {
+            const sess = Number(entry.sessions || 0);
+            if (amt !== 0 || sess !== 0) {
               claimPayload.push({
                 roc_year: currentYear,
                 program_type: blk.program,
                 period_key: blk.periodKey,
                 col_key: colKey,
                 instructor_name: instName,
+                plan_name: entry.planName || blk.defaultPlan,
+                sessions: sess,
                 amount: amt,
                 updated_at: new Date().toISOString()
               });
