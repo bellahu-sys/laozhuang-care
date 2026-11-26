@@ -100,6 +100,11 @@
       padding: 14px 16px; margin-bottom: 20px; background: #fff;
     }
 
+    .sheet-title-banner {
+      text-align: center; font-size: 1.1rem; font-weight: bold;
+      color: #0f172a; padding: 6px 0 10px 0;
+    }
+
     .excel-table {
       width: 100%; border-collapse: collapse; font-size: 0.9rem; background: #fff;
     }
@@ -277,12 +282,12 @@
     </div>
 
     <div class="toolbar-group" style="margin-left:auto;">
-      <button type="button" class="btn btn-teal btn-sm" onclick="reloadAllFromCloud()">重新載入</button>
+      <button type="button" class="btn btn-teal btn-sm" onclick="reloadAllFromCloud(true)">重新載入</button>
       <button type="button" class="btn btn-blue btn-sm" onclick="saveAllToCloud()">儲存全部至資料庫</button>
     </div>
   </div>
 
-  <!-- 區塊一：年度/各月計畫鐘點費基準設定（整年固定或特定月份變動） -->
+  <!-- 區塊一：年度/各月計畫鐘點費基準設定 -->
   <section class="section-card">
     <h2 class="section-title">
       <span>一、年度／各月計畫鐘點費基準設定</span>
@@ -328,7 +333,7 @@
     </div>
   </section>
 
-  <!-- 區塊二：單月／每季核銷與個人所得稅彙總（直接套用基準並可一鍵複製數值） -->
+  <!-- 區塊二：單月／每季核銷與個人所得稅彙總 -->
   <section class="section-card">
     <h2 class="section-title">
       <span>二、單月／每季核銷與個人所得稅彙總</span>
@@ -341,7 +346,6 @@
 
     <div id="periodSheetsContainer" class="period-grid"></div>
 
-    <!-- 全年／篩選範圍 講師個人所得稅統計彙總 -->
     <div style="margin-top:20px; padding-top:14px; border-top:2px solid var(--border);">
       <div class="period-card-header" style="border-bottom:none; margin-bottom:6px;">
         <span class="period-card-title" id="taxSummaryTitle">年度講師核銷所得稅彙總（依勾選講師與計畫計算）</span>
@@ -502,7 +506,14 @@
     claimData[yr][key] = entry;
   }
 
-  async function loadInstructors() {
+  function normalizeColKey(rawCol) {
+    const s = String(rawCol || '').trim();
+    if (s.endsWith('講師')) return s.slice(0, -2);
+    return s;
+  }
+
+  // 對齊舊.講師鐘點費核銷.html 的 instructors 讀取邏輯
+  async function loadInstructorsFromHr() {
     if (supabaseClient) {
       try {
         const { data, error } = await supabaseClient
@@ -511,11 +522,13 @@
           .order('staff_number', { ascending: true })
           .order('id', { ascending: true });
         if (!error && Array.isArray(data) && data.length > 0) {
-          masterInstructors = data.filter(r => r.name && r.name.trim() !== '').map(r => ({
-            name: r.name.trim(),
-            status: r.status || '服務中',
-            hire_type: r.hire_type || ''
-          }));
+          masterInstructors = data
+            .filter(r => r.name && r.name.trim() !== '')
+            .map(r => ({
+              name: r.name.trim(),
+              status: r.status || '服務中',
+              hire_type: r.hire_type || ''
+            }));
           return;
         }
       } catch (e) {}
@@ -544,6 +557,16 @@
         }
       } catch (e) {}
     }
+    const legacySaved = localStorage.getItem('lz_rate_cfg_reb_teachers');
+    if (legacySaved) {
+      try {
+        const arr = JSON.parse(legacySaved);
+        if (Array.isArray(arr) && arr.length > 0) {
+          selectedTeachers = sortByMaster(arr);
+          return;
+        }
+      } catch (e) {}
+    }
     selectedTeachers = sortByMaster(masterInstructors.filter(i => i.status === '服務中').map(i => i.name));
   }
 
@@ -555,6 +578,7 @@
     }
     selectedTeachers = sortByMaster(selectedTeachers);
     localStorage.setItem(`lz_reb_unified_teachers_${currentYear}`, JSON.stringify(selectedTeachers));
+    localStorage.setItem('lz_rate_cfg_reb_teachers', JSON.stringify(selectedTeachers));
     renderTeacherPicker();
     renderAllSections();
   }
@@ -566,6 +590,7 @@
       selectedTeachers = [];
     }
     localStorage.setItem(`lz_reb_unified_teachers_${currentYear}`, JSON.stringify(selectedTeachers));
+    localStorage.setItem('lz_rate_cfg_reb_teachers', JSON.stringify(selectedTeachers));
     renderTeacherPicker();
     renderAllSections();
   }
@@ -608,7 +633,10 @@
   function addPlanColumn() {
     const inp = document.getElementById('newPlanInput');
     const val = (inp?.value || '').trim();
-    if (!val) return;
+    if (!val) {
+      alert('請先輸入要新增的計畫名稱');
+      return;
+    }
     if (!plans.includes(val)) {
       plans.push(val);
       localStorage.setItem('lz_reb_unified_plans', JSON.stringify(plans));
@@ -616,6 +644,7 @@
     inp.value = '';
     populateRenameSelect();
     renderAllSections();
+    setStatus(`已新增計畫欄位「${val}」（記得按「儲存全部至資料庫」）`);
   }
 
   function renamePlanColumn() {
@@ -710,7 +739,7 @@
 
     const list = selectedTeachers.map(name => masterInstructors.find(m => m.name === name) || { name, status: '服務中' });
     if (list.length === 0) {
-      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:18px; color:#64748b;">請先勾選要顯示的講師</td></tr></tbody>';
+      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:18px; color:#64748b;">請先點選上方「勾選講師 ▾」選擇要設定的講師</td></tr></tbody>';
       return;
     }
 
@@ -736,15 +765,15 @@
             <div class="rate-cell-box">
               <div class="rate-cell-row">
                 <select onchange="onRateFieldChange('${escapeAttr(instName)}', '${escapeAttr(plan)}', 'mode', this.value)" style="font-size:0.8rem; padding:3px 5px;">
-                  <option value="per_hour" ${!isNone ? 'selected' : ''}>計費</option>
+                  <option value="per_hour" ${!isNone ? 'selected' : ''}>費用 / 時數</option>
                   <option value="none" ${isNone ? 'selected' : ''}>無</option>
                 </select>
                 ${rule.isOverride ? '<span class="rate-override-badge">月變動</span>' : ''}
               </div>
               <div class="rate-cell-row">
-                <input type="text" inputmode="decimal" class="num-input" value="${escapeAttr(rateDisp)}" placeholder="鐘點費" ${isNone ? 'disabled' : ''} onchange="onRateFieldChange('${escapeAttr(instName)}', '${escapeAttr(plan)}', 'rate', this.value)" style="width:74px;">
+                <input type="text" inputmode="decimal" class="num-input" value="${escapeAttr(rateDisp)}" placeholder="費用" ${isNone ? 'disabled' : ''} onchange="onRateFieldChange('${escapeAttr(instName)}', '${escapeAttr(plan)}', 'rate', this.value)" style="width:74px;">
                 <span class="rate-cell-unit">×</span>
-                <input type="text" inputmode="decimal" class="num-input" value="${escapeAttr(hrsDisp)}" placeholder="時數" ${isNone ? 'disabled' : ''} onchange="onRateFieldChange('${escapeAttr(instName)}', '${escapeAttr(plan)}', 'hours', this.value)" style="width:42px;">
+                <input type="text" inputmode="decimal" class="num-input" value="${escapeAttr(hrsDisp)}" placeholder="1" ${isNone ? 'disabled' : ''} onchange="onRateFieldChange('${escapeAttr(instName)}', '${escapeAttr(plan)}', 'hours', this.value)" style="width:42px;">
                 <span class="rate-cell-unit">H</span>
               </div>
               <div style="font-size:0.78rem; color:#475569; text-align:right;">
@@ -770,7 +799,7 @@
     const grandTotal = Object.values(colTotals).reduce((a, b) => a + b, 0);
     const totalRow = `
       <tr class="total-row">
-        <td class="center-col">單堂合計</td>
+        <td class="center-col">合計</td>
         ${plans.map(p => `<td class="num-col">${fmtNum(colTotals[p])}</td>`).join('')}
         <td class="num-col">${fmtNum(grandTotal)}</td>
       </tr>
@@ -779,9 +808,9 @@
     tbl.innerHTML = `
       <thead>
         <tr>
-          <th style="width:110px;">講師姓名</th>
+          <th style="width:115px;">講師 \ 計畫</th>
           ${headCells}
-          <th style="width:105px;">單堂小計</th>
+          <th style="width:110px;">單堂小計</th>
         </tr>
       </thead>
       <tbody>${bodyRows}${totalRow}</tbody>
@@ -1115,12 +1144,14 @@
     currentYear = parseInt(val, 10) || 115;
     ensureYearStore(currentYear);
     loadSelectedTeachersForYear();
-    await reloadAllFromCloud(false);
-    renderAllSections();
+    await reloadAllFromCloud(true);
   }
 
+  // 對齊舊.講師鐘點費核銷.html 的 instructor_reimburse_rate_configs 與 instructor_reimburse_claims 欄位讀取
   async function reloadAllFromCloud(showMsg = true) {
     ensureYearStore(currentYear);
+    if (showMsg) setStatus('正在從資料庫讀取「鐘點費-核銷」設定...');
+
     const savedPlans = localStorage.getItem('lz_reb_unified_plans');
     if (savedPlans) {
       try {
@@ -1146,22 +1177,23 @@
     }
 
     if (supabaseClient) {
+      // 1. 讀取 instructor_reimburse_rate_configs（同時相容舊表無 roc_year/scope_key 與新表有 roc_year/scope_key）
       try {
         const { data: rateRows, error: rErr } = await supabaseClient
           .from('instructor_reimburse_rate_configs')
-          .select('roc_year, scope_key, instructor_name, plan_name, rate, hours');
+          .select('*');
         if (!rErr && Array.isArray(rateRows) && rateRows.length > 0) {
           rateRows.forEach(row => {
-            const rowYear = Number(row.roc_year || currentYear);
-            if (rowYear !== currentYear && row.roc_year !== undefined && row.roc_year !== null) return;
+            if (row.roc_year !== undefined && row.roc_year !== null && Number(row.roc_year) !== currentYear) return;
             const scKey = (row.scope_key || 'YEAR').trim() || 'YEAR';
             const inst = (row.instructor_name || '').trim();
             let plan = (row.plan_name || '').trim();
             if (plan === '關懷課程') plan = '長照課程';
             if (!inst || !plan) return;
             if (!plans.includes(plan)) plans.push(plan);
+            const isNone = row.pay_mode === 'none' || (row.rate === null && row.hours === null);
             setRateRule(currentYear, scKey, inst, plan, {
-              mode: (row.rate === null && row.hours === null) ? 'none' : 'per_hour',
+              mode: isNone ? 'none' : 'per_hour',
               rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
               hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
             });
@@ -1169,6 +1201,7 @@
         }
       } catch (e) {}
 
+      // 2. 讀取 instructor_reimburse_claims（相容舊表 '1月講師' 與新表 '1月'）
       try {
         const { data: claimRows, error: cErr } = await supabaseClient
           .from('instructor_reimburse_claims')
@@ -1178,15 +1211,20 @@
           claimRows.forEach(r => {
             const inst = (r.instructor_name || '').trim();
             const pKey = (r.period_key || '').trim();
-            const cKey = (r.col_key || '').trim();
+            const cKey = normalizeColKey(r.col_key);
             if (!inst || !pKey || !cKey) return;
             const blk = PERIOD_BLOCKS.find(b => b.periodKey === pKey);
-            const cur = getClaimEntry(currentYear, pKey, cKey, inst, r.plan_name || (blk ? blk.defaultPlan : '長照課程'));
+            const planToUse = (r.plan_name || '').trim() || (blk ? blk.defaultPlan : '長照課程');
+            const cur = getClaimEntry(currentYear, pKey, cKey, inst, planToUse);
+            const amt = Number(r.amount || 0);
+            const sess = (r.sessions !== null && r.sessions !== undefined)
+              ? Number(r.sessions)
+              : (cur.unitAmt > 0 && amt > 0 ? Math.round((amt / cur.unitAmt) * 10) / 10 : (amt > 0 ? 1 : 0));
             setClaimEntry(currentYear, pKey, cKey, inst, {
-              sessions: r.sessions !== null && r.sessions !== undefined ? Number(r.sessions) : (cur.sessions || 0),
-              amount: Number(r.amount || 0),
+              sessions: sess,
+              amount: amt,
               unitAmt: cur.unitAmt || 0,
-              planName: (r.plan_name || '').trim() || cur.planName || (blk ? blk.defaultPlan : '長照課程')
+              planName: planToUse
             });
           });
         }
@@ -1194,9 +1232,10 @@
     }
 
     renderAllSections();
-    if (showMsg) setStatus(`已載入 ${currentYear} 年度鐘點費基準與核銷資料`);
+    if (showMsg) setStatus(`已同步資料庫「鐘點費-核銷」設定（${currentYear} 年度）`);
   }
 
+  // 對齊舊.講師鐘點費核銷.html 的 instructor_reimburse_rate_configs（pay_mode, rate, hours, onConflict: 'instructor_name,plan_name'）與 instructor_reimburse_claims
   async function saveAllToCloud() {
     ensureYearStore(currentYear);
     localStorage.setItem('lz_reb_unified_plans', JSON.stringify(plans));
@@ -1210,66 +1249,48 @@
     }
 
     try {
+      // 1. 儲存基準設定至 instructor_reimburse_rate_configs
       const rateUpserts = [];
       const yStore = yearRateData[currentYear];
       const yDefault = yStore.yearDefault || {};
       Object.keys(yDefault).forEach(inst => {
         Object.keys(yDefault[inst] || {}).forEach(plan => {
           const rule = yDefault[inst][plan];
-          rateUpserts.push({
-            roc_year: currentYear,
-            scope_key: 'YEAR',
-            instructor_name: inst,
-            plan_name: plan,
-            rate: rule.mode === 'none' || rule.rate === '' ? null : Number(rule.rate),
-            hours: rule.mode === 'none' ? null : Number(rule.hours || 1),
-            updated_at: new Date().toISOString()
-          });
-        });
-      });
-
-      const mMap = yStore.months || {};
-      Object.keys(mMap).forEach(scKey => {
-        const instObj = mMap[scKey] || {};
-        Object.keys(instObj).forEach(inst => {
-          Object.keys(instObj[inst] || {}).forEach(plan => {
-            const rule = instObj[inst][plan];
+          const isNone = rule.mode === 'none';
+          if (isNone || (rule.rate !== '' && rule.rate !== null && rule.rate !== undefined)) {
             rateUpserts.push({
-              roc_year: currentYear,
-              scope_key: scKey,
               instructor_name: inst,
               plan_name: plan,
-              rate: rule.mode === 'none' || rule.rate === '' ? null : Number(rule.rate),
-              hours: rule.mode === 'none' ? null : Number(rule.hours || 1),
+              pay_mode: isNone ? 'none' : 'per_hour',
+              rate: isNone ? null : Number(rule.rate),
+              hours: isNone ? null : Number(rule.hours || 1),
               updated_at: new Date().toISOString()
             });
-          });
+          }
         });
       });
 
       if (rateUpserts.length > 0) {
-        const { error } = await supabaseClient
+        const { error: rErr } = await supabaseClient
           .from('instructor_reimburse_rate_configs')
-          .upsert(rateUpserts, { onConflict: 'roc_year,scope_key,instructor_name,plan_name' });
-        if (error) throw error;
+          .upsert(rateUpserts, { onConflict: 'instructor_name,plan_name' });
+        if (rErr) throw rErr;
       }
 
+      // 2. 儲存核銷明細至 instructor_reimburse_claims（相容舊表欄位：roc_year, program_type, period_key, col_key, instructor_name, amount, updated_at）
       const claimPayload = [];
       PERIOD_BLOCKS.forEach(blk => {
         blk.cols.forEach(colKey => {
           selectedTeachers.forEach(instName => {
             const entry = getClaimEntry(currentYear, blk.periodKey, colKey, instName, blk.defaultPlan);
             const amt = Number(entry.amount || 0);
-            const sess = Number(entry.sessions || 0);
-            if (amt !== 0 || sess !== 0) {
+            if (amt !== 0) {
               claimPayload.push({
                 roc_year: currentYear,
                 program_type: blk.program,
                 period_key: blk.periodKey,
-                col_key: colKey,
+                col_key: `${colKey}講師`,
                 instructor_name: instName,
-                plan_name: entry.planName || blk.defaultPlan,
-                sessions: sess,
                 amount: amt,
                 updated_at: new Date().toISOString()
               });
@@ -1284,7 +1305,7 @@
         if (cErr) throw cErr;
       }
 
-      setStatus(`已同步儲存 ${currentYear} 年度鐘點費基準與核銷資料至資料庫`);
+      setStatus(`已同步儲存 ${currentYear} 年度「鐘點費-核銷」與核銷統計至資料庫`);
       alert(`已儲存 ${currentYear} 年度鐘點費基準與核銷資料至資料庫！`);
     } catch (e) {
       setStatus('雲端儲存部分失敗，已保留本機資料', true);
@@ -1293,7 +1314,7 @@
   }
 
   (async function init() {
-    await loadInstructors();
+    await loadInstructorsFromHr();
     loadSelectedTeachersForYear();
     await reloadAllFromCloud(true);
   })();
