@@ -1214,6 +1214,8 @@
   let hasAnyRegularInDb = false;
   let currentPresetsList = INITIAL_PRESETS.slice();
   let presetLookup = {};
+  let visibleCaseList = [];
+  let visiblePresetList = [];
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -1223,10 +1225,6 @@
       .replace(/"/g, '&quot;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-  }
-
-  function escJsStr(v) {
-    return String(v ?? '').replace(/\/g, '\\').replace(/'/g, "\'");
   }
 
   function setNowRocDatetime() {
@@ -1540,20 +1538,20 @@
 
   function renderPresetModalTable() {
     const kw = (document.getElementById('presetSearchInput')?.value || '').trim().toLowerCase();
-    const list = getUniquePresetRows().filter(function(item) {
+    visiblePresetList = getUniquePresetRows().filter(function(item) {
       if (!kw) return true;
       return (item.name && item.name.toLowerCase().includes(kw)) ||
         (item.code && item.code.toLowerCase().includes(kw)) ||
         (item.remark && item.remark.toLowerCase().includes(kw));
     });
-    document.getElementById('modalPresetSummary').textContent = '（共 ' + list.length + ' 位長輩有原始設定）';
+    document.getElementById('modalPresetSummary').textContent = '（共 ' + visiblePresetList.length + ' 位長輩有原始設定）';
     const fmtP = function(c, o) { return o ? ((c || '') + '（' + o + '）') : (c || ''); };
     const tbody = document.getElementById('presetModalTbody');
-    if (list.length === 0) {
+    if (visiblePresetList.length === 0) {
       tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:18px; color:#64748b;">查無符合設定名單</td></tr>';
       return;
     }
-    tbody.innerHTML = list.map(function(item, idx) {
+    tbody.innerHTML = visiblePresetList.map(function(item, idx) {
       return '<tr>' +
         '<td style="text-align:center;">' + (idx + 1) + '</td>' +
         '<td>' + escHtml(item.code) + '</td>' +
@@ -1566,28 +1564,29 @@
         '<td style="text-align:center;">' + escHtml(fmtP(item.interaction_status, item.interaction_other)) + '</td>' +
         '<td style="text-align:center;">' + escHtml(fmtP(item.mental_status, item.mental_other)) + '</td>' +
         '<td>' + escHtml(item.remark) + '</td>' +
-        '<td style="text-align:center; white-space:nowrap;"><button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.8rem;" onclick="selectFromPreset('' + escJsStr(item.name) + '')">帶入表單</button></td>' +
+        '<td style="text-align:center; white-space:nowrap;"><button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.8rem;" onclick="onPickPresetByIdx(' + idx + ')">帶入表單</button></td>' +
         '</tr>';
     }).join('');
   }
 
-  function selectFromPreset(name) {
-    const matched = allCases.find(function(c) { return String(c.name || '').trim() === String(name || '').trim(); });
-    const p = presetLookup[name];
+  function onPickPresetByIdx(idx) {
+    const p = visiblePresetList[idx];
+    if (!p) return;
+    const matched = allCases.find(function(c) { return String(c.name || '').trim() === String(p.name || '').trim(); });
     if (matched) {
       selectedCase = matched;
       document.getElementById('selCaseName').textContent = matched.name || '';
       document.getElementById('selCaseCode').textContent = matched.gov_system_id || matched.case_number || '';
       document.getElementById('selCaseGender').textContent = matched.gender || '';
       document.getElementById('selCasePhone').textContent = [matched.phone, matched.mobile].filter(Boolean).join(' / ') || '未登錄電話';
-    } else if (p) {
+    } else {
       selectedCase = null;
       document.getElementById('selCaseName').textContent = p.name || '';
       document.getElementById('selCaseCode').textContent = p.code || '-';
       document.getElementById('selCaseGender').textContent = p.gender || '-';
       document.getElementById('selCasePhone').textContent = '-';
     }
-    if (p) applyPresetObject(p);
+    applyPresetObject(p);
     renderCasePicker();
     closePresetListModal();
   }
@@ -1746,7 +1745,7 @@
       hintEl.textContent = '目前顯示全部服務中長輩';
     }
 
-    const filtered = allCases.filter(function(c) {
+    visibleCaseList = allCases.filter(function(c) {
       const st = latestStatusMap[String(c.id)] || '服務中';
       if (String(st).startsWith('已結案')) return false;
       if (onlyRegular && hasAnyRegularInDb && !isRegularCase(c)) return false;
@@ -1760,17 +1759,17 @@
     });
 
     const box = document.getElementById('casePickerList');
-    if (filtered.length === 0) {
+    if (visibleCaseList.length === 0) {
       box.innerHTML = '<div style="padding:18px; text-align:center; color:#64748b; font-size:0.9rem;">查無符合條件的個案</div>';
       return;
     }
 
-    box.innerHTML = filtered.map(function(c) {
+    box.innerHTML = visibleCaseList.map(function(c, idx) {
       const isSel = selectedCase && String(selectedCase.id) === String(c.id);
       const isDone = doneNames.has(c.name);
       const hasPreset = Boolean(findPresetForCase(c));
       const phoneTxt = [c.phone, c.mobile].filter(Boolean).join(' / ');
-      return '<div class="case-pick-row ' + (isSel ? 'selected' : '') + '" onclick="selectCase('' + escJsStr(c.id) + '')">' +
+      return '<div class="case-pick-row ' + (isSel ? 'selected' : '') + '" onclick="onPickCaseByIdx(' + idx + ')">' +
         '<div>' +
           '<div><strong>' + escHtml(c.case_number || '') + '</strong> ' + escHtml(c.name || '') + ' ' + (isRegularCase(c) ? '<span class="reg-dot">常來</span>' : '') + '</div>' +
           '<div style="font-size:0.8rem; color:#475569;">' + escHtml(phoneTxt || '無電話') + '</div>' +
@@ -1783,8 +1782,8 @@
     }).join('');
   }
 
-  function selectCase(caseId) {
-    const found = allCases.find(function(c) { return String(c.id) === String(caseId); });
+  function onPickCaseByIdx(idx) {
+    const found = visibleCaseList[idx];
     if (!found) return;
     selectedCase = found;
     document.getElementById('selCaseName').textContent = found.name || '';
@@ -1878,8 +1877,8 @@
     return { code: raw, other: (prevOth ? String(prevOth).trim() : null) };
   }
 
-  async function saveInlineRow(id, showToast) {
-    const item = monthCheckins.find(function(r) { return String(r.id) === String(id); });
+  async function saveInlineRowByIdx(idx, showToast) {
+    const item = monthCheckins[idx];
     if (!item || !sbClient) return;
     const payload = {
       call_datetime: item.call_datetime || '',
@@ -1912,8 +1911,8 @@
     if (showToast) alert('已更新「' + item.case_name + '」的電話問安記錄！');
   }
 
-  function onInlineEdit(id, colKey, rawVal) {
-    const item = monthCheckins.find(function(r) { return String(r.id) === String(id); });
+  function onInlineEditByIdx(idx, colKey, rawVal) {
+    const item = monthCheckins[idx];
     if (!item) return;
     if (colKey === 'call_datetime') item.call_datetime = rawVal;
     else if (colKey === 'remark') item.remark = rawVal;
@@ -1948,32 +1947,32 @@
     const codeStyle = 'width:68px; padding:5px 6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.88rem; text-align:center; background:#fffef7;';
 
     tbody.innerHTML = monthCheckins.map(function(r, idx) {
-      const rid = escJsStr(r.id);
       return '<tr>' +
         '<td style="text-align:center;">' + (idx + 1) + '</td>' +
         '<td>' + escHtml(r.case_code || '') + '</td>' +
         '<td style="white-space:nowrap; min-width:86px;"><strong>' + escHtml(r.case_name || '') + '</strong></td>' +
         '<td style="text-align:center;">' + escHtml(r.gender || '') + '</td>' +
-        '<td><input type="text" style="' + inpStyle + ' min-width:148px;" value="' + escHtml(r.call_datetime || '') + '" oninput="onInlineEdit('' + rid + '','call_datetime',this.value)" onchange="onInlineEdit('' + rid + '','call_datetime',this.value); saveInlineRow('' + rid + '',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.answer_status, r.answer_other)) + '" oninput="onInlineEdit('' + rid + '','answer',this.value)" onchange="onInlineEdit('' + rid + '','answer',this.value); saveInlineRow('' + rid + '',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.speech_status, r.speech_other)) + '" oninput="onInlineEdit('' + rid + '','speech',this.value)" onchange="onInlineEdit('' + rid + '','speech',this.value); saveInlineRow('' + rid + '',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.health_status, r.health_other)) + '" oninput="onInlineEdit('' + rid + '','health',this.value)" onchange="onInlineEdit('' + rid + '','health',this.value); saveInlineRow('' + rid + '',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.life_status, r.life_other)) + '" oninput="onInlineEdit('' + rid + '','life',this.value)" onchange="onInlineEdit('' + rid + '','life',this.value); saveInlineRow('' + rid + '',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.interaction_status, r.interaction_other)) + '" oninput="onInlineEdit('' + rid + '','interaction',this.value)" onchange="onInlineEdit('' + rid + '','interaction',this.value); saveInlineRow('' + rid + '',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.mental_status, r.mental_other)) + '" oninput="onInlineEdit('' + rid + '','mental',this.value)" onchange="onInlineEdit('' + rid + '','mental',this.value); saveInlineRow('' + rid + '',false)"></td>' +
-        '<td><input type="text" style="' + inpStyle + ' min-width:140px;" value="' + escHtml(r.remark || '') + '" oninput="onInlineEdit('' + rid + '','remark',this.value)" onchange="onInlineEdit('' + rid + '','remark',this.value); saveInlineRow('' + rid + '',false)"></td>' +
+        '<td><input type="text" style="' + inpStyle + ' min-width:148px;" value="' + escHtml(r.call_datetime || '') + '" oninput="onInlineEditByIdx(' + idx + ','call_datetime',this.value)" onchange="onInlineEditByIdx(' + idx + ','call_datetime',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.answer_status, r.answer_other)) + '" oninput="onInlineEditByIdx(' + idx + ','answer',this.value)" onchange="onInlineEditByIdx(' + idx + ','answer',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.speech_status, r.speech_other)) + '" oninput="onInlineEditByIdx(' + idx + ','speech',this.value)" onchange="onInlineEditByIdx(' + idx + ','speech',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.health_status, r.health_other)) + '" oninput="onInlineEditByIdx(' + idx + ','health',this.value)" onchange="onInlineEditByIdx(' + idx + ','health',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.life_status, r.life_other)) + '" oninput="onInlineEditByIdx(' + idx + ','life',this.value)" onchange="onInlineEditByIdx(' + idx + ','life',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.interaction_status, r.interaction_other)) + '" oninput="onInlineEditByIdx(' + idx + ','interaction',this.value)" onchange="onInlineEditByIdx(' + idx + ','interaction',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.mental_status, r.mental_other)) + '" oninput="onInlineEditByIdx(' + idx + ','mental',this.value)" onchange="onInlineEditByIdx(' + idx + ','mental',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
+        '<td><input type="text" style="' + inpStyle + ' min-width:140px;" value="' + escHtml(r.remark || '') + '" oninput="onInlineEditByIdx(' + idx + ','remark',this.value)" onchange="onInlineEditByIdx(' + idx + ','remark',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
         '<td style="text-align:center; white-space:nowrap;">' +
-          '<button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.82rem; margin-right:4px;" onclick="saveInlineRow('' + rid + '',true)">儲存</button>' +
-          '<button type="button" class="btn btn-del" onclick="deleteCheckin('' + rid + '')">刪除</button>' +
+          '<button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.82rem; margin-right:4px;" onclick="saveInlineRowByIdx(' + idx + ',true)">儲存</button>' +
+          '<button type="button" class="btn btn-del" onclick="deleteCheckinByIdx(' + idx + ')">刪除</button>' +
         '</td>' +
       '</tr>';
     }).join('');
   }
 
-  async function deleteCheckin(id) {
-    if (!confirm('確定要刪除這筆電話問安記錄嗎？')) return;
-    if (!sbClient) return;
-    const { error } = await sbClient.from('phone_checkins').delete().eq('id', id);
+  async function deleteCheckinByIdx(idx) {
+    const item = monthCheckins[idx];
+    if (!item || !sbClient) return;
+    if (!confirm('確定要刪除「' + (item.case_name || '') + '」這筆電話問安記錄嗎？')) return;
+    const { error } = await sbClient.from('phone_checkins').delete().eq('id', item.id);
     if (error) alert('刪除失敗：' + error.message);
     else await loadMonthCheckins();
   }
@@ -1985,14 +1984,15 @@
     }
     const rocYear = document.getElementById('rocYearSelect').value;
     const month = document.getElementById('monthSelect').value;
+    const nl = String.fromCharCode(10);
     const noteRow = [
       '注意事項：', '', '', '',
-      '接聽情形：請填寫1,2,3,4\n親自接聽為1\n親友接聽為2\n無人接聽為3\n電話故障為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
-      '口頭表達：請填寫1,2,3,4\n表達清晰為1\n表達尚可為2\n口語不清為3\n無法表達為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
-      '健康情況：請填寫1,2,3,4\n健康良好為1\n稍有病痛為2\n按時用藥為3\n定期門診為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
-      '生活狀況：請填寫1,2,3,4\n三餐定時為1\n餐不定時為2\n參與活動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
-      '親友互動：請填寫1,2,3,4\n常有互動為1\n偶有互動為2\n很少互動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
-      '精神狀況：請填寫1,2,3,4\n精神愉快為1\n尚可為2\n精神不佳為3\n輕生念頭為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      ['接聽情形：請填寫1,2,3,4', '親自接聽為1', '親友接聽為2', '無人接聽為3', '電話故障為4', '其他請填5，並且在後一欄位填寫原因', '只可包含一個數字'].join(nl), '',
+      ['口頭表達：請填寫1,2,3,4', '表達清晰為1', '表達尚可為2', '口語不清為3', '無法表達為4', '其他請填5，並且在後一欄位填寫原因', '只可包含一個數字'].join(nl), '',
+      ['健康情況：請填寫1,2,3,4', '健康良好為1', '稍有病痛為2', '按時用藥為3', '定期門診為4', '其他請填5，並且在後一欄位填寫原因', '可包含多個數字', '請用逗號分隔'].join(nl), '',
+      ['生活狀況：請填寫1,2,3,4', '三餐定時為1', '餐不定時為2', '參與活動為3', '極少互動為4', '其他請填5，並且在後一欄位填寫原因', '可包含多個數字', '請用逗號分隔'].join(nl), '',
+      ['親友互動：請填寫1,2,3,4', '常有互動為1', '偶有互動為2', '很少互動為3', '極少互動為4', '其他請填5，並且在後一欄位填寫原因', '只可包含一個數字'].join(nl), '',
+      ['精神狀況：請填寫1,2,3,4', '精神愉快為1', '尚可為2', '精神不佳為3', '輕生念頭為4', '其他請填5，並且在後一欄位填寫原因', '只可包含一個數字'].join(nl), '',
       '填寫欲補充之資料'
     ];
     const headerRow = [
