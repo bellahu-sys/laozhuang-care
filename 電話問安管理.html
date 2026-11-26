@@ -745,6 +745,118 @@
     await loadMonthCheckins();
   }
 
+  function escapeAttrVal(v) {
+    return String(v ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function parseCombinedField(codeVal, othVal) {
+    const c = String(codeVal ?? '').trim();
+    const o = String(othVal ?? '').trim();
+    if (o) return `${c || '5'}（${o}）`;
+    return c;
+  }
+
+  function splitCombinedField(rawInput, prevOth) {
+    const raw = String(rawInput ?? '').trim();
+    const m = raw.match(/^([^（(]+?)[（(]([^）)]+)[）)]$/);
+    if (m) {
+      return { code: m[1].trim(), other: m[2].trim() };
+    }
+    return { code: raw, other: (prevOth ? String(prevOth).trim() : null) };
+  }
+
+  async function saveInlineCheckinRow(id, showToast = false) {
+    const item = monthCheckins.find(r => String(r.id) === String(id));
+    if (!item) return;
+    const sb = getSupabase();
+    const statusEl = document.getElementById('syncStatus');
+    if (!sb) {
+      if (statusEl) {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = '尚未載入資料庫連線設定';
+      }
+      return;
+    }
+
+    const payload = {
+      case_code: item.case_code || null,
+      case_name: item.case_name || '',
+      gender: item.gender || '',
+      call_datetime: item.call_datetime || '',
+      answer_status: item.answer_status || null,
+      answer_other: item.answer_other || null,
+      speech_status: item.speech_status || null,
+      speech_other: item.speech_other || null,
+      health_status: item.health_status || null,
+      health_other: item.health_other || null,
+      life_status: item.life_status || null,
+      life_other: item.life_other || null,
+      interaction_status: item.interaction_status || null,
+      interaction_other: item.interaction_other || null,
+      mental_status: item.mental_status || null,
+      mental_other: item.mental_other || null,
+      remark: item.remark || null
+    };
+
+    const { error } = await sb.from('phone_checkins').update(payload).eq('id', item.id);
+    if (error) {
+      if (statusEl) {
+        statusEl.style.color = '#dc2626';
+        statusEl.textContent = '修改儲存失敗：' + error.message;
+      }
+      if (showToast) alert('修改儲存失敗：' + error.message);
+      return;
+    }
+
+    const now = new Date();
+    const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    if (statusEl) {
+      statusEl.style.color = '#0f766e';
+      statusEl.textContent = `已即時儲存修改（${item.case_name}・${tStr}）`;
+    }
+    if (showToast) alert(`已更新「${item.case_name}」的電話問安記錄！`);
+  }
+
+  function onInlineCellInput(id, colKey, rawVal) {
+    const item = monthCheckins.find(r => String(r.id) === String(id));
+    if (!item) return;
+
+    if (colKey === 'call_datetime') {
+      item.call_datetime = rawVal;
+    } else if (colKey === 'remark') {
+      item.remark = rawVal;
+    } else if (colKey === 'answer') {
+      const sp = splitCombinedField(rawVal, item.answer_other);
+      item.answer_status = sp.code;
+      item.answer_other = sp.other;
+    } else if (colKey === 'speech') {
+      const sp = splitCombinedField(rawVal, item.speech_other);
+      item.speech_status = sp.code;
+      item.speech_other = sp.other;
+    } else if (colKey === 'health') {
+      const sp = splitCombinedField(rawVal, item.health_other);
+      item.health_status = sp.code;
+      item.health_other = sp.other;
+    } else if (colKey === 'life') {
+      const sp = splitCombinedField(rawVal, item.life_other);
+      item.life_status = sp.code;
+      item.life_other = sp.other;
+    } else if (colKey === 'interaction') {
+      const sp = splitCombinedField(rawVal, item.interaction_other);
+      item.interaction_status = sp.code;
+      item.interaction_other = sp.other;
+    } else if (colKey === 'mental') {
+      const sp = splitCombinedField(rawVal, item.mental_other);
+      item.mental_status = sp.code;
+      item.mental_other = sp.other;
+    }
+    updateKpis();
+  }
+
   function renderCheckinTable() {
     const tbody = document.getElementById('checkinTableBody');
     if (monthCheckins.length === 0) {
@@ -752,22 +864,57 @@
       return;
     }
 
-    const fmtCell = (code, oth) => oth ? `${code || ''}（${oth}）` : (code || '');
+    const inpStyle = 'width:100%; padding:5px 6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.88rem; background:#fffef7;';
+    const codeInpStyle = 'width:68px; padding:5px 6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.88rem; text-align:center; background:#fffef7;';
+
     tbody.innerHTML = monthCheckins.map((r, idx) => `
       <tr>
         <td style="text-align:center;">${idx + 1}</td>
-        <td>${r.case_code || ''}</td>
-        <td><strong>${r.case_name || ''}</strong></td>
-        <td style="text-align:center;">${r.gender || ''}</td>
-        <td>${r.call_datetime || ''}</td>
-        <td>${fmtCell(r.answer_status, r.answer_other)}</td>
-        <td>${fmtCell(r.speech_status, r.speech_other)}</td>
-        <td>${fmtCell(r.health_status, r.health_other)}</td>
-        <td>${fmtCell(r.life_status, r.life_other)}</td>
-        <td>${fmtCell(r.interaction_status, r.interaction_other)}</td>
-        <td>${fmtCell(r.mental_status, r.mental_other)}</td>
-        <td>${r.remark || ''}</td>
+        <td>${escapeAttrVal(r.case_code || '')}</td>
+        <td><strong>${escapeAttrVal(r.case_name || '')}</strong></td>
+        <td style="text-align:center;">${escapeAttrVal(r.gender || '')}</td>
+        <td>
+          <input type="text" style="${inpStyle} min-width:148px;" value="${escapeAttrVal(r.call_datetime || '')}"
+            oninput="onInlineCellInput(${r.id}, 'call_datetime', this.value)"
+            onchange="onInlineCellInput(${r.id}, 'call_datetime', this.value); saveInlineCheckinRow(${r.id}, false)">
+        </td>
         <td style="text-align:center;">
+          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.answer_status, r.answer_other))}"
+            oninput="onInlineCellInput(${r.id}, 'answer', this.value)"
+            onchange="onInlineCellInput(${r.id}, 'answer', this.value); saveInlineCheckinRow(${r.id}, false)">
+        </td>
+        <td style="text-align:center;">
+          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.speech_status, r.speech_other))}"
+            oninput="onInlineCellInput(${r.id}, 'speech', this.value)"
+            onchange="onInlineCellInput(${r.id}, 'speech', this.value); saveInlineCheckinRow(${r.id}, false)">
+        </td>
+        <td style="text-align:center;">
+          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.health_status, r.health_other))}"
+            oninput="onInlineCellInput(${r.id}, 'health', this.value)"
+            onchange="onInlineCellInput(${r.id}, 'health', this.value); saveInlineCheckinRow(${r.id}, false)">
+        </td>
+        <td style="text-align:center;">
+          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.life_status, r.life_other))}"
+            oninput="onInlineCellInput(${r.id}, 'life', this.value)"
+            onchange="onInlineCellInput(${r.id}, 'life', this.value); saveInlineCheckinRow(${r.id}, false)">
+        </td>
+        <td style="text-align:center;">
+          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.interaction_status, r.interaction_other))}"
+            oninput="onInlineCellInput(${r.id}, 'interaction', this.value)"
+            onchange="onInlineCellInput(${r.id}, 'interaction', this.value); saveInlineCheckinRow(${r.id}, false)">
+        </td>
+        <td style="text-align:center;">
+          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.mental_status, r.mental_other))}"
+            oninput="onInlineCellInput(${r.id}, 'mental', this.value)"
+            onchange="onInlineCellInput(${r.id}, 'mental', this.value); saveInlineCheckinRow(${r.id}, false)">
+        </td>
+        <td>
+          <input type="text" style="${inpStyle} min-width:140px;" value="${escapeAttrVal(r.remark || '')}"
+            oninput="onInlineCellInput(${r.id}, 'remark', this.value)"
+            onchange="onInlineCellInput(${r.id}, 'remark', this.value); saveInlineCheckinRow(${r.id}, false)">
+        </td>
+        <td style="text-align:center; white-space:nowrap;">
+          <button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.82rem; margin-right:4px;" onclick="saveInlineCheckinRow(${r.id}, true)">儲存</button>
           <button type="button" class="btn btn-del" onclick="deleteCheckin(${r.id})">刪除</button>
         </td>
       </tr>
