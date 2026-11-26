@@ -14,6 +14,10 @@
       --bg: #eef2f6;
       --border: #cbd5e1;
       --text: #1e293b;
+      --rose-main: #be123c;
+      --rose-dark: #9f1239;
+      --rose-bg: #fff1f2;
+      --rose-border: #fecdd3;
     }
     * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
     body { margin: 0; background: var(--bg); color: var(--text); }
@@ -47,8 +51,51 @@
     .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
+    /* 常駐關懷核銷快速切換列 */
+    .care-subnav {
+      background: var(--rose-bg);
+      border-bottom: 1px solid var(--rose-border);
+      padding: 8px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(190, 18, 60, 0.06);
+    }
+    .care-subnav-label {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--rose-dark);
+      margin-right: 4px;
+    }
+    .care-subnav a {
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: bold;
+      padding: 6px 13px;
+      border-radius: 6px;
+      border: 1px solid var(--rose-border);
+      background: #ffffff;
+      color: var(--rose-dark);
+      transition: all 0.14s ease;
+    }
+    .care-subnav a:hover {
+      background: #ffe4e6;
+      border-color: var(--rose-main);
+    }
+    .care-subnav a.active {
+      background: var(--rose-main);
+      color: #ffffff;
+      border-color: var(--rose-main);
+      box-shadow: 0 2px 6px rgba(190, 18, 60, 0.22);
+    }
+
     .container {
-      max-width: 1420px; margin: 22px auto 50px auto; background: #fff;
+      max-width: 1420px; margin: 18px auto 50px auto; background: #fff;
       padding: 24px; border-radius: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.06);
       border: 1px solid var(--border);
     }
@@ -76,6 +123,8 @@
     .btn-blue:hover { background: #1d4ed8; }
     .btn-amber { background: #d97706; color: #fff; }
     .btn-amber:hover { background: #b45309; }
+    .btn-rose { background: var(--rose-main); color: #fff; }
+    .btn-rose:hover { background: var(--rose-dark); }
     .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
     .btn-outline:hover { background: #f1f5f9; }
     .btn-sm { padding: 5px 10px; font-size: 0.84rem; }
@@ -145,7 +194,7 @@
     }
 
     @media print {
-      nav.topbar, .no-print { display: none !important; }
+      nav.topbar, .care-subnav, .no-print { display: none !important; }
       body { background: #fff; }
       .container { max-width: 100%; margin: 0; padding: 0; border: none; box-shadow: none; }
       .auto-fit-input { border: none; background: transparent; padding: 2px 0; }
@@ -191,8 +240,17 @@
         <a href="每日工作檢核表.html">每日工作檢核表</a>
         <a href="零用金管理中心.html">零用金清點記錄</a>
         <a href="每日菜單管理.html">每日菜單管理</a>
-        <a href="食材費收據管理.html">食材費計算</a>
         <a href="公文編號記錄.html">公文編號記錄</a>
+        <a href="資料庫臨時記錄.html">資料庫臨時記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
       </div>
     </div>
     <div class="nav-item">
@@ -204,10 +262,14 @@
         <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
         <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
         <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
-        <div class="dropdown-divider">長照與延緩核銷</div>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
         <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照核銷食材費.html">長照核銷食材費</a>
         <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
-        <a href="長照講師核銷記錄.html">3. 長照核銷統計</a>
+        <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+        <div class="dropdown-divider">其他計畫核銷</div>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
       </div>
     </div>
     <div class="nav-item">
@@ -216,16 +278,28 @@
         <a href="年度課程安排行事曆.html">年度排課行事曆</a>
         <a href="課程活動表.html">課程活動表</a>
         <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
       </div>
     </div>
   </div>
 </nav>
 
+<!-- 常駐關懷核銷快速切換列：免回首頁直接切換對照 -->
+<div class="care-subnav no-print" aria-label="關懷核銷快速切換">
+  <span class="care-subnav-label">關懷核銷快速切換：</span>
+  <a href="關懷核銷食材費.html">關懷核銷食材費</a>
+  <a href="每月業務費記錄.html" class="active">1. 每月業務費記錄</a>
+  <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+  <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+  <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+</div>
+
 <div class="container">
   <div class="header-bar">
     <h1>【關懷核銷】每月業務費記錄</h1>
-    <div class="no-print" style="display:flex; gap:8px; align-items:center;">
+    <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
       <span id="statusText" style="font-weight:bold; color:#166534;"></span>
+      <a href="關懷每季核銷統計.html" class="btn btn-rose btn-sm" style="text-decoration:none;">前往 4. 關懷每季核銷統計 →</a>
       <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">列印</button>
     </div>
   </div>
