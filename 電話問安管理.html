@@ -450,7 +450,7 @@
           <tr>
             <th>項次</th>
             <th>編號</th>
-            <th>姓名</th>
+            <th style="min-width:86px; white-space:nowrap;">姓名</th>
             <th>性別</th>
             <th>電訪日期時間</th>
             <th>接聽</th>
@@ -871,7 +871,7 @@
       <tr>
         <td style="text-align:center;">${idx + 1}</td>
         <td>${escapeAttrVal(r.case_code || '')}</td>
-        <td><strong>${escapeAttrVal(r.case_name || '')}</strong></td>
+        <td style="white-space:nowrap; min-width:86px;"><strong>${escapeAttrVal(r.case_name || '')}</strong></td>
         <td style="text-align:center;">${escapeAttrVal(r.gender || '')}</td>
         <td>
           <input type="text" style="${inpStyle} min-width:148px;" value="${escapeAttrVal(r.call_datetime || '')}"
