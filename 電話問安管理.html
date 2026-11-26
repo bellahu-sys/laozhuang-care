@@ -41,11 +41,46 @@
     .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
     .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
 
-    .container { max-width: 1260px; margin: 22px auto 50px auto; padding: 0 16px; }
+    .section-subnav {
+      background: #f0fdfa;
+      border-bottom: 1px solid #99f6e4;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(15, 118, 110, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: #115e59;
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #99f6e4;
+      background: #ffffff;
+      color: #115e59;
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover { background: #ccfbf1; border-color: #0f766e; }
+    .section-subnav a.active { background: #0f766e; color: #ffffff; border-color: #0f766e; }
+    @media print { .section-subnav { display: none !important; } }
+
+    .container { max-width: 1280px; margin: 20px auto 50px auto; padding: 0 16px; }
     .card {
       background: #fff; border-radius: 12px; padding: 20px 24px;
       border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
     h1 { margin: 0 0 6px 0; font-size: 1.4rem; color: var(--primary); }
     h2 {
@@ -57,16 +92,16 @@
 
     .toolbar {
       display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
-      background: #f8fafc; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);
-      margin-bottom: 14px;
+      background: #f8fafc; padding: 11px 14px; border-radius: 8px; border: 1px solid var(--border);
+      margin-bottom: 12px;
     }
-    input[type="text"], input[type="datetime-local"], select, textarea {
+    input[type="text"], select, textarea {
       padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
       font-size: 0.94rem; background: #fff;
     }
-    button.btn {
-      padding: 8px 15px; border: none; border-radius: 6px; font-weight: bold;
-      cursor: pointer; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 5px;
+    button.btn, label.btn {
+      padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px;
     }
     .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:hover { background: var(--primary-dark); }
@@ -75,6 +110,7 @@
     .btn-green { background: #15803d; color: #fff; }
     .btn-green:hover { background: #166534; }
     .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
     .btn-gray { background: #64748b; color: #fff; }
     .btn-del { background: #dc2626; color: #fff; padding: 4px 9px; font-size: 0.82rem; }
 
@@ -88,16 +124,13 @@
     .kpi-badge-ok { background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 14px; font-weight: bold; font-size: 0.85rem; }
     .kpi-badge-warn { background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 14px; font-weight: bold; font-size: 0.85rem; }
 
-    .search-picker-grid {
-      display: grid; grid-template-columns: 360px 1fr; gap: 18px; align-items: start;
-    }
+    .search-picker-grid { display: grid; grid-template-columns: 350px 1fr; gap: 18px; align-items: start; }
     @media (max-width: 920px) { .search-picker-grid { grid-template-columns: 1fr; } }
 
-    .case-list-panel {
-      border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; padding: 12px;
-    }
+    .case-list-panel { border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc; padding: 12px; }
     .case-scroll {
-      max-height: 460px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; margin-top: 8px;
+      max-height: 470px; overflow-y: auto; border: 1px solid #e2e8f0;
+      border-radius: 6px; background: #fff; margin-top: 8px;
     }
     .case-pick-row {
       padding: 9px 11px; border-bottom: 1px solid #f1f5f9; cursor: pointer;
@@ -105,25 +138,23 @@
     }
     .case-pick-row:hover { background: #f0fdfa; }
     .case-pick-row.selected { background: #ccfbf1; font-weight: bold; border-left: 4px solid var(--primary); }
-    .done-dot { font-size: 0.76rem; background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+    .done-dot { font-size: 0.75rem; background: #dcfce7; color: #166534; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
     .reg-dot { font-size: 0.74rem; background: #e0f2fe; color: #075985; padding: 1px 6px; border-radius: 8px; }
+    .preset-dot { font-size: 0.74rem; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 8px; border: 1px solid #fde68a; }
 
-    .form-panel {
-      border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; background: #fff;
-    }
+    .mode-pill { font-size: 0.82rem; padding: 3px 10px; border-radius: 12px; font-weight: bold; }
+    .mode-pill-blank { background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; }
+    .mode-pill-preset { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+
+    .form-panel { border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; background: #fff; }
     .selected-banner {
       background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
-      padding: 10px 14px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+      padding: 10px 14px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
       font-size: 0.94rem;
     }
-    .q-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-    }
+    .q-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     @media (max-width: 720px) { .q-grid { grid-template-columns: 1fr; } }
-
-    .q-box {
-      border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; background: #f8fafc;
-    }
+    .q-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; background: #f8fafc; }
     .q-title { font-weight: bold; font-size: 0.93rem; color: var(--primary-dark); margin-bottom: 6px; }
     .q-hint { font-size: 0.78rem; color: #64748b; font-weight: normal; }
     .opt-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
@@ -138,156 +169,24 @@
     table.data-table th, table.data-table td { border: 1px solid #cbd5e1; padding: 7px 8px; text-align: left; }
     table.data-table th { background: #e2e8f0; text-align: center; white-space: nowrap; }
     table.data-table tr:nth-child(even) { background: #f8fafc; }
-  
-    .section-subnav {
-      background: #f0fdfa;
-      border-bottom: 1px solid #99f6e4;
-      padding: 8px 16px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-      position: sticky;
-      top: 0;
-      z-index: 450;
-      box-shadow: 0 2px 5px rgba(15, 118, 110, 0.08);
-    }
-    .section-subnav-label {
-      font-size: 0.84rem;
-      font-weight: bold;
-      color: #115e59;
-      margin-right: 4px;
-    }
-    .section-subnav a {
-      text-decoration: none;
-      font-size: 0.85rem;
-      font-weight: bold;
-      padding: 5px 11px;
-      border-radius: 6px;
-      border: 1px solid #99f6e4;
-      background: #ffffff;
-      color: #115e59;
-      transition: all 0.14s ease;
-    }
-    .section-subnav a:hover {
-      background: #ccfbf1;
-      border-color: #0f766e;
-    }
-    .section-subnav a.active {
-      background: #0f766e;
-      color: #ffffff;
-      border-color: #0f766e;
-      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.22);
-    }
-    @media print { .section-subnav { display: none !important; } }
 
-  
-    .section-subnav {
-      background: #f0fdfa;
-      border-bottom: 1px solid #99f6e4;
-      padding: 8px 16px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-      position: sticky;
-      top: 0;
-      z-index: 450;
-      box-shadow: 0 2px 5px rgba(15, 118, 110, 0.08);
-    }
-    .section-subnav-label {
-      font-size: 0.84rem;
-      font-weight: bold;
-      color: #115e59;
-      margin-right: 4px;
-    }
-    .section-subnav a {
-      text-decoration: none;
-      font-size: 0.85rem;
-      font-weight: bold;
-      padding: 5px 11px;
-      border-radius: 6px;
-      border: 1px solid #99f6e4;
-      background: #ffffff;
-      color: #115e59;
-      transition: all 0.14s ease;
-    }
-    .section-subnav a:hover {
-      background: #ccfbf1;
-      border-color: #0f766e;
-    }
-    .section-subnav a.active {
-      background: #0f766e;
-      color: #ffffff;
-      border-color: #0f766e;
-      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.22);
-    }
-    @media print { .section-subnav { display: none !important; } }
-
-    .preset-dot { font-size: 0.74rem; background: #fef3c7; color: #92400e; padding: 1px 6px; border-radius: 8px; border: 1px solid #fde68a; }
-    .mode-pill { font-size: 0.8rem; padding: 3px 9px; border-radius: 12px; font-weight: bold; }
-    .mode-pill-preset { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
-    .mode-pill-blank { background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; }
-    .preset-modal-backdrop {
-      display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5);
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.52);
       z-index: 900; justify-content: center; align-items: center; padding: 16px;
     }
-    .preset-modal-backdrop.open { display: flex; }
-    .preset-modal-box {
-      background: #fff; border-radius: 12px; max-width: 980px; width: 100%; max-height: 86vh;
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 12px; max-width: 1020px; width: 100%; max-height: 86vh;
       display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.25); overflow: hidden;
     }
-    .preset-modal-hdr {
+    .modal-hdr {
       background: var(--primary); color: #fff; padding: 14px 20px;
       display: flex; justify-content: space-between; align-items: center; gap: 10px;
     }
-    .preset-modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+    .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
   </style>
 </head>
 <body>
-
-<!-- 已有電話問安記錄名單 Modal -->
-<div class="preset-modal-backdrop" id="presetListModal" onclick="if(event.target===this)closePresetListModal()">
-  <div class="preset-modal-box">
-    <div class="preset-modal-hdr">
-      <div>
-        <strong style="font-size:1.05rem;">已有電話問安記錄名單（雲端同步設定檔）</strong>
-        <span id="modalPresetSummary" style="font-size:0.84rem; margin-left:10px; opacity:0.92;"></span>
-      </div>
-      <button type="button" class="btn btn-gray" style="padding:5px 12px; font-size:0.85rem;" onclick="closePresetListModal()">關閉</button>
-    </div>
-    <div class="preset-modal-body">
-      <div class="toolbar" style="margin-bottom:12px;">
-        <input type="text" id="presetSearchInput" placeholder="搜尋姓名、編號或備註..." oninput="renderPresetModalTable()" style="flex:1; min-width:200px;">
-        <button type="button" class="btn btn-blue" style="padding:6px 12px; font-size:0.84rem;" onclick="exportPresetExcel()">匯出目前設定名單 (.xlsx)</button>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>項次</th>
-              <th>編號</th>
-              <th style="min-width:86px; white-space:nowrap;">姓名</th>
-              <th>性別</th>
-              <th>接聽</th>
-              <th>口頭</th>
-              <th>健康</th>
-              <th>生活</th>
-              <th>親友</th>
-              <th>精神</th>
-              <th>備註</th>
-              <th style="white-space:nowrap;">操作</th>
-            </tr>
-          </thead>
-          <tbody id="presetModalTbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
 
 <script>
   if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
@@ -363,7 +262,7 @@
     </div>
   </div>
 </nav>
-<!-- 常駐人事資料快速切換列 -->
+
 <div class="section-subnav no-print" aria-label="人事資料快速切換">
   <span class="section-subnav-label">人事資料快速切換：</span>
   <a href="個案資料管理.html">個案資料管理</a>
@@ -376,26 +275,56 @@
   <a href="聯絡電話.html">聯絡電話</a>
 </div>
 
-<!-- 常駐人事資料快速切換列 -->
-<div class="section-subnav no-print" aria-label="人事資料快速切換">
-  <span class="section-subnav-label">人事資料快速切換：</span>
-  <a href="個案資料管理.html">個案資料管理</a>
-  <a href="個案清單.html">個案名冊查詢與服務狀況</a>
-  <a href="講師資料.html">講師資料管理</a>
-  <a href="臨時人員資料.html">臨時人員資料管理</a>
-  <a href="志工資料管理.html">志工資料管理</a>
-  <a href="電話問安管理.html" class="active">電話問安記錄</a>
-  <a href="延緩前測管理.html">延緩課程前測記錄</a>
-  <a href="聯絡電話.html">聯絡電話</a>
+<!-- 已有電話問安記錄名單 Modal -->
+<div class="modal-backdrop" id="presetListModal" onclick="if(event.target===this)closePresetListModal()">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div>
+        <strong style="font-size:1.05rem;">已有電話問安記錄名單（雲端同步設定檔）</strong>
+        <span id="modalPresetSummary" style="font-size:0.84rem; margin-left:10px;"></span>
+      </div>
+      <button type="button" class="btn btn-gray" style="padding:5px 12px; font-size:0.85rem;" onclick="closePresetListModal()">關閉</button>
+    </div>
+    <div class="modal-body">
+      <div class="toolbar">
+        <input type="text" id="presetSearchInput" placeholder="搜尋姓名、編號或備註..." oninput="renderPresetModalTable()" style="flex:1; min-width:200px;">
+        <label class="btn btn-gray" style="padding:6px 12px; font-size:0.84rem; margin:0; cursor:pointer;">
+          上傳設定 Excel (.xlsx)
+          <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handlePresetExcelUpload(event)">
+        </label>
+        <button type="button" class="btn btn-blue" style="padding:6px 12px; font-size:0.84rem;" onclick="exportPresetExcel()">匯出設定名單 (.xlsx)</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>項次</th>
+              <th>編號</th>
+              <th style="min-width:86px; white-space:nowrap;">姓名</th>
+              <th>性別</th>
+              <th>接聽</th>
+              <th>口頭</th>
+              <th>健康</th>
+              <th>生活</th>
+              <th>親友</th>
+              <th>精神</th>
+              <th>備註</th>
+              <th style="white-space:nowrap;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="presetModalTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
-
 
 <div class="container">
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div>
         <h1>電話問安記錄與政府平台匯出</h1>
-        <p class="sub-note">依搜尋選取常來據點或服務中個案，一筆一筆新增每月電話問安記錄，並一鍵匯出符合政府系統格式的 Excel 檔案。</p>
+        <p class="sub-note">支援「未去電空白填寫」與「返據點套用原始設定」雙模式，所有記錄與設定皆同步儲存於 Supabase 雲端。</p>
       </div>
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <label style="font-weight:bold;">民國年：</label>
@@ -422,11 +351,9 @@
     <div style="margin-left:auto; font-size:0.86rem; color:#0f766e;" id="syncStatus">正在連線資料庫...</div>
   </div>
 
-  <!-- 一、左側搜尋選取個案 ＋ 右側一筆一筆新增問安記錄 -->
   <div class="card">
     <h2>一、搜尋選擇長輩並新增電話問安記錄</h2>
     <div class="search-picker-grid">
-      <!-- 左側名單搜尋 -->
       <div class="case-list-panel">
         <div style="display:flex; flex-direction:column; gap:7px;">
           <input type="text" id="caseSearchInput" placeholder="輸入長輩姓名、編號或電話搜尋..." oninput="renderCasePicker()">
@@ -445,7 +372,6 @@
         </div>
       </div>
 
-      <!-- 右側問安記錄表單 -->
       <div class="form-panel">
         <div class="selected-banner">
           <div><strong>目前電訪長輩：</strong><span id="selCaseName" style="color:#1d4ed8; font-weight:bold; font-size:1.05rem;">請先從左側點選長輩</span></div>
@@ -456,12 +382,12 @@
 
         <div class="toolbar" style="margin-bottom:10px;">
           <span id="formFillModePill" class="mode-pill mode-pill-blank">目前：空白表單模式</span>
-          <label><strong>電訪日期時間（民國年/月/日 時:分:秒）：</strong>
-            <input type="text" id="callDatetimeInput" style="width:185px; font-weight:bold;" placeholder="115/11/23 09:30:00">
+          <label><strong>電訪日期時間：</strong>
+            <input type="text" id="callDatetimeInput" style="width:185px; font-weight:bold;" placeholder="115/11/26 14:20:00">
           </label>
           <button type="button" class="btn btn-gray" style="padding:6px 10px; font-size:0.84rem;" onclick="setNowRocDatetime()">重設為現在時間</button>
           <button type="button" class="btn btn-gray" style="padding:6px 10px; font-size:0.84rem;" onclick="clearFormToBlank()">清空為空白表單</button>
-          <button type="button" class="btn btn-blue" style="padding:6px 10px; font-size:0.84rem;" onclick="applyNormalPreset()">一鍵帶入「一切正常」常用選項</button>
+          <button type="button" class="btn btn-blue" style="padding:6px 10px; font-size:0.84rem;" onclick="applyNormalPreset()">一鍵帶入「一切正常」</button>
         </div>
 
         <div class="toolbar" style="margin-bottom:12px; background:#fffbeb; border-color:#fde68a;">
@@ -469,17 +395,16 @@
           <button type="button" class="btn btn-blue" style="padding:6px 12px; font-size:0.85rem;" onclick="applyCasePresetToForm(false)">套用該個案原始設定</button>
           <label class="btn btn-gray" style="padding:6px 11px; font-size:0.84rem; margin:0; cursor:pointer;">
             上傳設定 Excel (.xlsx)
-            <input type="file" id="presetExcelInput" accept=".xlsx,.xls" style="display:none;" onchange="handlePresetExcelUpload(event)">
+            <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="handlePresetExcelUpload(event)">
           </label>
-          <span id="presetMatchInfo" style="font-size:0.82rem; color:#92400e;">未去電返據點時自動帶入空白表單；3 天到據點說明原因時可套用原始設定。</span>
+          <span id="presetMatchInfo" style="font-size:0.82rem; color:#92400e;">未去電時維持空白表單；3 天到據點說明原因時可套用原始設定。</span>
         </div>
 
         <div class="q-grid">
-          <!-- 1. 接聽情形（單選） -->
           <div class="q-box">
             <div class="q-title">1. 接聽情形 <span class="q-hint">（單選 1～5）</span></div>
             <div class="opt-wrap">
-              <label class="opt-lbl"><input type="radio" name="q_answer" value="1" checked> 1 親自接聽</label>
+              <label class="opt-lbl"><input type="radio" name="q_answer" value="1"> 1 親自接聽</label>
               <label class="opt-lbl"><input type="radio" name="q_answer" value="2"> 2 親友接聽</label>
               <label class="opt-lbl"><input type="radio" name="q_answer" value="3"> 3 無人接聽</label>
               <label class="opt-lbl"><input type="radio" name="q_answer" value="4"> 4 電話故障</label>
@@ -488,11 +413,10 @@
             <input type="text" id="other_answer" class="other-input" placeholder="選 5 其他時請填寫原因">
           </div>
 
-          <!-- 2. 口頭表達（單選） -->
           <div class="q-box">
             <div class="q-title">2. 口頭表達 <span class="q-hint">（單選 1～5）</span></div>
             <div class="opt-wrap">
-              <label class="opt-lbl"><input type="radio" name="q_speech" value="1" checked> 1 表達清晰</label>
+              <label class="opt-lbl"><input type="radio" name="q_speech" value="1"> 1 表達清晰</label>
               <label class="opt-lbl"><input type="radio" name="q_speech" value="2"> 2 表達尚可</label>
               <label class="opt-lbl"><input type="radio" name="q_speech" value="3"> 3 口語不清</label>
               <label class="opt-lbl"><input type="radio" name="q_speech" value="4"> 4 無法表達</label>
@@ -501,37 +425,34 @@
             <input type="text" id="other_speech" class="other-input" placeholder="選 5 其他時請填寫原因">
           </div>
 
-          <!-- 3. 健康情況（複選逗號分隔） -->
           <div class="q-box">
             <div class="q-title">3. 健康情況 <span class="q-hint">（可複選，自動逗號分隔）</span></div>
             <div class="opt-wrap">
-              <label class="opt-lbl"><input type="checkbox" name="q_health" value="1" checked> 1 健康良好</label>
+              <label class="opt-lbl"><input type="checkbox" name="q_health" value="1"> 1 健康良好</label>
               <label class="opt-lbl"><input type="checkbox" name="q_health" value="2"> 2 稍有病痛</label>
               <label class="opt-lbl"><input type="checkbox" name="q_health" value="3"> 3 按時用藥</label>
               <label class="opt-lbl"><input type="checkbox" name="q_health" value="4"> 4 定期門診</label>
               <label class="opt-lbl"><input type="checkbox" name="q_health" value="5"> 5 其他</label>
             </div>
-            <input type="text" id="other_health" class="other-input" placeholder="選 5 其他時請填寫原因（如：糖尿病、高血壓）">
+            <input type="text" id="other_health" class="other-input" placeholder="選 5 其他時請填寫原因">
           </div>
 
-          <!-- 4. 生活狀況（複選逗號分隔） -->
           <div class="q-box">
             <div class="q-title">4. 生活狀況 <span class="q-hint">（可複選，自動逗號分隔）</span></div>
             <div class="opt-wrap">
-              <label class="opt-lbl"><input type="checkbox" name="q_life" value="1" checked> 1 三餐定時</label>
+              <label class="opt-lbl"><input type="checkbox" name="q_life" value="1"> 1 三餐定時</label>
               <label class="opt-lbl"><input type="checkbox" name="q_life" value="2"> 2 餐不定時</label>
-              <label class="opt-lbl"><input type="checkbox" name="q_life" value="3" checked> 3 參與活動</label>
+              <label class="opt-lbl"><input type="checkbox" name="q_life" value="3"> 3 參與活動</label>
               <label class="opt-lbl"><input type="checkbox" name="q_life" value="4"> 4 極少互動</label>
               <label class="opt-lbl"><input type="checkbox" name="q_life" value="5"> 5 其他</label>
             </div>
             <input type="text" id="other_life" class="other-input" placeholder="選 5 其他時請填寫原因">
           </div>
 
-          <!-- 5. 親友互動（單選） -->
           <div class="q-box">
             <div class="q-title">5. 親友互動 <span class="q-hint">（單選 1～5）</span></div>
             <div class="opt-wrap">
-              <label class="opt-lbl"><input type="radio" name="q_interaction" value="1" checked> 1 常有互動</label>
+              <label class="opt-lbl"><input type="radio" name="q_interaction" value="1"> 1 常有互動</label>
               <label class="opt-lbl"><input type="radio" name="q_interaction" value="2"> 2 偶有互動</label>
               <label class="opt-lbl"><input type="radio" name="q_interaction" value="3"> 3 很少互動</label>
               <label class="opt-lbl"><input type="radio" name="q_interaction" value="4"> 4 極少互動</label>
@@ -540,11 +461,10 @@
             <input type="text" id="other_interaction" class="other-input" placeholder="選 5 其他時請填寫原因">
           </div>
 
-          <!-- 6. 精神狀況（單選） -->
           <div class="q-box">
             <div class="q-title">6. 精神狀況 <span class="q-hint">（單選 1～5）</span></div>
             <div class="opt-wrap">
-              <label class="opt-lbl"><input type="radio" name="q_mental" value="1" checked> 1 精神愉快</label>
+              <label class="opt-lbl"><input type="radio" name="q_mental" value="1"> 1 精神愉快</label>
               <label class="opt-lbl"><input type="radio" name="q_mental" value="2"> 2 尚可</label>
               <label class="opt-lbl"><input type="radio" name="q_mental" value="3"> 3 精神不佳</label>
               <label class="opt-lbl"><input type="radio" name="q_mental" value="4"> 4 輕生念頭</label>
@@ -566,7 +486,6 @@
     </div>
   </div>
 
-  <!-- 二、本月已登錄電話問安明細表 -->
   <div class="card">
     <h2>
       <span id="listTitle">二、本月已登錄電話問安記錄明細</span>
@@ -600,20 +519,7 @@
 </div>
 
 <script>
-  function getSupabase() {
-    if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined' || !window.supabase) {
-      return null;
-    }
-    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-
-  let allCases = [];
-  let latestStatusMap = {};
-  let monthCheckins = [];
-  let selectedCase = null;
-  let hasAnyRegularInDb = false;
-
-  const DEFAULT_CASE_PRESETS = [
+  const INITIAL_PRESETS = [
   {
     "code": "110086915",
     "name": "邱鳳廷",
@@ -1299,12 +1205,19 @@
     "remark": "感冒"
   }
 ];
-  let currentPresetsList = DEFAULT_CASE_PRESETS.slice();
-  let casePresetMap = {};
+
+  let sbClient = null;
+  let allCases = [];
+  let latestStatusMap = {};
+  let monthCheckins = [];
+  let selectedCase = null;
+  let hasAnyRegularInDb = false;
+  let currentPresetsList = INITIAL_PRESETS.slice();
+  let presetLookup = {};
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
-  function escapeAttrVal(v) {
+  function escHtml(v) {
     return String(v ?? '')
       .replace(/&/g, '&amp;')
       .replace(/"/g, '&quot;')
@@ -1312,27 +1225,156 @@
       .replace(/>/g, '&gt;');
   }
 
-  function rebuildPresetMap(list) {
-    casePresetMap = {};
+  function escJsStr(v) {
+    return String(v ?? '').replace(/\/g, '\\').replace(/'/g, "\'");
+  }
+
+  function setNowRocDatetime() {
+    const now = new Date();
+    const rocY = now.getFullYear() - 1911;
+    const str = rocY + '/' + pad2(now.getMonth() + 1) + '/' + pad2(now.getDate()) + ' ' +
+      pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':00';
+    document.getElementById('callDatetimeInput').value = str;
+  }
+
+  function rebuildPresetLookup(list) {
+    presetLookup = {};
     (list || []).forEach(function(item) {
       const n = String(item.name || '').trim();
       const c = String(item.code || '').trim();
       if (!n) return;
-      if (!casePresetMap[n]) casePresetMap[n] = item;
-      if (c && !casePresetMap[c]) casePresetMap[c] = item;
+      if (!presetLookup[n]) presetLookup[n] = item;
+      if (c && !presetLookup[c]) presetLookup[c] = item;
     });
     const uniqNames = new Set((list || []).map(function(x) { return String(x.name || '').trim(); }).filter(Boolean));
     const badge = document.getElementById('presetCountBadge');
     if (badge) badge.textContent = String(uniqNames.size);
   }
 
-  rebuildPresetMap(currentPresetsList);
+  function findPresetForCase(c) {
+    if (!c) return null;
+    const n = String(c.name || '').trim();
+    const g = String(c.gov_system_id || '').trim();
+    const num = String(c.case_number || '').trim();
+    return presetLookup[n] || presetLookup[g] || presetLookup[num] || null;
+  }
+
+  function setFormModePill(isPreset) {
+    const pill = document.getElementById('formFillModePill');
+    if (!pill) return;
+    if (isPreset) {
+      pill.textContent = '目前：已套用原始設定';
+      pill.className = 'mode-pill mode-pill-preset';
+    } else {
+      pill.textContent = '目前：空白表單模式';
+      pill.className = 'mode-pill mode-pill-blank';
+    }
+  }
+
+  function clearFormToBlank() {
+    document.querySelectorAll('input[name="q_answer"]').forEach(function(r) { r.checked = false; });
+    document.querySelectorAll('input[name="q_speech"]').forEach(function(r) { r.checked = false; });
+    document.querySelectorAll('input[name="q_health"]').forEach(function(cb) { cb.checked = false; });
+    document.querySelectorAll('input[name="q_life"]').forEach(function(cb) { cb.checked = false; });
+    document.querySelectorAll('input[name="q_interaction"]').forEach(function(r) { r.checked = false; });
+    document.querySelectorAll('input[name="q_mental"]').forEach(function(r) { r.checked = false; });
+    ['other_answer', 'other_speech', 'other_health', 'other_life', 'other_interaction', 'other_mental', 'remarkInput'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    setFormModePill(false);
+  }
+
+  function applyNormalPreset() {
+    clearFormToBlank();
+    setNowRocDatetime();
+    const setRadio = function(name, v) {
+      const el = document.querySelector('input[name="' + name + '"][value="' + v + '"]');
+      if (el) el.checked = true;
+    };
+    const setCheck = function(name, v) {
+      const el = document.querySelector('input[name="' + name + '"][value="' + v + '"]');
+      if (el) el.checked = true;
+    };
+    setRadio('q_answer', '1');
+    setRadio('q_speech', '1');
+    setCheck('q_health', '1');
+    setCheck('q_life', '1');
+    setCheck('q_life', '3');
+    setRadio('q_interaction', '1');
+    setRadio('q_mental', '1');
+    setFormModePill(true);
+  }
+
+  function applyPresetObject(p) {
+    if (!p) return;
+    clearFormToBlank();
+    setNowRocDatetime();
+    if (p.answer_status) {
+      const r1 = document.querySelector('input[name="q_answer"][value="' + String(p.answer_status).trim() + '"]');
+      if (r1) r1.checked = true;
+    }
+    if (p.answer_other) document.getElementById('other_answer').value = p.answer_other;
+
+    if (p.speech_status) {
+      const r2 = document.querySelector('input[name="q_speech"][value="' + String(p.speech_status).trim() + '"]');
+      if (r2) r2.checked = true;
+    }
+    if (p.speech_other) document.getElementById('other_speech').value = p.speech_other;
+
+    if (p.health_status) {
+      String(p.health_status).split(/[,，]/).map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(v) {
+        const c3 = document.querySelector('input[name="q_health"][value="' + v + '"]');
+        if (c3) c3.checked = true;
+      });
+    }
+    if (p.health_other) document.getElementById('other_health').value = p.health_other;
+
+    if (p.life_status) {
+      String(p.life_status).split(/[,，]/).map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(v) {
+        const c4 = document.querySelector('input[name="q_life"][value="' + v + '"]');
+        if (c4) c4.checked = true;
+      });
+    }
+    if (p.life_other) document.getElementById('other_life').value = p.life_other;
+
+    if (p.interaction_status) {
+      const r5 = document.querySelector('input[name="q_interaction"][value="' + String(p.interaction_status).trim() + '"]');
+      if (r5) r5.checked = true;
+    }
+    if (p.interaction_other) document.getElementById('other_interaction').value = p.interaction_other;
+
+    if (p.mental_status) {
+      const r6 = document.querySelector('input[name="q_mental"][value="' + String(p.mental_status).trim() + '"]');
+      if (r6) r6.checked = true;
+    }
+    if (p.mental_other) document.getElementById('other_mental').value = p.mental_other;
+
+    if (p.remark) document.getElementById('remarkInput').value = p.remark;
+    setFormModePill(true);
+  }
+
+  function applyCasePresetToForm(silentIfMissing) {
+    if (!selectedCase) {
+      if (!silentIfMissing) alert('請先從左側點選一位長輩！');
+      return;
+    }
+    const p = findPresetForCase(selectedCase);
+    if (!p) {
+      if (!silentIfMissing) alert('「' + selectedCase.name + '」尚無原始設定，維持空白表單方便填寫。');
+      clearFormToBlank();
+      setNowRocDatetime();
+      return;
+    }
+    applyPresetObject(p);
+    const info = document.getElementById('presetMatchInfo');
+    if (info) info.textContent = '已套用「' + selectedCase.name + '」原始設定，修改原因或備註後即可儲存';
+  }
 
   async function syncPresetsFromCloud() {
-    const sb = getSupabase();
-    if (!sb) return;
+    if (!sbClient) return;
     try {
-      const { data, error } = await sb
+      const { data, error } = await sbClient
         .from('phone_checkin_presets')
         .select('*')
         .order('sort_order', { ascending: true })
@@ -1359,20 +1401,17 @@
             remark: r.remark || ''
           };
         });
-        rebuildPresetMap(currentPresetsList);
+        rebuildPresetLookup(currentPresetsList);
         renderCasePicker();
-        if (document.getElementById('presetListModal')?.classList.contains('open')) {
-          renderPresetModalTable();
-        }
-      } else if (error) {
-        console.warn('phone_checkin_presets 尚未建立或同步中：', error.message);
       }
     } catch (e) {}
   }
 
   async function savePresetsToCloud(list) {
-    const sb = getSupabase();
-    if (!sb) return false;
+    if (!sbClient) {
+      alert('尚未連線至 Supabase，無法同步雲端設定');
+      return false;
+    }
     try {
       const rows = (list || []).filter(function(item) { return item && item.name; }).map(function(item, idx) {
         return {
@@ -1396,135 +1435,17 @@
           remark: item.remark || null
         };
       });
-      const { error: delErr } = await sb.from('phone_checkin_presets').delete().not('id', 'is', null);
+      const { error: delErr } = await sbClient.from('phone_checkin_presets').delete().not('id', 'is', null);
       if (delErr) throw delErr;
       if (rows.length > 0) {
-        const { error: insErr } = await sb.from('phone_checkin_presets').insert(rows);
+        const { error: insErr } = await sbClient.from('phone_checkin_presets').insert(rows);
         if (insErr) throw insErr;
       }
       return true;
     } catch (e) {
-      alert('雲端儲存設定名單失敗（請確認 Supabase 已建立 phone_checkin_presets 資料表）：' + e.message);
+      alert('同步至 phone_checkin_presets 失敗（請先在 Supabase SQL Editor 執行建表語法）：' + e.message);
       return false;
     }
-  }
-
-  function getUniquePresetRows() {
-    const seen = new Set();
-    const out = [];
-    Object.values(casePresetMap).forEach(function(item) {
-      if (!item || !item.name) return;
-      const key = (item.code || '') + '__' + item.name;
-      if (!seen.has(key)) {
-        seen.add(key);
-        out.push(item);
-      }
-    });
-    return out;
-  }
-
-  function findPresetForCase(c) {
-    if (!c) return null;
-    const n = String(c.name || '').trim();
-    const govId = String(c.gov_system_id || '').trim();
-    const cNum = String(c.case_number || '').trim();
-    return casePresetMap[n] || casePresetMap[govId] || casePresetMap[cNum] || null;
-  }
-
-  function setFormModeBadge(isPreset) {
-    const pill = document.getElementById('formFillModePill');
-    if (!pill) return;
-    if (isPreset) {
-      pill.textContent = '目前：已套用原始設定';
-      pill.className = 'mode-pill mode-pill-preset';
-    } else {
-      pill.textContent = '目前：空白表單模式';
-      pill.className = 'mode-pill mode-pill-blank';
-    }
-  }
-
-  function clearFormToBlank() {
-    document.querySelectorAll('input[name="q_answer"]').forEach(function(r) { r.checked = false; });
-    document.querySelectorAll('input[name="q_speech"]').forEach(function(r) { r.checked = false; });
-    document.querySelectorAll('input[name="q_health"]').forEach(function(cb) { cb.checked = false; });
-    document.querySelectorAll('input[name="q_life"]').forEach(function(cb) { cb.checked = false; });
-    document.querySelectorAll('input[name="q_interaction"]').forEach(function(r) { r.checked = false; });
-    document.querySelectorAll('input[name="q_mental"]').forEach(function(r) { r.checked = false; });
-    ['other_answer', 'other_speech', 'other_health', 'other_life', 'other_interaction', 'other_mental', 'remarkInput'].forEach(function(id) {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    setFormModeBadge(false);
-  }
-
-  function applyPresetDataObject(p, keepNowDt) {
-    if (!p) return;
-    clearFormToBlank();
-    if (keepNowDt) {
-      setNowRocDatetime();
-    } else if (p.call_datetime) {
-      document.getElementById('callDatetimeInput').value = p.call_datetime;
-    }
-
-    if (p.answer_status) {
-      const el = document.querySelector('input[name="q_answer"][value="' + String(p.answer_status).trim() + '"]');
-      if (el) el.checked = true;
-    }
-    if (p.answer_other) document.getElementById('other_answer').value = p.answer_other;
-
-    if (p.speech_status) {
-      const el = document.querySelector('input[name="q_speech"][value="' + String(p.speech_status).trim() + '"]');
-      if (el) el.checked = true;
-    }
-    if (p.speech_other) document.getElementById('other_speech').value = p.speech_other;
-
-    if (p.health_status) {
-      String(p.health_status).split(/[,，]/).map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(v) {
-        const cb = document.querySelector('input[name="q_health"][value="' + v + '"]');
-        if (cb) cb.checked = true;
-      });
-    }
-    if (p.health_other) document.getElementById('other_health').value = p.health_other;
-
-    if (p.life_status) {
-      String(p.life_status).split(/[,，]/).map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(v) {
-        const cb = document.querySelector('input[name="q_life"][value="' + v + '"]');
-        if (cb) cb.checked = true;
-      });
-    }
-    if (p.life_other) document.getElementById('other_life').value = p.life_other;
-
-    if (p.interaction_status) {
-      const el = document.querySelector('input[name="q_interaction"][value="' + String(p.interaction_status).trim() + '"]');
-      if (el) el.checked = true;
-    }
-    if (p.interaction_other) document.getElementById('other_interaction').value = p.interaction_other;
-
-    if (p.mental_status) {
-      const el = document.querySelector('input[name="q_mental"][value="' + String(p.mental_status).trim() + '"]');
-      if (el) el.checked = true;
-    }
-    if (p.mental_other) document.getElementById('other_mental').value = p.mental_other;
-
-    if (p.remark) document.getElementById('remarkInput').value = p.remark;
-    setFormModeBadge(true);
-  }
-
-  function applyCasePresetToForm(silentIfMissing) {
-    if (!selectedCase) {
-      if (!silentIfMissing) alert('請先從左側點選一位長輩！');
-      return;
-    }
-    const p = findPresetForCase(selectedCase);
-    if (!p) {
-      if (!silentIfMissing) alert('「' + selectedCase.name + '」在已有記錄設定檔中尚無原始設定，已維持空白表單方便填寫。');
-      clearFormToBlank();
-      setNowRocDatetime();
-      return;
-    }
-    applyPresetDataObject(p, true);
-    const infoEl = document.getElementById('presetMatchInfo');
-    if (infoEl) infoEl.textContent = '已套用「' + selectedCase.name + '」原始設定（可直接修改備註或原因後儲存）';
   }
 
   function handlePresetExcelUpload(ev) {
@@ -1535,29 +1456,28 @@
       try {
         const data = new Uint8Array(e.target.result);
         const wb = XLSX.read(data, { type: 'array' });
-        const firstSheet = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+        const ws0 = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws0, { header: 1, defval: '' });
         if (!rows || rows.length < 2) {
-          alert('Excel 檔案內容不足！');
+          alert('Excel 檔案沒有資料列');
           return;
         }
         let hdrIdx = 0;
         for (let i = 0; i < Math.min(5, rows.length); i++) {
-          if (rows[i].some(function(cell) { return String(cell || '').includes('姓名'); })) {
+          if (rows[i].some(function(c) { return String(c || '').includes('姓名'); })) {
             hdrIdx = i;
             break;
           }
         }
-        const parsedList = [];
+        const parsed = [];
         for (let r = hdrIdx + 1; r < rows.length; r++) {
           const row = rows[r];
           if (!row) continue;
-          const codeVal = String(row[0] ?? '').trim();
-          const nameVal = String(row[1] ?? '').trim();
-          if (!nameVal) continue;
-          parsedList.push({
-            code: codeVal,
-            name: nameVal,
+          const nm = String(row[1] ?? '').trim();
+          if (!nm) continue;
+          parsed.push({
+            code: String(row[0] ?? '').trim(),
+            name: nm,
             gender: String(row[2] ?? '').trim(),
             call_datetime: String(row[3] ?? '').trim(),
             answer_status: String(row[4] ?? '').trim(),
@@ -1575,20 +1495,20 @@
             remark: String(row[16] ?? '').trim()
           });
         }
-        if (parsedList.length === 0) {
-          alert('未解析到有效的長輩設定資料！');
+        if (parsed.length === 0) {
+          alert('找不到有效的姓名設定列');
           return;
         }
-        currentPresetsList = parsedList;
-        const ok = await savePresetsToCloud(parsedList);
-        rebuildPresetMap(parsedList);
+        currentPresetsList = parsed;
+        rebuildPresetLookup(parsed);
         renderCasePicker();
-        if (selectedCase && findPresetForCase(selectedCase)) {
-          applyCasePresetToForm(true);
+        if (document.getElementById('presetListModal')?.classList.contains('open')) {
+          renderPresetModalTable();
         }
-        if (ok) alert('已同步 ' + parsedList.length + ' 筆電話問安原始設定至雲端資料庫！');
+        const ok = await savePresetsToCloud(parsed);
+        if (ok) alert('已成功匯入並同步 ' + parsed.length + ' 筆設定至雲端！');
       } catch (err) {
-        alert('解析 Excel 失敗：' + err.message);
+        alert('讀取 Excel 失敗：' + err.message);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -1596,14 +1516,26 @@
   }
 
   function openPresetListModal() {
-    const m = document.getElementById('presetListModal');
-    if (m) m.classList.add('open');
+    document.getElementById('presetListModal').classList.add('open');
     renderPresetModalTable();
   }
 
   function closePresetListModal() {
-    const m = document.getElementById('presetListModal');
-    if (m) m.classList.remove('open');
+    document.getElementById('presetListModal').classList.remove('open');
+  }
+
+  function getUniquePresetRows() {
+    const seen = new Set();
+    const out = [];
+    Object.values(presetLookup).forEach(function(item) {
+      if (!item || !item.name) return;
+      const key = (item.code || '') + '__' + item.name;
+      if (!seen.has(key)) {
+        seen.add(key);
+        out.push(item);
+      }
+    });
+    return out;
   }
 
   function renderPresetModalTable() {
@@ -1614,51 +1546,48 @@
         (item.code && item.code.toLowerCase().includes(kw)) ||
         (item.remark && item.remark.toLowerCase().includes(kw));
     });
-    const summary = document.getElementById('modalPresetSummary');
-    if (summary) summary.textContent = '（共 ' + list.length + ' 位長輩有原始設定）';
-
-    const fmtP = function(code, oth) { return oth ? ((code || '') + '（' + oth + '）') : (code || ''); };
+    document.getElementById('modalPresetSummary').textContent = '（共 ' + list.length + ' 位長輩有原始設定）';
+    const fmtP = function(c, o) { return o ? ((c || '') + '（' + o + '）') : (c || ''); };
     const tbody = document.getElementById('presetModalTbody');
-    if (!tbody) return;
     if (list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:18px; color:#64748b;">查無符合的設定名單</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:18px; color:#64748b;">查無符合設定名單</td></tr>';
       return;
     }
     tbody.innerHTML = list.map(function(item, idx) {
       return '<tr>' +
         '<td style="text-align:center;">' + (idx + 1) + '</td>' +
-        '<td>' + escapeAttrVal(item.code) + '</td>' +
-        '<td style="white-space:nowrap; min-width:86px;"><strong>' + escapeAttrVal(item.name) + '</strong></td>' +
-        '<td style="text-align:center;">' + escapeAttrVal(item.gender) + '</td>' +
-        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.answer_status, item.answer_other)) + '</td>' +
-        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.speech_status, item.speech_other)) + '</td>' +
-        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.health_status, item.health_other)) + '</td>' +
-        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.life_status, item.life_other)) + '</td>' +
-        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.interaction_status, item.interaction_other)) + '</td>' +
-        '<td style="text-align:center;">' + escapeAttrVal(fmtP(item.mental_status, item.mental_other)) + '</td>' +
-        '<td>' + escapeAttrVal(item.remark) + '</td>' +
-        '<td style="text-align:center; white-space:nowrap;"><button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.8rem;" onclick="selectCaseFromPreset('' + escapeAttrVal(item.name) + '')">帶入表單</button></td>' +
+        '<td>' + escHtml(item.code) + '</td>' +
+        '<td style="white-space:nowrap; min-width:86px;"><strong>' + escHtml(item.name) + '</strong></td>' +
+        '<td style="text-align:center;">' + escHtml(item.gender) + '</td>' +
+        '<td style="text-align:center;">' + escHtml(fmtP(item.answer_status, item.answer_other)) + '</td>' +
+        '<td style="text-align:center;">' + escHtml(fmtP(item.speech_status, item.speech_other)) + '</td>' +
+        '<td style="text-align:center;">' + escHtml(fmtP(item.health_status, item.health_other)) + '</td>' +
+        '<td style="text-align:center;">' + escHtml(fmtP(item.life_status, item.life_other)) + '</td>' +
+        '<td style="text-align:center;">' + escHtml(fmtP(item.interaction_status, item.interaction_other)) + '</td>' +
+        '<td style="text-align:center;">' + escHtml(fmtP(item.mental_status, item.mental_other)) + '</td>' +
+        '<td>' + escHtml(item.remark) + '</td>' +
+        '<td style="text-align:center; white-space:nowrap;"><button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.8rem;" onclick="selectFromPreset('' + escJsStr(item.name) + '')">帶入表單</button></td>' +
         '</tr>';
     }).join('');
   }
 
-  function selectCaseFromPreset(name) {
-    const matchedCase = allCases.find(function(c) { return String(c.name || '').trim() === String(name || '').trim(); });
-    if (matchedCase) {
-      selectedCase = matchedCase;
-      document.getElementById('selCaseName').textContent = matchedCase.name || '';
-      document.getElementById('selCaseCode').textContent = matchedCase.gov_system_id || matchedCase.case_number || '';
-      document.getElementById('selCaseGender').textContent = matchedCase.gender || '';
-      document.getElementById('selCasePhone').textContent = [matchedCase.phone, matchedCase.mobile].filter(Boolean).join(' / ') || '未登錄電話';
-    } else {
-      const p = casePresetMap[name];
-      document.getElementById('selCaseName').textContent = name || '';
-      document.getElementById('selCaseCode').textContent = p ? p.code : '-';
-      document.getElementById('selCaseGender').textContent = p ? p.gender : '-';
+  function selectFromPreset(name) {
+    const matched = allCases.find(function(c) { return String(c.name || '').trim() === String(name || '').trim(); });
+    const p = presetLookup[name];
+    if (matched) {
+      selectedCase = matched;
+      document.getElementById('selCaseName').textContent = matched.name || '';
+      document.getElementById('selCaseCode').textContent = matched.gov_system_id || matched.case_number || '';
+      document.getElementById('selCaseGender').textContent = matched.gender || '';
+      document.getElementById('selCasePhone').textContent = [matched.phone, matched.mobile].filter(Boolean).join(' / ') || '未登錄電話';
+    } else if (p) {
+      selectedCase = null;
+      document.getElementById('selCaseName').textContent = p.name || '';
+      document.getElementById('selCaseCode').textContent = p.code || '-';
+      document.getElementById('selCaseGender').textContent = p.gender || '-';
       document.getElementById('selCasePhone').textContent = '-';
     }
-    const p = casePresetMap[name];
-    if (p) applyPresetDataObject(p, true);
+    if (p) applyPresetObject(p);
     renderCasePicker();
     closePresetListModal();
   }
@@ -1685,58 +1614,51 @@
     XLSX.writeFile(wb, '電話問安記錄＿已有記錄名單.xlsx');
   }
 
-  function setNowRocDatetime() {
-    const now = new Date();
-    const rocY = now.getFullYear() - 1911;
-    const str = `${rocY}/${pad2(now.getMonth() + 1)}/${pad2(now.getDate())} ${pad2(now.getHours())}:${pad2(now.getMinutes())}:00`;
-    document.getElementById('callDatetimeInput').value = str;
-  }
-
-  (function initYM() {
+  async function initPage() {
     const now = new Date();
     const rocY = String(now.getFullYear() - 1911);
     const m = String(now.getMonth() + 1);
     const ySel = document.getElementById('rocYearSelect');
-    if ([...ySel.options].some(o => o.value === rocY)) ySel.value = rocY;
+    if ([...ySel.options].some(function(o) { return o.value === rocY; })) ySel.value = rocY;
     document.getElementById('monthSelect').value = m;
     clearFormToBlank();
     setNowRocDatetime();
-  })();
+    rebuildPresetLookup(currentPresetsList);
 
-  async function initData() {
     const statusEl = document.getElementById('syncStatus');
-    const sb = getSupabase();
-    if (!sb) {
+    if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined' || !window.supabase) {
       statusEl.style.color = '#dc2626';
-      statusEl.textContent = '尚未載入 config.js 連線設定';
-      document.getElementById('casePickerList').innerHTML = '<div style="padding:18px; text-align:center; color:#dc2626;">找不到 config.js，請確認同資料夾有 config.js</div>';
+      statusEl.textContent = '找不到 config.js 連線設定';
+      document.getElementById('casePickerList').innerHTML = '<div style="padding:18px; text-align:center; color:#dc2626;">找不到 config.js</div>';
       return;
     }
 
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     try {
-      const { data: casesData, error: casesErr } = await sb
+      const { data: casesData, error: casesErr } = await sbClient
         .from('cases')
         .select('*')
         .order('case_number', { ascending: true });
-
       if (casesErr) {
         statusEl.style.color = '#dc2626';
         statusEl.textContent = '讀取 cases 失敗：' + casesErr.message;
-        document.getElementById('casePickerList').innerHTML = `<div style="padding:18px; text-align:center; color:#dc2626;">讀取失敗：${casesErr.message}</div>`;
+        document.getElementById('casePickerList').innerHTML = '<div style="padding:18px; text-align:center; color:#dc2626;">讀取失敗：' + escHtml(casesErr.message) + '</div>';
         return;
       }
-
       allCases = casesData || [];
-      hasAnyRegularInDb = allCases.some(c => c.is_regular === true || (Array.isArray(c.regular_tags) && c.regular_tags.length > 0));
+      hasAnyRegularInDb = allCases.some(function(c) {
+        return c.is_regular === true || (Array.isArray(c.regular_tags) && c.regular_tags.length > 0);
+      });
 
       try {
-        const { data: stData } = await sb
+        const { data: stData } = await sbClient
           .from('case_service_status')
           .select('case_id, status, effective_date, id')
           .order('effective_date', { ascending: false })
           .order('id', { ascending: false });
         latestStatusMap = {};
-        (stData || []).forEach(r => {
+        (stData || []).forEach(function(r) {
           if (!latestStatusMap[String(r.case_id)]) latestStatusMap[String(r.case_id)] = r.status;
         });
       } catch (e) {
@@ -1744,13 +1666,13 @@
       }
 
       statusEl.style.color = '#0f766e';
-      statusEl.textContent = `已載入 ${allCases.length} 筆個案資料`;
+      statusEl.textContent = '已載入 ' + allCases.length + ' 筆個案資料';
       await syncPresetsFromCloud();
       await loadMonthCheckins();
     } catch (err) {
       statusEl.style.color = '#dc2626';
       statusEl.textContent = '連線例外：' + err.message;
-      document.getElementById('casePickerList').innerHTML = `<div style="padding:18px; text-align:center; color:#dc2626;">載入例外：${err.message}</div>`;
+      document.getElementById('casePickerList').innerHTML = '<div style="padding:18px; text-align:center; color:#dc2626;">載入例外：' + escHtml(err.message) + '</div>';
     }
   }
 
@@ -1758,13 +1680,11 @@
     const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
     const month = parseInt(document.getElementById('monthSelect').value, 10);
     const statusEl = document.getElementById('syncStatus');
-    document.getElementById('listTitle').textContent = `二、${rocYear} 年 ${month} 月已登錄電話問安記錄明細`;
+    document.getElementById('listTitle').textContent = '二、' + rocYear + ' 年 ' + month + ' 月已登錄電話問安記錄明細';
 
-    const sb = getSupabase();
-    if (!sb) return;
-
+    if (!sbClient) return;
     try {
-      const { data, error } = await sb
+      const { data, error } = await sbClient
         .from('phone_checkins')
         .select('*')
         .eq('roc_year', rocYear)
@@ -1774,11 +1694,11 @@
       if (error) {
         monthCheckins = [];
         statusEl.style.color = '#b45309';
-        statusEl.textContent = '讀取 phone_checkins 失敗：' + error.message;
+        statusEl.textContent = '提示：尚未建立 phone_checkins 資料表（仍可搜尋長輩）';
       } else {
         monthCheckins = data || [];
         statusEl.style.color = '#0f766e';
-        statusEl.textContent = `已同步 ${rocYear} 年 ${month} 月電訪資料（${monthCheckins.length} 筆）`;
+        statusEl.textContent = '已同步 ' + rocYear + ' 年 ' + month + ' 月電訪資料（' + monthCheckins.length + ' 筆）';
       }
     } catch (e) {
       monthCheckins = [];
@@ -1791,17 +1711,16 @@
 
   function updateKpis() {
     const total = monthCheckins.length;
-    const uniq = new Set(monthCheckins.map(r => r.case_name)).size;
+    const uniq = new Set(monthCheckins.map(function(r) { return r.case_name; })).size;
     document.getElementById('kpiTotalCount').textContent = total;
     document.getElementById('kpiUniqueCases').textContent = uniq;
-
     const badge = document.getElementById('kpiGoalBadge');
     if (uniq >= 20) {
       badge.className = 'kpi-badge-ok';
-      badge.textContent = `已達成每月 20 位以上問安目標（目前 ${uniq} 位）`;
+      badge.textContent = '已達成每月 20 位以上問安目標（目前 ' + uniq + ' 位）';
     } else {
       badge.className = 'kpi-badge-warn';
-      badge.textContent = `距離每月 20 位目標還差 ${20 - uniq} 位`;
+      badge.textContent = '距離每月 20 位目標還差 ' + (20 - uniq) + ' 位';
     }
   }
 
@@ -1810,15 +1729,15 @@
   }
 
   function renderCasePicker() {
-    const kw = document.getElementById('caseSearchInput').value.trim().toLowerCase();
-    const onlyRegular = document.getElementById('onlyRegularChk').checked;
-    const hideDone = document.getElementById('hideDoneChk').checked;
-    const doneNames = new Set(monthCheckins.map(r => r.case_name));
+    const kw = (document.getElementById('caseSearchInput')?.value || '').trim().toLowerCase();
+    const onlyRegular = document.getElementById('onlyRegularChk')?.checked ?? true;
+    const hideDone = document.getElementById('hideDoneChk')?.checked ?? false;
+    const doneNames = new Set(monthCheckins.map(function(r) { return r.case_name; }));
     const hintEl = document.getElementById('regularHintMsg');
 
     if (onlyRegular && !hasAnyRegularInDb) {
       hintEl.style.color = '#b45309';
-      hintEl.textContent = '資料庫尚未勾選「常來」標記，目前先顯示全部服務中長輩；可至「常來個案名冊與報表」第4分頁勾選。';
+      hintEl.textContent = '資料庫尚未勾選「常來」標記，目前先顯示全部服務中長輩。';
     } else if (onlyRegular) {
       hintEl.style.color = '#0f766e';
       hintEl.textContent = '目前僅顯示已勾選「常來據點」的長輩';
@@ -1827,9 +1746,9 @@
       hintEl.textContent = '目前顯示全部服務中長輩';
     }
 
-    const filtered = allCases.filter(c => {
+    const filtered = allCases.filter(function(c) {
       const st = latestStatusMap[String(c.id)] || '服務中';
-      if (st.startsWith('已結案')) return false;
+      if (String(st).startsWith('已結案')) return false;
       if (onlyRegular && hasAnyRegularInDb && !isRegularCase(c)) return false;
       if (hideDone && doneNames.has(c.name)) return false;
       if (!kw) return true;
@@ -1842,24 +1761,25 @@
 
     const box = document.getElementById('casePickerList');
     if (filtered.length === 0) {
-      box.innerHTML = '<div style="padding:18px; text-align:center; color:#64748b; font-size:0.9rem;">查無符合條件的個案，請調整搜尋字或取消勾選「僅顯示常來據點個案」</div>';
+      box.innerHTML = '<div style="padding:18px; text-align:center; color:#64748b; font-size:0.9rem;">查無符合條件的個案</div>';
       return;
     }
 
-    box.innerHTML = filtered.map(c => {
+    box.innerHTML = filtered.map(function(c) {
       const isSel = selectedCase && String(selectedCase.id) === String(c.id);
       const isDone = doneNames.has(c.name);
       const hasPreset = Boolean(findPresetForCase(c));
       const phoneTxt = [c.phone, c.mobile].filter(Boolean).join(' / ');
-      return `
-        <div class="case-pick-row ${isSel ? 'selected' : ''}" onclick="selectCase('${String(c.id).replace(/'/g, "\'")}')">
-          <div>
-            <div><strong>${c.case_number || ''}</strong> ${c.name || ''} ${isRegularCase(c) ? '<span class="reg-dot">常來</span>' : ''}</div>
-            <div style="font-size:0.8rem; color:#475569;">${phoneTxt || '無電話'}</div>
-          </div>
-          ${hasPreset ? '<span class="preset-dot">有設定</span>' : ''} ${isDone ? '<span class="done-dot">本月已訪</span>' : ''}
-        </div>
-      `;
+      return '<div class="case-pick-row ' + (isSel ? 'selected' : '') + '" onclick="selectCase('' + escJsStr(c.id) + '')">' +
+        '<div>' +
+          '<div><strong>' + escHtml(c.case_number || '') + '</strong> ' + escHtml(c.name || '') + ' ' + (isRegularCase(c) ? '<span class="reg-dot">常來</span>' : '') + '</div>' +
+          '<div style="font-size:0.8rem; color:#475569;">' + escHtml(phoneTxt || '無電話') + '</div>' +
+        '</div>' +
+        '<div style="display:flex; gap:4px; align-items:center;">' +
+          (hasPreset ? '<span class="preset-dot">有設定</span>' : '') +
+          (isDone ? '<span class="done-dot">本月已訪</span>' : '') +
+        '</div>' +
+      '</div>';
     }).join('');
   }
 
@@ -1874,35 +1794,22 @@
     clearFormToBlank();
     setNowRocDatetime();
     const p = findPresetForCase(found);
-    const infoEl = document.getElementById('presetMatchInfo');
-    if (infoEl) {
-      infoEl.textContent = p
-        ? '此個案有原始設定（3天後到據點說明原因時可按「套用該個案原始設定」帶入）'
+    const info = document.getElementById('presetMatchInfo');
+    if (info) {
+      info.textContent = p
+        ? '此個案有原始設定（3天後到據點說明原因時可按「套用該個案原始設定」）'
         : '此個案無原始設定，目前為空白表單方便填寫';
     }
     renderCasePicker();
   }
 
-  function applyNormalPreset() {
-    document.querySelector('input[name="q_answer"][value="1"]').checked = true;
-    document.querySelector('input[name="q_speech"][value="1"]').checked = true;
-    document.querySelectorAll('input[name="q_health"]').forEach(cb => { cb.checked = (cb.value === '1'); });
-    document.querySelectorAll('input[name="q_life"]').forEach(cb => { cb.checked = (cb.value === '1' || cb.value === '3'); });
-    document.querySelector('input[name="q_interaction"][value="1"]').checked = true;
-    document.querySelector('input[name="q_mental"][value="1"]').checked = true;
-    ['other_answer', 'other_speech', 'other_health', 'other_life', 'other_interaction', 'other_mental', 'remarkInput'].forEach(id => {
-      document.getElementById(id).value = '';
-    });
-    setFormModeBadge(true);
-  }
-
   function getRadioVal(name) {
-    const el = document.querySelector(`input[name="${name}"]:checked`);
+    const el = document.querySelector('input[name="' + name + '"]:checked');
     return el ? el.value : '';
   }
 
   function getCheckboxCsv(name) {
-    return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(cb => cb.value).join(',');
+    return [...document.querySelectorAll('input[name="' + name + '"]:checked')].map(function(cb) { return cb.value; }).join(',');
   }
 
   async function saveCheckinRecord() {
@@ -1915,9 +1822,10 @@
       alert('請填寫電訪日期時間！');
       return;
     }
-
-    const sb = getSupabase();
-    if (!sb) { alert('尚未載入資料庫設定'); return; }
+    if (!sbClient) {
+      alert('尚未載入資料庫設定');
+      return;
+    }
 
     const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
     const month = parseInt(document.getElementById('monthSelect').value, 10);
@@ -1930,22 +1838,22 @@
       call_datetime: callDt,
       roc_year: rocYear,
       month: month,
-      answer_status: getRadioVal('q_answer'),
+      answer_status: getRadioVal('q_answer') || null,
       answer_other: document.getElementById('other_answer').value.trim() || null,
-      speech_status: getRadioVal('q_speech'),
+      speech_status: getRadioVal('q_speech') || null,
       speech_other: document.getElementById('other_speech').value.trim() || null,
-      health_status: getCheckboxCsv('q_health'),
+      health_status: getCheckboxCsv('q_health') || null,
       health_other: document.getElementById('other_health').value.trim() || null,
-      life_status: getCheckboxCsv('q_life'),
+      life_status: getCheckboxCsv('q_life') || null,
       life_other: document.getElementById('other_life').value.trim() || null,
-      interaction_status: getRadioVal('q_interaction'),
+      interaction_status: getRadioVal('q_interaction') || null,
       interaction_other: document.getElementById('other_interaction').value.trim() || null,
-      mental_status: getRadioVal('q_mental'),
+      mental_status: getRadioVal('q_mental') || null,
       mental_other: document.getElementById('other_mental').value.trim() || null,
       remark: document.getElementById('remarkInput').value.trim() || null
     };
 
-    const { error } = await sb.from('phone_checkins').insert([payload]);
+    const { error } = await sbClient.from('phone_checkins').insert([payload]);
     if (error) {
       alert('儲存失敗：' + error.message);
       return;
@@ -1956,39 +1864,24 @@
     await loadMonthCheckins();
   }
 
-  function parseCombinedField(codeVal, othVal) {
+  function fmtCombined(codeVal, othVal) {
     const c = String(codeVal ?? '').trim();
     const o = String(othVal ?? '').trim();
-    if (o) return `${c || '5'}（${o}）`;
+    if (o) return (c || '5') + '（' + o + '）';
     return c;
   }
 
-  function splitCombinedField(rawInput, prevOth) {
+  function splitCombined(rawInput, prevOth) {
     const raw = String(rawInput ?? '').trim();
     const m = raw.match(/^([^（(]+?)[（(]([^）)]+)[）)]$/);
-    if (m) {
-      return { code: m[1].trim(), other: m[2].trim() };
-    }
+    if (m) return { code: m[1].trim(), other: m[2].trim() };
     return { code: raw, other: (prevOth ? String(prevOth).trim() : null) };
   }
 
-  async function saveInlineCheckinRow(id, showToast = false) {
-    const item = monthCheckins.find(r => String(r.id) === String(id));
-    if (!item) return;
-    const sb = getSupabase();
-    const statusEl = document.getElementById('syncStatus');
-    if (!sb) {
-      if (statusEl) {
-        statusEl.style.color = '#dc2626';
-        statusEl.textContent = '尚未載入資料庫連線設定';
-      }
-      return;
-    }
-
+  async function saveInlineRow(id, showToast) {
+    const item = monthCheckins.find(function(r) { return String(r.id) === String(id); });
+    if (!item || !sbClient) return;
     const payload = {
-      case_code: item.case_code || null,
-      case_name: item.case_name || '',
-      gender: item.gender || '',
       call_datetime: item.call_datetime || '',
       answer_status: item.answer_status || null,
       answer_other: item.answer_other || null,
@@ -2004,60 +1897,45 @@
       mental_other: item.mental_other || null,
       remark: item.remark || null
     };
-
-    const { error } = await sb.from('phone_checkins').update(payload).eq('id', item.id);
+    const { error } = await sbClient.from('phone_checkins').update(payload).eq('id', item.id);
     if (error) {
-      if (statusEl) {
-        statusEl.style.color = '#dc2626';
-        statusEl.textContent = '修改儲存失敗：' + error.message;
-      }
-      if (showToast) alert('修改儲存失敗：' + error.message);
+      alert('更新失敗：' + error.message);
       return;
     }
-
+    const statusEl = document.getElementById('syncStatus');
     const now = new Date();
-    const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const tStr = pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds());
     if (statusEl) {
       statusEl.style.color = '#0f766e';
-      statusEl.textContent = `已即時儲存修改（${item.case_name}・${tStr}）`;
+      statusEl.textContent = '已更新「' + item.case_name + '」記錄（' + tStr + '）';
     }
-    if (showToast) alert(`已更新「${item.case_name}」的電話問安記錄！`);
+    if (showToast) alert('已更新「' + item.case_name + '」的電話問安記錄！');
   }
 
-  function onInlineCellInput(id, colKey, rawVal) {
-    const item = monthCheckins.find(r => String(r.id) === String(id));
+  function onInlineEdit(id, colKey, rawVal) {
+    const item = monthCheckins.find(function(r) { return String(r.id) === String(id); });
     if (!item) return;
-
-    if (colKey === 'call_datetime') {
-      item.call_datetime = rawVal;
-    } else if (colKey === 'remark') {
-      item.remark = rawVal;
-    } else if (colKey === 'answer') {
-      const sp = splitCombinedField(rawVal, item.answer_other);
-      item.answer_status = sp.code;
-      item.answer_other = sp.other;
+    if (colKey === 'call_datetime') item.call_datetime = rawVal;
+    else if (colKey === 'remark') item.remark = rawVal;
+    else if (colKey === 'answer') {
+      const sp = splitCombined(rawVal, item.answer_other);
+      item.answer_status = sp.code; item.answer_other = sp.other;
     } else if (colKey === 'speech') {
-      const sp = splitCombinedField(rawVal, item.speech_other);
-      item.speech_status = sp.code;
-      item.speech_other = sp.other;
+      const sp = splitCombined(rawVal, item.speech_other);
+      item.speech_status = sp.code; item.speech_other = sp.other;
     } else if (colKey === 'health') {
-      const sp = splitCombinedField(rawVal, item.health_other);
-      item.health_status = sp.code;
-      item.health_other = sp.other;
+      const sp = splitCombined(rawVal, item.health_other);
+      item.health_status = sp.code; item.health_other = sp.other;
     } else if (colKey === 'life') {
-      const sp = splitCombinedField(rawVal, item.life_other);
-      item.life_status = sp.code;
-      item.life_other = sp.other;
+      const sp = splitCombined(rawVal, item.life_other);
+      item.life_status = sp.code; item.life_other = sp.other;
     } else if (colKey === 'interaction') {
-      const sp = splitCombinedField(rawVal, item.interaction_other);
-      item.interaction_status = sp.code;
-      item.interaction_other = sp.other;
+      const sp = splitCombined(rawVal, item.interaction_other);
+      item.interaction_status = sp.code; item.interaction_other = sp.other;
     } else if (colKey === 'mental') {
-      const sp = splitCombinedField(rawVal, item.mental_other);
-      item.mental_status = sp.code;
-      item.mental_other = sp.other;
+      const sp = splitCombined(rawVal, item.mental_other);
+      item.mental_status = sp.code; item.mental_other = sp.other;
     }
-    updateKpis();
   }
 
   function renderCheckinTable() {
@@ -2066,74 +1944,38 @@
       tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:20px; color:#64748b;">本月尚無電話問安記錄，請從上方選取長輩並新增記錄。</td></tr>';
       return;
     }
-
     const inpStyle = 'width:100%; padding:5px 6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.88rem; background:#fffef7;';
-    const codeInpStyle = 'width:68px; padding:5px 6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.88rem; text-align:center; background:#fffef7;';
+    const codeStyle = 'width:68px; padding:5px 6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.88rem; text-align:center; background:#fffef7;';
 
-    tbody.innerHTML = monthCheckins.map((r, idx) => `
-      <tr>
-        <td style="text-align:center;">${idx + 1}</td>
-        <td>${escapeAttrVal(r.case_code || '')}</td>
-        <td style="white-space:nowrap; min-width:86px;"><strong>${escapeAttrVal(r.case_name || '')}</strong></td>
-        <td style="text-align:center;">${escapeAttrVal(r.gender || '')}</td>
-        <td>
-          <input type="text" style="${inpStyle} min-width:148px;" value="${escapeAttrVal(r.call_datetime || '')}"
-            oninput="onInlineCellInput(${r.id}, 'call_datetime', this.value)"
-            onchange="onInlineCellInput(${r.id}, 'call_datetime', this.value); saveInlineCheckinRow(${r.id}, false)">
-        </td>
-        <td style="text-align:center;">
-          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.answer_status, r.answer_other))}"
-            oninput="onInlineCellInput(${r.id}, 'answer', this.value)"
-            onchange="onInlineCellInput(${r.id}, 'answer', this.value); saveInlineCheckinRow(${r.id}, false)">
-        </td>
-        <td style="text-align:center;">
-          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.speech_status, r.speech_other))}"
-            oninput="onInlineCellInput(${r.id}, 'speech', this.value)"
-            onchange="onInlineCellInput(${r.id}, 'speech', this.value); saveInlineCheckinRow(${r.id}, false)">
-        </td>
-        <td style="text-align:center;">
-          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.health_status, r.health_other))}"
-            oninput="onInlineCellInput(${r.id}, 'health', this.value)"
-            onchange="onInlineCellInput(${r.id}, 'health', this.value); saveInlineCheckinRow(${r.id}, false)">
-        </td>
-        <td style="text-align:center;">
-          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.life_status, r.life_other))}"
-            oninput="onInlineCellInput(${r.id}, 'life', this.value)"
-            onchange="onInlineCellInput(${r.id}, 'life', this.value); saveInlineCheckinRow(${r.id}, false)">
-        </td>
-        <td style="text-align:center;">
-          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.interaction_status, r.interaction_other))}"
-            oninput="onInlineCellInput(${r.id}, 'interaction', this.value)"
-            onchange="onInlineCellInput(${r.id}, 'interaction', this.value); saveInlineCheckinRow(${r.id}, false)">
-        </td>
-        <td style="text-align:center;">
-          <input type="text" style="${codeInpStyle}" value="${escapeAttrVal(parseCombinedField(r.mental_status, r.mental_other))}"
-            oninput="onInlineCellInput(${r.id}, 'mental', this.value)"
-            onchange="onInlineCellInput(${r.id}, 'mental', this.value); saveInlineCheckinRow(${r.id}, false)">
-        </td>
-        <td>
-          <input type="text" style="${inpStyle} min-width:140px;" value="${escapeAttrVal(r.remark || '')}"
-            oninput="onInlineCellInput(${r.id}, 'remark', this.value)"
-            onchange="onInlineCellInput(${r.id}, 'remark', this.value); saveInlineCheckinRow(${r.id}, false)">
-        </td>
-        <td style="text-align:center; white-space:nowrap;">
-          <button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.82rem; margin-right:4px;" onclick="saveInlineCheckinRow(${r.id}, true)">儲存</button>
-          <button type="button" class="btn btn-del" onclick="deleteCheckin(${r.id})">刪除</button>
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = monthCheckins.map(function(r, idx) {
+      const rid = escJsStr(r.id);
+      return '<tr>' +
+        '<td style="text-align:center;">' + (idx + 1) + '</td>' +
+        '<td>' + escHtml(r.case_code || '') + '</td>' +
+        '<td style="white-space:nowrap; min-width:86px;"><strong>' + escHtml(r.case_name || '') + '</strong></td>' +
+        '<td style="text-align:center;">' + escHtml(r.gender || '') + '</td>' +
+        '<td><input type="text" style="' + inpStyle + ' min-width:148px;" value="' + escHtml(r.call_datetime || '') + '" oninput="onInlineEdit('' + rid + '','call_datetime',this.value)" onchange="onInlineEdit('' + rid + '','call_datetime',this.value); saveInlineRow('' + rid + '',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.answer_status, r.answer_other)) + '" oninput="onInlineEdit('' + rid + '','answer',this.value)" onchange="onInlineEdit('' + rid + '','answer',this.value); saveInlineRow('' + rid + '',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.speech_status, r.speech_other)) + '" oninput="onInlineEdit('' + rid + '','speech',this.value)" onchange="onInlineEdit('' + rid + '','speech',this.value); saveInlineRow('' + rid + '',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.health_status, r.health_other)) + '" oninput="onInlineEdit('' + rid + '','health',this.value)" onchange="onInlineEdit('' + rid + '','health',this.value); saveInlineRow('' + rid + '',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.life_status, r.life_other)) + '" oninput="onInlineEdit('' + rid + '','life',this.value)" onchange="onInlineEdit('' + rid + '','life',this.value); saveInlineRow('' + rid + '',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.interaction_status, r.interaction_other)) + '" oninput="onInlineEdit('' + rid + '','interaction',this.value)" onchange="onInlineEdit('' + rid + '','interaction',this.value); saveInlineRow('' + rid + '',false)"></td>' +
+        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.mental_status, r.mental_other)) + '" oninput="onInlineEdit('' + rid + '','mental',this.value)" onchange="onInlineEdit('' + rid + '','mental',this.value); saveInlineRow('' + rid + '',false)"></td>' +
+        '<td><input type="text" style="' + inpStyle + ' min-width:140px;" value="' + escHtml(r.remark || '') + '" oninput="onInlineEdit('' + rid + '','remark',this.value)" onchange="onInlineEdit('' + rid + '','remark',this.value); saveInlineRow('' + rid + '',false)"></td>' +
+        '<td style="text-align:center; white-space:nowrap;">' +
+          '<button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.82rem; margin-right:4px;" onclick="saveInlineRow('' + rid + '',true)">儲存</button>' +
+          '<button type="button" class="btn btn-del" onclick="deleteCheckin('' + rid + '')">刪除</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('');
   }
 
   async function deleteCheckin(id) {
     if (!confirm('確定要刪除這筆電話問安記錄嗎？')) return;
-    const sb = getSupabase();
-    if (!sb) return;
-    const { error } = await sb.from('phone_checkins').delete().eq('id', id);
-    if (error) {
-      alert('刪除失敗：' + error.message);
-    } else {
-      await loadMonthCheckins();
-    }
+    if (!sbClient) return;
+    const { error } = await sbClient.from('phone_checkins').delete().eq('id', id);
+    if (error) alert('刪除失敗：' + error.message);
+    else await loadMonthCheckins();
   }
 
   function exportGovExcel() {
@@ -2143,53 +1985,14 @@
     }
     const rocYear = document.getElementById('rocYearSelect').value;
     const month = document.getElementById('monthSelect').value;
-
     const noteRow = [
       '注意事項：', '', '', '',
-      '接聽情形：請填寫1,2,3,4
-親自接聽為1
-親友接聽為2
-無人接聽為3
-電話故障為4
-其他請填5，並且在後一欄位填寫原因
-只可包含一個數字', '',
-      '口頭表達：請填寫1,2,3,4
-表達清晰為1
-表達尚可為2
-口語不清為3
-無法表達為4
-其他請填5，並且在後一欄位填寫原因
-只可包含一個數字', '',
-      '健康情況：請填寫1,2,3,4
-健康良好為1
-稍有病痛為2
-按時用藥為3
-定期門診為4
-其他請填5，並且在後一欄位填寫原因
-可包含多個數字
-請用逗號分隔', '',
-      '生活狀況：請填寫1,2,3,4
-三餐定時為1
-餐不定時為2
-參與活動為3
-極少互動為4
-其他請填5，並且在後一欄位填寫原因
-可包含多個數字
-請用逗號分隔', '',
-      '親友互動：請填寫1,2,3,4
-常有互動為1
-偶有互動為2
-很少互動為3
-極少互動為4
-其他請填5，並且在後一欄位填寫原因
-只可包含一個數字', '',
-      '精神狀況：請填寫1,2,3,4
-精神愉快為1
-尚可為2
-精神不佳為3
-輕生念頭為4
-其他請填5，並且在後一欄位填寫原因
-只可包含一個數字', '',
+      '接聽情形：請填寫1,2,3,4\n親自接聽為1\n親友接聽為2\n無人接聽為3\n電話故障為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '口頭表達：請填寫1,2,3,4\n表達清晰為1\n表達尚可為2\n口語不清為3\n無法表達為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '健康情況：請填寫1,2,3,4\n健康良好為1\n稍有病痛為2\n按時用藥為3\n定期門診為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
+      '生活狀況：請填寫1,2,3,4\n三餐定時為1\n餐不定時為2\n參與活動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
+      '親友互動：請填寫1,2,3,4\n常有互動為1\n偶有互動為2\n很少互動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '精神狀況：請填寫1,2,3,4\n精神愉快為1\n尚可為2\n精神不佳為3\n輕生念頭為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
       '填寫欲補充之資料'
     ];
     const headerRow = [
@@ -2197,35 +2000,22 @@
       '接聽情形', '其他', '口頭表達', '其他', '健康情況', '其他',
       '生活狀況', '其他', '親友互動', '其他', '精神狀況', '其他', '備註'
     ];
-
-    const dataRows = monthCheckins.map(r => [
-      r.case_code || '',
-      r.case_name || '',
-      r.gender || '',
-      r.call_datetime || '',
-      r.answer_status || '',
-      r.answer_other || '',
-      r.speech_status || '',
-      r.speech_other || '',
-      r.health_status || '',
-      r.health_other || '',
-      r.life_status || '',
-      r.life_other || '',
-      r.interaction_status || '',
-      r.interaction_other || '',
-      r.mental_status || '',
-      r.mental_other || '',
-      r.remark || ''
-    ]);
-
-    const aoa = [noteRow, [], headerRow, ...dataRows];
-    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const dataRows = monthCheckins.map(function(r) {
+      return [
+        r.case_code || '', r.case_name || '', r.gender || '', r.call_datetime || '',
+        r.answer_status || '', r.answer_other || '', r.speech_status || '', r.speech_other || '',
+        r.health_status || '', r.health_other || '', r.life_status || '', r.life_other || '',
+        r.interaction_status || '', r.interaction_other || '', r.mental_status || '', r.mental_other || '',
+        r.remark || ''
+      ];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([noteRow, [], headerRow].concat(dataRows));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '工作表1');
-    XLSX.writeFile(wb, `電話問安資料匯入範本_${rocYear}年${pad2(month)}月.xlsx`);
+    XLSX.writeFile(wb, '電話問安資料匯入範本_' + rocYear + '年' + pad2(month) + '月.xlsx');
   }
 
-  initData();
+  initPage();
 </script>
 </body>
 </html>
