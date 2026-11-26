@@ -1259,19 +1259,84 @@
     if (badge) badge.textContent = String(uniqNames.size);
   }
 
-  (function initPresetsStore() {
+  let currentPresetsList = DEFAULT_CASE_PRESETS.slice();
+  rebuildPresetMap(currentPresetsList);
+
+  async function syncPresetsFromCloud() {
+    const sb = getSupabase();
+    if (!sb) return;
     try {
-      const saved = localStorage.getItem('laozhuang_phone_checkin_presets_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          rebuildPresetMap(parsed);
-          return;
+      const { data, error } = await sb
+        .from('phone_checkin_presets')
+        .select('*')
+        .order('id', { ascending: true });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        currentPresetsList = data.map(function(r) {
+          return {
+            code: r.case_code || r.code || '',
+            name: r.case_name || r.name || '',
+            gender: r.gender || '',
+            call_datetime: r.call_datetime || '',
+            answer_status: r.answer_status || '',
+            answer_other: r.answer_other || '',
+            speech_status: r.speech_status || '',
+            speech_other: r.speech_other || '',
+            health_status: r.health_status || '',
+            health_other: r.health_other || '',
+            life_status: r.life_status || '',
+            life_other: r.life_other || '',
+            interaction_status: r.interaction_status || '',
+            interaction_other: r.interaction_other || '',
+            mental_status: r.mental_status || '',
+            mental_other: r.mental_other || '',
+            remark: r.remark || ''
+          };
+        });
+        rebuildPresetMap(currentPresetsList);
+        renderCasePicker();
+        if (document.getElementById('presetListModal')?.classList.contains('open')) {
+          renderPresetModalTable();
         }
       }
     } catch (e) {}
-    rebuildPresetMap(DEFAULT_CASE_PRESETS);
-  })();
+  }
+
+  async function savePresetsToCloud(list) {
+    const sb = getSupabase();
+    if (!sb) return false;
+    try {
+      const rows = (list || []).filter(function(item) { return item && item.name; }).map(function(item, idx) {
+        return {
+          sort_order: idx + 1,
+          case_code: item.code || null,
+          case_name: String(item.name).trim(),
+          gender: item.gender || null,
+          call_datetime: item.call_datetime || null,
+          answer_status: item.answer_status || null,
+          answer_other: item.answer_other || null,
+          speech_status: item.speech_status || null,
+          speech_other: item.speech_other || null,
+          health_status: item.health_status || null,
+          health_other: item.health_other || null,
+          life_status: item.life_status || null,
+          life_other: item.life_other || null,
+          interaction_status: item.interaction_status || null,
+          interaction_other: item.interaction_other || null,
+          mental_status: item.mental_status || null,
+          mental_other: item.mental_other || null,
+          remark: item.remark || null
+        };
+      });
+      await sb.from('phone_checkin_presets').delete().neq('id', 0);
+      if (rows.length > 0) {
+        const { error } = await sb.from('phone_checkin_presets').insert(rows);
+        if (error) throw error;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
   function getUniquePresetRows() {
     const seen = new Set();
@@ -1395,7 +1460,7 @@
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
       try {
         const data = new Uint8Array(e.target.result);
         const wb = XLSX.read(data, { type: 'array' });
@@ -1443,7 +1508,8 @@
           alert('未解析到有效的長輩設定資料！');
           return;
         }
-        localStorage.setItem('laozhuang_phone_checkin_presets_v1', JSON.stringify(parsedList));
+        currentPresetsList = parsedList;
+        await savePresetsToCloud(parsedList);
         rebuildPresetMap(parsedList);
         renderCasePicker();
         if (selectedCase && findPresetForCase(selectedCase)) {
@@ -1610,6 +1676,7 @@
 
       statusEl.style.color = '#0f766e';
       statusEl.textContent = `已載入 ${allCases.length} 筆個案資料`;
+      await syncPresetsFromCloud();
       await loadMonthCheckins();
     } catch (err) {
       statusEl.style.color = '#dc2626';
@@ -1711,12 +1778,12 @@
     }
 
     box.innerHTML = filtered.map(c => {
-      const isSel = selectedCase && selectedCase.id === c.id;
+      const isSel = selectedCase && String(selectedCase.id) === String(c.id);
       const isDone = doneNames.has(c.name);
       const hasPreset = Boolean(findPresetForCase(c));
       const phoneTxt = [c.phone, c.mobile].filter(Boolean).join(' / ');
       return `
-        <div class="case-pick-row ${isSel ? 'selected' : ''}" onclick="selectCase(${c.id})">
+        <div class="case-pick-row ${isSel ? 'selected' : ''}" onclick="selectCase('${String(c.id).replace(/'/g, "\\'")}')">
           <div>
             <div><strong>${c.case_number || ''}</strong> ${c.name || ''} ${isRegularCase(c) ? '<span class="reg-dot">常來</span>' : ''}</div>
             <div style="font-size:0.8rem; color:#475569;">${phoneTxt || '無電話'}</div>
@@ -1728,7 +1795,7 @@
   }
 
   function selectCase(caseId) {
-    const found = allCases.find(function(c) { return c.id === caseId; });
+    const found = allCases.find(function(c) { return String(c.id) === String(caseId); });
     if (!found) return;
     selectedCase = found;
     document.getElementById('selCaseName').textContent = found.name || '';
