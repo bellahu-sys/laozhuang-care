@@ -519,6 +519,21 @@
 </div>
 
 <script>
+  (function() {
+    function show(msg) {
+      var el = document.getElementById('syncStatus');
+      if (el) { el.style.color = '#dc2626'; el.textContent = '頁面發生錯誤：' + msg; }
+      var box = document.getElementById('casePickerList');
+      if (box && box.textContent.indexOf('載入名單中') >= 0) {
+        box.textContent = '頁面程式發生錯誤：' + msg;
+        box.style.color = '#dc2626';
+      }
+    }
+    window.addEventListener('error', function(ev) { show(ev.message || '未知錯誤'); });
+    window.addEventListener('unhandledrejection', function(ev) { show((ev.reason && ev.reason.message) || String(ev.reason)); });
+  })();
+</script>
+<script>
   const INITIAL_PRESETS = [
   {
     "code": "110086915",
@@ -1214,8 +1229,57 @@
   let hasAnyRegularInDb = false;
   let currentPresetsList = INITIAL_PRESETS.slice();
   let presetLookup = {};
-  let visibleCaseList = [];
-  let visiblePresetList = [];
+  let loadSeq = 0;
+  let checkinLoadError = '';
+  let presetCloudState = 'local';
+
+  const statusParts = { cases: null, presets: null, checkins: null };
+  function setStatusPart(key, text, isErr) {
+    statusParts[key] = { text: text, err: !!isErr };
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    const parts = ['cases', 'presets', 'checkins'].map(function(k) { return statusParts[k]; }).filter(Boolean);
+    el.textContent = parts.map(function(p) { return p.text; }).join('　｜　');
+    el.style.color = parts.some(function(p) { return p.err; }) ? '#dc2626' : '#0f766e';
+  }
+
+  function isMissingTableError(err) {
+    const m = (String((err && err.message) || '') + ' ' + String((err && err.code) || '')).toLowerCase();
+    return m.indexOf('42p01') >= 0 || m.indexOf('pgrst205') >= 0 || m.indexOf('does not exist') >= 0 || m.indexOf('schema cache') >= 0;
+  }
+
+  // 由「115/11/26 14:20:00」取出民國年與月份；也接受西元年與 - . 分隔
+  function parseRocYearMonth(str) {
+    const m = String(str || '').trim().match(/^(\d{2,4})\s*[\/\-.]\s*(\d{1,2})/);
+    if (!m) return null;
+    let y = parseInt(m[1], 10);
+    const mo = parseInt(m[2], 10);
+    if (y > 1911) y -= 1911;
+    if (!(y >= 1 && mo >= 1 && mo <= 12)) return null;
+    return { year: y, month: mo };
+  }
+
+  // 代碼欄位整理：全形逗號、頓號、空白一律轉成半形逗號
+  function cleanCode(v) {
+    const t = String(v === null || v === undefined ? '' : v).replace(/[，、\s]+/g, ',').replace(/^,+|,+$/g, '');
+    return t === '' ? null : t;
+  }
+
+  function gotoMonth(y, m) {
+    const ySel = document.getElementById('rocYearSelect');
+    if (![...ySel.options].some(function(o) { return o.value === String(y); })) {
+      const o = document.createElement('option');
+      o.value = String(y);
+      o.textContent = y + ' 年';
+      ySel.appendChild(o);
+    }
+    ySel.value = String(y);
+    document.getElementById('monthSelect').value = String(m);
+  }
+
+  function findCheckin(id) {
+    return monthCheckins.find(function(r) { return String(r.id) === String(id); });
+  }
 
   function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -1369,81 +1433,117 @@
     if (info) info.textContent = '已套用「' + selectedCase.name + '」原始設定，修改原因或備註後即可儲存';
   }
 
-  async function syncPresetsFromCloud() {
-    if (!sbClient) return;
-    try {
-      const { data, error } = await sbClient
-        .from('phone_checkin_presets')
-        .select('*')
-        .order('sort_order', { ascending: true })
-        .order('id', { ascending: true });
-      if (!error && Array.isArray(data) && data.length > 0) {
-        currentPresetsList = data.map(function(r) {
-          return {
-            code: r.case_code || r.code || '',
-            name: r.case_name || r.name || '',
-            gender: r.gender || '',
-            call_datetime: r.call_datetime || '',
-            answer_status: r.answer_status || '',
-            answer_other: r.answer_other || '',
-            speech_status: r.speech_status || '',
-            speech_other: r.speech_other || '',
-            health_status: r.health_status || '',
-            health_other: r.health_other || '',
-            life_status: r.life_status || '',
-            life_other: r.life_other || '',
-            interaction_status: r.interaction_status || '',
-            interaction_other: r.interaction_other || '',
-            mental_status: r.mental_status || '',
-            mental_other: r.mental_other || '',
-            remark: r.remark || ''
-          };
-        });
-        rebuildPresetLookup(currentPresetsList);
-        renderCasePicker();
-      }
-    } catch (e) {}
+  function presetToRow(item, idx) {
+    const v = function(x) { return (x === undefined || x === null || String(x).trim() === '') ? null : String(x).trim(); };
+    return {
+      sort_order: idx,
+      case_code: v(item.code),
+      case_name: String(item.name).trim(),
+      gender: v(item.gender),
+      call_datetime: v(item.call_datetime),
+      answer_status: v(item.answer_status),
+      answer_other: v(item.answer_other),
+      speech_status: v(item.speech_status),
+      speech_other: v(item.speech_other),
+      health_status: v(item.health_status),
+      health_other: v(item.health_other),
+      life_status: v(item.life_status),
+      life_other: v(item.life_other),
+      interaction_status: v(item.interaction_status),
+      interaction_other: v(item.interaction_other),
+      mental_status: v(item.mental_status),
+      mental_other: v(item.mental_other),
+      remark: v(item.remark)
+    };
   }
 
-  async function savePresetsToCloud(list) {
-    if (!sbClient) {
-      alert('尚未連線至 Supabase，無法同步雲端設定');
-      return false;
+  function rowToPreset(r) {
+    const t = function(x) { return x === undefined || x === null ? '' : String(x); };
+    return {
+      code: t(r.case_code), name: t(r.case_name), gender: t(r.gender), call_datetime: t(r.call_datetime),
+      answer_status: t(r.answer_status), answer_other: t(r.answer_other),
+      speech_status: t(r.speech_status), speech_other: t(r.speech_other),
+      health_status: t(r.health_status), health_other: t(r.health_other),
+      life_status: t(r.life_status), life_other: t(r.life_other),
+      interaction_status: t(r.interaction_status), interaction_other: t(r.interaction_other),
+      mental_status: t(r.mental_status), mental_other: t(r.mental_other),
+      remark: t(r.remark)
+    };
+  }
+
+  async function syncPresetsFromCloud() {
+    if (!sbClient) return;
+    const res = await sbClient
+      .from('phone_checkin_presets')
+      .select('*')
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true });
+    if (res.error) {
+      console.error('phone_checkin_presets 讀取失敗', res.error);
+      presetCloudState = isMissingTableError(res.error) ? 'missing' : 'error';
+      setStatusPart('presets', presetCloudState === 'missing'
+        ? '原始設定名單：雲端資料表尚未建立（暫用內建名單）'
+        : '原始設定名單讀取失敗：' + res.error.message, true);
+      return;
     }
-    try {
-      const rows = (list || []).filter(function(item) { return item && item.name; }).map(function(item, idx) {
-        return {
-          sort_order: idx + 1,
-          case_code: item.code || null,
-          case_name: String(item.name).trim(),
-          gender: item.gender || null,
-          call_datetime: item.call_datetime || null,
-          answer_status: item.answer_status || null,
-          answer_other: item.answer_other || null,
-          speech_status: item.speech_status || null,
-          speech_other: item.speech_other || null,
-          health_status: item.health_status || null,
-          health_other: item.health_other || null,
-          life_status: item.life_status || null,
-          life_other: item.life_other || null,
-          interaction_status: item.interaction_status || null,
-          interaction_other: item.interaction_other || null,
-          mental_status: item.mental_status || null,
-          mental_other: item.mental_other || null,
-          remark: item.remark || null
-        };
+    if (!res.data || res.data.length === 0) {
+      // 雲端還沒有名單：把內建的已有記錄名單寫入雲端，之後以雲端為準
+      const seenNames = new Set();
+      currentPresetsList = INITIAL_PRESETS.filter(function(x) {
+        const nm = String(x.name || '').trim();
+        if (!nm || seenNames.has(nm)) return false;
+        seenNames.add(nm);
+        return true;
       });
-      const { error: delErr } = await sbClient.from('phone_checkin_presets').delete().not('id', 'is', null);
-      if (delErr) throw delErr;
-      if (rows.length > 0) {
-        const { error: insErr } = await sbClient.from('phone_checkin_presets').insert(rows);
-        if (insErr) throw insErr;
-      }
-      return true;
-    } catch (e) {
-      alert('同步至 phone_checkin_presets 失敗（請先在 Supabase SQL Editor 執行建表語法）：' + e.message);
+      const ok = await savePresetsToCloud(currentPresetsList, true);
+      presetCloudState = ok ? 'cloud' : 'error';
+      setStatusPart('presets', ok ? '原始設定名單：已建立雲端名單（' + currentPresetsList.length + ' 人）' : '原始設定名單：寫入雲端失敗', !ok);
+    } else {
+      currentPresetsList = res.data.map(rowToPreset);
+      presetCloudState = 'cloud';
+      setStatusPart('presets', '原始設定名單：雲端 ' + currentPresetsList.length + ' 人', false);
+    }
+    rebuildPresetLookup(currentPresetsList);
+    renderCasePicker();
+  }
+
+  // 以姓名為唯一鍵 upsert：同名覆蓋、新名新增，不會動到名單裡的其他人
+  async function savePresetsToCloud(list, silent) {
+    if (!sbClient) {
+      if (!silent) alert('尚未連線至 Supabase，無法同步雲端設定');
       return false;
     }
+    const seen = new Set();
+    const rows = [];
+    (list || []).forEach(function(item) {
+      const nm = item && String(item.name || '').trim();
+      if (!nm || seen.has(nm)) return;
+      seen.add(nm);
+      rows.push(presetToRow(item, rows.length + 1));
+    });
+    if (rows.length === 0) return true;
+    const res = await sbClient.from('phone_checkin_presets').upsert(rows, { onConflict: 'case_name' });
+    if (res.error) {
+      console.error('phone_checkin_presets 寫入失敗', res.error);
+      if (!silent) {
+        alert('同步至 phone_checkin_presets 失敗：' + res.error.message +
+          (isMissingTableError(res.error) ? '\n請先在 Supabase SQL Editor 執行「電話問安管理_Supabase建表.sql」' : ''));
+      }
+      return false;
+    }
+    return true;
+  }
+
+  async function deletePresetByName(name) {
+    if (!confirm('確定要從「已有電話問安記錄名單」移除「' + name + '」的原始設定嗎？')) return;
+    if (sbClient) {
+      const res = await sbClient.from('phone_checkin_presets').delete().eq('case_name', name);
+      if (res.error) { alert('刪除失敗：' + res.error.message); return; }
+    }
+    currentPresetsList = currentPresetsList.filter(function(x) { return String(x.name || '').trim() !== name; });
+    rebuildPresetLookup(currentPresetsList);
+    renderPresetModalTable();
+    renderCasePicker();
   }
 
   function handlePresetExcelUpload(ev) {
@@ -1497,14 +1597,22 @@
           alert('找不到有效的姓名設定列');
           return;
         }
-        currentPresetsList = parsed;
-        rebuildPresetLookup(parsed);
+        const merged = new Map();
+        currentPresetsList.forEach(function(x) { merged.set(String(x.name || '').trim(), x); });
+        parsed.forEach(function(x) { merged.set(String(x.name || '').trim(), x); });
+        currentPresetsList = Array.from(merged.values());
+        rebuildPresetLookup(currentPresetsList);
         renderCasePicker();
         if (document.getElementById('presetListModal')?.classList.contains('open')) {
           renderPresetModalTable();
         }
-        const ok = await savePresetsToCloud(parsed);
-        if (ok) alert('已成功匯入並同步 ' + parsed.length + ' 筆設定至雲端！');
+        const ok = await savePresetsToCloud(currentPresetsList, false);
+        if (ok) {
+          presetCloudState = 'cloud';
+          setStatusPart('presets', '原始設定名單：雲端 ' + currentPresetsList.length + ' 人', false);
+          if (document.getElementById('presetListModal')?.classList.contains('open')) renderPresetModalTable();
+          alert('已匯入 ' + parsed.length + ' 筆設定並同步至雲端（同名者已更新，名單共 ' + currentPresetsList.length + ' 人）！');
+        }
       } catch (err) {
         alert('讀取 Excel 失敗：' + err.message);
       }
@@ -1525,33 +1633,31 @@
   function getUniquePresetRows() {
     const seen = new Set();
     const out = [];
-    Object.values(presetLookup).forEach(function(item) {
-      if (!item || !item.name) return;
-      const key = (item.code || '') + '__' + item.name;
-      if (!seen.has(key)) {
-        seen.add(key);
-        out.push(item);
-      }
+    (currentPresetsList || []).forEach(function(item) {
+      const nm = item && String(item.name || '').trim();
+      if (!nm || seen.has(nm)) return;
+      seen.add(nm);
+      out.push(item);
     });
     return out;
   }
 
   function renderPresetModalTable() {
     const kw = (document.getElementById('presetSearchInput')?.value || '').trim().toLowerCase();
-    visiblePresetList = getUniquePresetRows().filter(function(item) {
+    const list = getUniquePresetRows().filter(function(item) {
       if (!kw) return true;
       return (item.name && item.name.toLowerCase().includes(kw)) ||
         (item.code && item.code.toLowerCase().includes(kw)) ||
         (item.remark && item.remark.toLowerCase().includes(kw));
     });
-    document.getElementById('modalPresetSummary').textContent = '（共 ' + visiblePresetList.length + ' 位長輩有原始設定）';
+    document.getElementById('modalPresetSummary').textContent = '（共 ' + list.length + ' 位長輩有原始設定；' + (presetCloudState === 'cloud' ? '已同步雲端' : (presetCloudState === 'missing' ? '雲端資料表尚未建立，暫用內建名單' : '雲端同步異常')) + '）';
     const fmtP = function(c, o) { return o ? ((c || '') + '（' + o + '）') : (c || ''); };
     const tbody = document.getElementById('presetModalTbody');
-    if (visiblePresetList.length === 0) {
+    if (list.length === 0) {
       tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; padding:18px; color:#64748b;">查無符合設定名單</td></tr>';
       return;
     }
-    tbody.innerHTML = visiblePresetList.map(function(item, idx) {
+    tbody.innerHTML = list.map(function(item, idx) {
       return '<tr>' +
         '<td style="text-align:center;">' + (idx + 1) + '</td>' +
         '<td>' + escHtml(item.code) + '</td>' +
@@ -1564,29 +1670,31 @@
         '<td style="text-align:center;">' + escHtml(fmtP(item.interaction_status, item.interaction_other)) + '</td>' +
         '<td style="text-align:center;">' + escHtml(fmtP(item.mental_status, item.mental_other)) + '</td>' +
         '<td>' + escHtml(item.remark) + '</td>' +
-        '<td style="text-align:center; white-space:nowrap;"><button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.8rem;" onclick="onPickPresetByIdx(' + idx + ')">帶入表單</button></td>' +
+        '<td style="text-align:center; white-space:nowrap;">' +
+          '<button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.8rem; margin-right:4px;" data-act="pick" data-name="' + escHtml(item.name) + '">帶入表單</button>' +
+          '<button type="button" class="btn btn-del" data-act="del" data-name="' + escHtml(item.name) + '">刪除</button>' +
+        '</td>' +
         '</tr>';
     }).join('');
   }
 
-  function onPickPresetByIdx(idx) {
-    const p = visiblePresetList[idx];
-    if (!p) return;
-    const matched = allCases.find(function(c) { return String(c.name || '').trim() === String(p.name || '').trim(); });
+  function selectFromPreset(name) {
+    const matched = allCases.find(function(c) { return String(c.name || '').trim() === String(name || '').trim(); });
+    const p = presetLookup[name];
     if (matched) {
       selectedCase = matched;
       document.getElementById('selCaseName').textContent = matched.name || '';
       document.getElementById('selCaseCode').textContent = matched.gov_system_id || matched.case_number || '';
       document.getElementById('selCaseGender').textContent = matched.gender || '';
       document.getElementById('selCasePhone').textContent = [matched.phone, matched.mobile].filter(Boolean).join(' / ') || '未登錄電話';
-    } else {
+    } else if (p) {
       selectedCase = null;
       document.getElementById('selCaseName').textContent = p.name || '';
       document.getElementById('selCaseCode').textContent = p.code || '-';
       document.getElementById('selCaseGender').textContent = p.gender || '-';
       document.getElementById('selCasePhone').textContent = '-';
     }
-    applyPresetObject(p);
+    if (p) applyPresetObject(p);
     renderCasePicker();
     closePresetListModal();
   }
@@ -1614,95 +1722,91 @@
   }
 
   async function initPage() {
+    if (!document.getElementById('casePickerList')) return; // 通行密碼錯誤時頁面已清空
     const now = new Date();
-    const rocY = String(now.getFullYear() - 1911);
-    const m = String(now.getMonth() + 1);
+    const rocNow = now.getFullYear() - 1911;
     const ySel = document.getElementById('rocYearSelect');
-    if ([...ySel.options].some(function(o) { return o.value === rocY; })) ySel.value = rocY;
-    document.getElementById('monthSelect').value = m;
+    ySel.innerHTML = '';
+    for (let y = rocNow - 2; y <= rocNow + 2; y++) {
+      const o = document.createElement('option');
+      o.value = String(y);
+      o.textContent = y + ' 年';
+      ySel.appendChild(o);
+    }
+    gotoMonth(rocNow, now.getMonth() + 1);
     clearFormToBlank();
     setNowRocDatetime();
     rebuildPresetLookup(currentPresetsList);
 
-    const statusEl = document.getElementById('syncStatus');
     if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined' || !window.supabase) {
-      statusEl.style.color = '#dc2626';
-      statusEl.textContent = '找不到 config.js 連線設定';
+      setStatusPart('cases', '找不到 config.js 連線設定', true);
       document.getElementById('casePickerList').innerHTML = '<div style="padding:18px; text-align:center; color:#dc2626;">找不到 config.js</div>';
       return;
     }
-
     sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     try {
-      const { data: casesData, error: casesErr } = await sbClient
-        .from('cases')
-        .select('*')
-        .order('case_number', { ascending: true });
-      if (casesErr) {
-        statusEl.style.color = '#dc2626';
-        statusEl.textContent = '讀取 cases 失敗：' + casesErr.message;
-        document.getElementById('casePickerList').innerHTML = '<div style="padding:18px; text-align:center; color:#dc2626;">讀取失敗：' + escHtml(casesErr.message) + '</div>';
+      let res = await sbClient.from('cases').select('*').order('case_number', { ascending: true });
+      if (res.error) res = await sbClient.from('cases').select('*');
+      if (res.error) {
+        setStatusPart('cases', '讀取 cases 失敗：' + res.error.message, true);
+        document.getElementById('casePickerList').innerHTML = '<div style="padding:18px; text-align:center; color:#dc2626;">讀取失敗：' + escHtml(res.error.message) + '</div>';
         return;
       }
-      allCases = casesData || [];
+      allCases = res.data || [];
       hasAnyRegularInDb = allCases.some(function(c) {
         return c.is_regular === true || (Array.isArray(c.regular_tags) && c.regular_tags.length > 0);
       });
 
-      try {
-        const { data: stData } = await sbClient
-          .from('case_service_status')
-          .select('case_id, status, effective_date, id')
-          .order('effective_date', { ascending: false })
-          .order('id', { ascending: false });
-        latestStatusMap = {};
-        (stData || []).forEach(function(r) {
-          if (!latestStatusMap[String(r.case_id)]) latestStatusMap[String(r.case_id)] = r.status;
-        });
-      } catch (e) {
-        latestStatusMap = {};
-      }
+      latestStatusMap = {};
+      const st = await sbClient.from('case_service_status').select('case_id, status, effective_date, id')
+        .order('effective_date', { ascending: false }).order('id', { ascending: false });
+      if (st.error) console.error('case_service_status 讀取失敗', st.error);
+      (st.data || []).forEach(function(r) {
+        if (!latestStatusMap[String(r.case_id)]) latestStatusMap[String(r.case_id)] = r.status;
+      });
 
-      statusEl.style.color = '#0f766e';
-      statusEl.textContent = '已載入 ' + allCases.length + ' 筆個案資料';
-      await syncPresetsFromCloud();
-      await loadMonthCheckins();
+      setStatusPart('cases', '已載入 ' + allCases.length + ' 筆個案', false);
+      renderCasePicker(); // 左側名單先顯示，不必等其他資料
     } catch (err) {
-      statusEl.style.color = '#dc2626';
-      statusEl.textContent = '連線例外：' + err.message;
-      document.getElementById('casePickerList').innerHTML = '<div style="padding:18px; text-align:center; color:#dc2626;">載入例外：' + escHtml(err.message) + '</div>';
+      console.error(err);
+      setStatusPart('cases', '連線例外：' + err.message, true);
+      document.getElementById('casePickerList').textContent = '載入例外：' + err.message;
+      return;
     }
+
+    try { await syncPresetsFromCloud(); } catch (e) { console.error(e); setStatusPart('presets', '原始設定名單例外：' + e.message, true); }
+    await loadMonthCheckins();
   }
 
   async function loadMonthCheckins() {
     const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
     const month = parseInt(document.getElementById('monthSelect').value, 10);
-    const statusEl = document.getElementById('syncStatus');
     document.getElementById('listTitle').textContent = '二、' + rocYear + ' 年 ' + month + ' 月已登錄電話問安記錄明細';
-
     if (!sbClient) return;
+
+    const seq = ++loadSeq; // 快速切換月份時，只採用最後一次的結果
+    let res;
     try {
-      const { data, error } = await sbClient
-        .from('phone_checkins')
-        .select('*')
-        .eq('roc_year', rocYear)
-        .eq('month', month)
-        .order('id', { ascending: true });
-
-      if (error) {
-        monthCheckins = [];
-        statusEl.style.color = '#b45309';
-        statusEl.textContent = '提示：尚未建立 phone_checkins 資料表（仍可搜尋長輩）';
-      } else {
-        monthCheckins = data || [];
-        statusEl.style.color = '#0f766e';
-        statusEl.textContent = '已同步 ' + rocYear + ' 年 ' + month + ' 月電訪資料（' + monthCheckins.length + ' 筆）';
-      }
+      res = await sbClient.from('phone_checkins').select('*')
+        .eq('roc_year', rocYear).eq('month', month).order('id', { ascending: true });
     } catch (e) {
-      monthCheckins = [];
+      res = { data: null, error: { message: e.message } };
     }
+    if (seq !== loadSeq) return;
 
+    if (res.error) {
+      console.error('phone_checkins 讀取失敗', res.error);
+      monthCheckins = [];
+      checkinLoadError = isMissingTableError(res.error)
+        ? '尚未建立 phone_checkins 資料表，請先在 Supabase SQL Editor 執行「電話問安管理_Supabase建表.sql」'
+        : '讀取電訪記錄失敗：' + res.error.message;
+      setStatusPart('checkins', checkinLoadError, true);
+    } else {
+      monthCheckins = res.data || [];
+      checkinLoadError = '';
+      setStatusPart('checkins', rocYear + ' 年 ' + month + ' 月電訪記錄 ' + monthCheckins.length + ' 筆', false);
+    }
     updateKpis();
     renderCasePicker();
     renderCheckinTable();
@@ -1745,7 +1849,7 @@
       hintEl.textContent = '目前顯示全部服務中長輩';
     }
 
-    visibleCaseList = allCases.filter(function(c) {
+    const filtered = allCases.filter(function(c) {
       const st = latestStatusMap[String(c.id)] || '服務中';
       if (String(st).startsWith('已結案')) return false;
       if (onlyRegular && hasAnyRegularInDb && !isRegularCase(c)) return false;
@@ -1759,17 +1863,17 @@
     });
 
     const box = document.getElementById('casePickerList');
-    if (visibleCaseList.length === 0) {
+    if (filtered.length === 0) {
       box.innerHTML = '<div style="padding:18px; text-align:center; color:#64748b; font-size:0.9rem;">查無符合條件的個案</div>';
       return;
     }
 
-    box.innerHTML = visibleCaseList.map(function(c, idx) {
+    box.innerHTML = filtered.map(function(c) {
       const isSel = selectedCase && String(selectedCase.id) === String(c.id);
       const isDone = doneNames.has(c.name);
       const hasPreset = Boolean(findPresetForCase(c));
       const phoneTxt = [c.phone, c.mobile].filter(Boolean).join(' / ');
-      return '<div class="case-pick-row ' + (isSel ? 'selected' : '') + '" onclick="onPickCaseByIdx(' + idx + ')">' +
+      return '<div class="case-pick-row ' + (isSel ? 'selected' : '') + '" data-case-id="' + escHtml(c.id) + '">' +
         '<div>' +
           '<div><strong>' + escHtml(c.case_number || '') + '</strong> ' + escHtml(c.name || '') + ' ' + (isRegularCase(c) ? '<span class="reg-dot">常來</span>' : '') + '</div>' +
           '<div style="font-size:0.8rem; color:#475569;">' + escHtml(phoneTxt || '無電話') + '</div>' +
@@ -1782,8 +1886,8 @@
     }).join('');
   }
 
-  function onPickCaseByIdx(idx) {
-    const found = visibleCaseList[idx];
+  function selectCase(caseId) {
+    const found = allCases.find(function(c) { return String(c.id) === String(caseId); });
     if (!found) return;
     selectedCase = found;
     document.getElementById('selCaseName').textContent = found.name || '';
@@ -1821,130 +1925,144 @@
       alert('請填寫電訪日期時間！');
       return;
     }
+    const ym = parseRocYearMonth(callDt);
+    if (!ym) {
+      alert('電訪日期時間格式不正確，請照「115/11/26 14:20:00」的格式填寫。');
+      return;
+    }
     if (!sbClient) {
       alert('尚未載入資料庫設定');
       return;
     }
 
-    const rocYear = parseInt(document.getElementById('rocYearSelect').value, 10);
-    const month = parseInt(document.getElementById('monthSelect').value, 10);
+    const day = callDt.split(/\s+/)[0];
+    const dups = monthCheckins.filter(function(r) {
+      return String(r.case_id) === String(selectedCase.id) && String(r.call_datetime || '').split(/\s+/)[0] === day;
+    });
+    if (dups.length > 0 && !confirm('「' + selectedCase.name + '」在 ' + day + ' 已有 ' + dups.length + ' 筆記錄，仍要再新增一筆嗎？')) return;
 
+    // 年、月一律依電訪日期決定，避免存到別的月份而「看不到」
     const payload = {
       case_id: selectedCase.id,
       case_code: selectedCase.gov_system_id || selectedCase.case_number || '',
       case_name: selectedCase.name,
       gender: selectedCase.gender || '',
       call_datetime: callDt,
-      roc_year: rocYear,
-      month: month,
-      answer_status: getRadioVal('q_answer') || null,
+      roc_year: ym.year,
+      month: ym.month,
+      answer_status: cleanCode(getRadioVal('q_answer')),
       answer_other: document.getElementById('other_answer').value.trim() || null,
-      speech_status: getRadioVal('q_speech') || null,
+      speech_status: cleanCode(getRadioVal('q_speech')),
       speech_other: document.getElementById('other_speech').value.trim() || null,
-      health_status: getCheckboxCsv('q_health') || null,
+      health_status: cleanCode(getCheckboxCsv('q_health')),
       health_other: document.getElementById('other_health').value.trim() || null,
-      life_status: getCheckboxCsv('q_life') || null,
+      life_status: cleanCode(getCheckboxCsv('q_life')),
       life_other: document.getElementById('other_life').value.trim() || null,
-      interaction_status: getRadioVal('q_interaction') || null,
+      interaction_status: cleanCode(getRadioVal('q_interaction')),
       interaction_other: document.getElementById('other_interaction').value.trim() || null,
-      mental_status: getRadioVal('q_mental') || null,
+      mental_status: cleanCode(getRadioVal('q_mental')),
       mental_other: document.getElementById('other_mental').value.trim() || null,
       remark: document.getElementById('remarkInput').value.trim() || null
     };
 
-    const { error } = await sbClient.from('phone_checkins').insert([payload]);
-    if (error) {
-      alert('儲存失敗：' + error.message);
+    const res = await sbClient.from('phone_checkins').insert([payload]).select();
+    if (res.error) {
+      console.error('phone_checkins 新增失敗', res.error);
+      alert('儲存失敗：' + res.error.message + (isMissingTableError(res.error) ? '\n請先在 Supabase SQL Editor 執行「電話問安管理_Supabase建表.sql」' : ''));
+      return;
+    }
+    if (!res.data || res.data.length === 0) {
+      alert('資料已送出，但雲端沒有回傳這筆記錄，可能是資料表權限（RLS）擋住。請執行 SQL 腳本中的權限設定後再試。');
       return;
     }
 
     clearFormToBlank();
     setNowRocDatetime();
+    gotoMonth(ym.year, ym.month);
     await loadMonthCheckins();
+    setStatusPart('checkins', '已儲存「' + payload.case_name + '」的電話問安記錄（' + ym.year + ' 年 ' + ym.month + ' 月，共 ' + monthCheckins.length + ' 筆）', false);
   }
 
   function fmtCombined(codeVal, othVal) {
-    const c = String(codeVal ?? '').trim();
-    const o = String(othVal ?? '').trim();
+    const c = String(codeVal === null || codeVal === undefined ? '' : codeVal).trim();
+    const o = String(othVal === null || othVal === undefined ? '' : othVal).trim();
     if (o) return (c || '5') + '（' + o + '）';
     return c;
   }
 
   function splitCombined(rawInput, prevOth) {
-    const raw = String(rawInput ?? '').trim();
+    const raw = String(rawInput === null || rawInput === undefined ? '' : rawInput).trim();
     const m = raw.match(/^([^（(]+?)[（(]([^）)]+)[）)]$/);
     if (m) return { code: m[1].trim(), other: m[2].trim() };
     return { code: raw, other: (prevOth ? String(prevOth).trim() : null) };
   }
 
-  async function saveInlineRowByIdx(idx, showToast) {
-    const item = monthCheckins[idx];
+  async function saveInlineRow(id, showToast) {
+    const item = findCheckin(id);
     if (!item || !sbClient) return;
     const payload = {
       call_datetime: item.call_datetime || '',
-      answer_status: item.answer_status || null,
-      answer_other: item.answer_other || null,
-      speech_status: item.speech_status || null,
-      speech_other: item.speech_other || null,
-      health_status: item.health_status || null,
-      health_other: item.health_other || null,
-      life_status: item.life_status || null,
-      life_other: item.life_other || null,
-      interaction_status: item.interaction_status || null,
-      interaction_other: item.interaction_other || null,
-      mental_status: item.mental_status || null,
-      mental_other: item.mental_other || null,
+      answer_status: cleanCode(item.answer_status), answer_other: item.answer_other || null,
+      speech_status: cleanCode(item.speech_status), speech_other: item.speech_other || null,
+      health_status: cleanCode(item.health_status), health_other: item.health_other || null,
+      life_status: cleanCode(item.life_status), life_other: item.life_other || null,
+      interaction_status: cleanCode(item.interaction_status), interaction_other: item.interaction_other || null,
+      mental_status: cleanCode(item.mental_status), mental_other: item.mental_other || null,
       remark: item.remark || null
     };
-    const { error } = await sbClient.from('phone_checkins').update(payload).eq('id', item.id);
-    if (error) {
-      alert('更新失敗：' + error.message);
+    // 改了電訪日期且跨月時，連年月一起更新
+    const ym = parseRocYearMonth(item.call_datetime);
+    const moved = !!(ym && (ym.year !== Number(item.roc_year) || ym.month !== Number(item.month)));
+    if (moved) { payload.roc_year = ym.year; payload.month = ym.month; }
+
+    const res = await sbClient.from('phone_checkins').update(payload).eq('id', item.id).select();
+    if (res.error) {
+      console.error('phone_checkins 更新失敗', res.error);
+      alert('更新失敗：' + res.error.message);
       return;
     }
-    const statusEl = document.getElementById('syncStatus');
+    if (!res.data || res.data.length === 0) {
+      alert('更新沒有生效（找不到這筆記錄或權限不足），請重新整理頁面確認。');
+      return;
+    }
     const now = new Date();
     const tStr = pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds());
-    if (statusEl) {
-      statusEl.style.color = '#0f766e';
-      statusEl.textContent = '已更新「' + item.case_name + '」記錄（' + tStr + '）';
+    if (moved) {
+      gotoMonth(ym.year, ym.month);
+      await loadMonthCheckins();
+      setStatusPart('checkins', '「' + item.case_name + '」的日期已改到 ' + ym.year + ' 年 ' + ym.month + ' 月，已一併移過去（' + tStr + '）', false);
+      return;
     }
+    setStatusPart('checkins', '已更新「' + item.case_name + '」記錄（' + tStr + '）', false);
     if (showToast) alert('已更新「' + item.case_name + '」的電話問安記錄！');
   }
 
-  function onInlineEditByIdx(idx, colKey, rawVal) {
-    const item = monthCheckins[idx];
+  function onInlineEdit(id, colKey, rawVal) {
+    const item = findCheckin(id);
     if (!item) return;
-    if (colKey === 'call_datetime') item.call_datetime = rawVal;
-    else if (colKey === 'remark') item.remark = rawVal;
-    else if (colKey === 'answer') {
-      const sp = splitCombined(rawVal, item.answer_other);
-      item.answer_status = sp.code; item.answer_other = sp.other;
-    } else if (colKey === 'speech') {
-      const sp = splitCombined(rawVal, item.speech_other);
-      item.speech_status = sp.code; item.speech_other = sp.other;
-    } else if (colKey === 'health') {
-      const sp = splitCombined(rawVal, item.health_other);
-      item.health_status = sp.code; item.health_other = sp.other;
-    } else if (colKey === 'life') {
-      const sp = splitCombined(rawVal, item.life_other);
-      item.life_status = sp.code; item.life_other = sp.other;
-    } else if (colKey === 'interaction') {
-      const sp = splitCombined(rawVal, item.interaction_other);
-      item.interaction_status = sp.code; item.interaction_other = sp.other;
-    } else if (colKey === 'mental') {
-      const sp = splitCombined(rawVal, item.mental_other);
-      item.mental_status = sp.code; item.mental_other = sp.other;
-    }
+    if (colKey === 'call_datetime') { item.call_datetime = rawVal; return; }
+    if (colKey === 'remark') { item.remark = rawVal; return; }
+    if (['answer', 'speech', 'health', 'life', 'interaction', 'mental'].indexOf(colKey) < 0) return;
+    const sp = splitCombined(rawVal, item[colKey + '_other']);
+    item[colKey + '_status'] = sp.code;
+    item[colKey + '_other'] = sp.other;
   }
 
   function renderCheckinTable() {
     const tbody = document.getElementById('checkinTableBody');
     if (monthCheckins.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:20px; color:#64748b;">本月尚無電話問安記錄，請從上方選取長輩並新增記錄。</td></tr>';
+      const msg = checkinLoadError || '本月尚無電話問安記錄，請從上方選取長輩並新增記錄。';
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center; padding:20px; color:' + (checkinLoadError ? '#dc2626' : '#64748b') + ';">' + escHtml(msg) + '</td></tr>';
       return;
     }
     const inpStyle = 'width:100%; padding:5px 6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.88rem; background:#fffef7;';
     const codeStyle = 'width:68px; padding:5px 6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.88rem; text-align:center; background:#fffef7;';
+    const box = function(r, col, val, style) {
+      return '<input type="text" style="' + style + '" data-id="' + escHtml(r.id) + '" data-col="' + col + '" value="' + escHtml(val) + '">';
+    };
+    const codeCell = function(r, col) {
+      return '<td style="text-align:center;">' + box(r, col, fmtCombined(r[col + '_status'], r[col + '_other']), codeStyle) + '</td>';
+    };
 
     tbody.innerHTML = monthCheckins.map(function(r, idx) {
       return '<tr>' +
@@ -1952,29 +2070,64 @@
         '<td>' + escHtml(r.case_code || '') + '</td>' +
         '<td style="white-space:nowrap; min-width:86px;"><strong>' + escHtml(r.case_name || '') + '</strong></td>' +
         '<td style="text-align:center;">' + escHtml(r.gender || '') + '</td>' +
-        '<td><input type="text" style="' + inpStyle + ' min-width:148px;" value="' + escHtml(r.call_datetime || '') + '" oninput="onInlineEditByIdx(' + idx + ','call_datetime',this.value)" onchange="onInlineEditByIdx(' + idx + ','call_datetime',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.answer_status, r.answer_other)) + '" oninput="onInlineEditByIdx(' + idx + ','answer',this.value)" onchange="onInlineEditByIdx(' + idx + ','answer',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.speech_status, r.speech_other)) + '" oninput="onInlineEditByIdx(' + idx + ','speech',this.value)" onchange="onInlineEditByIdx(' + idx + ','speech',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.health_status, r.health_other)) + '" oninput="onInlineEditByIdx(' + idx + ','health',this.value)" onchange="onInlineEditByIdx(' + idx + ','health',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.life_status, r.life_other)) + '" oninput="onInlineEditByIdx(' + idx + ','life',this.value)" onchange="onInlineEditByIdx(' + idx + ','life',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.interaction_status, r.interaction_other)) + '" oninput="onInlineEditByIdx(' + idx + ','interaction',this.value)" onchange="onInlineEditByIdx(' + idx + ','interaction',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
-        '<td style="text-align:center;"><input type="text" style="' + codeStyle + '" value="' + escHtml(fmtCombined(r.mental_status, r.mental_other)) + '" oninput="onInlineEditByIdx(' + idx + ','mental',this.value)" onchange="onInlineEditByIdx(' + idx + ','mental',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
-        '<td><input type="text" style="' + inpStyle + ' min-width:140px;" value="' + escHtml(r.remark || '') + '" oninput="onInlineEditByIdx(' + idx + ','remark',this.value)" onchange="onInlineEditByIdx(' + idx + ','remark',this.value); saveInlineRowByIdx(' + idx + ',false)"></td>' +
+        '<td>' + box(r, 'call_datetime', r.call_datetime || '', inpStyle + ' min-width:148px;') + '</td>' +
+        codeCell(r, 'answer') + codeCell(r, 'speech') + codeCell(r, 'health') +
+        codeCell(r, 'life') + codeCell(r, 'interaction') + codeCell(r, 'mental') +
+        '<td>' + box(r, 'remark', r.remark || '', inpStyle + ' min-width:140px;') + '</td>' +
         '<td style="text-align:center; white-space:nowrap;">' +
-          '<button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.82rem; margin-right:4px;" onclick="saveInlineRowByIdx(' + idx + ',true)">儲存</button>' +
-          '<button type="button" class="btn btn-del" onclick="deleteCheckinByIdx(' + idx + ')">刪除</button>' +
+          '<button type="button" class="btn btn-primary" style="padding:4px 9px; font-size:0.82rem; margin-right:4px;" data-act="save" data-id="' + escHtml(r.id) + '">儲存</button>' +
+          '<button type="button" class="btn btn-del" data-act="del" data-id="' + escHtml(r.id) + '">刪除</button>' +
         '</td>' +
       '</tr>';
     }).join('');
   }
 
-  async function deleteCheckinByIdx(idx) {
-    const item = monthCheckins[idx];
-    if (!item || !sbClient) return;
-    if (!confirm('確定要刪除「' + (item.case_name || '') + '」這筆電話問安記錄嗎？')) return;
-    const { error } = await sbClient.from('phone_checkins').delete().eq('id', item.id);
-    if (error) alert('刪除失敗：' + error.message);
-    else await loadMonthCheckins();
+  async function deleteCheckin(id) {
+    if (!confirm('確定要刪除這筆電話問安記錄嗎？')) return;
+    if (!sbClient) return;
+    const res = await sbClient.from('phone_checkins').delete().eq('id', id).select();
+    if (res.error) { alert('刪除失敗：' + res.error.message); return; }
+    if (!res.data || res.data.length === 0) { alert('刪除沒有生效（找不到這筆記錄或權限不足），請重新整理頁面確認。'); return; }
+    await loadMonthCheckins();
+  }
+
+  function bindUiEvents() {
+    const tb = document.getElementById('checkinTableBody');
+    if (tb) {
+      tb.addEventListener('input', function(ev) {
+        const t = ev.target;
+        if (t.dataset && t.dataset.col) onInlineEdit(t.dataset.id, t.dataset.col, t.value);
+      });
+      tb.addEventListener('change', function(ev) {
+        const t = ev.target;
+        if (t.dataset && t.dataset.col) {
+          onInlineEdit(t.dataset.id, t.dataset.col, t.value);
+          saveInlineRow(t.dataset.id, false);
+        }
+      });
+      tb.addEventListener('click', function(ev) {
+        const b = ev.target.closest('button[data-act]');
+        if (!b) return;
+        if (b.dataset.act === 'save') saveInlineRow(b.dataset.id, true);
+        else if (b.dataset.act === 'del') deleteCheckin(b.dataset.id);
+      });
+    }
+    const picker = document.getElementById('casePickerList');
+    if (picker) {
+      picker.addEventListener('click', function(ev) {
+        const row = ev.target.closest('[data-case-id]');
+        if (row) selectCase(row.dataset.caseId);
+      });
+    }
+    const pm = document.getElementById('presetModalTbody');
+    if (pm) {
+      pm.addEventListener('click', function(ev) {
+        const b = ev.target.closest('button[data-act]');
+        if (!b) return;
+        if (b.dataset.act === 'pick') selectFromPreset(b.dataset.name);
+        else if (b.dataset.act === 'del') deletePresetByName(b.dataset.name);
+      });
+    }
   }
 
   function exportGovExcel() {
@@ -1984,15 +2137,14 @@
     }
     const rocYear = document.getElementById('rocYearSelect').value;
     const month = document.getElementById('monthSelect').value;
-    const nl = String.fromCharCode(10);
     const noteRow = [
       '注意事項：', '', '', '',
-      ['接聽情形：請填寫1,2,3,4', '親自接聽為1', '親友接聽為2', '無人接聽為3', '電話故障為4', '其他請填5，並且在後一欄位填寫原因', '只可包含一個數字'].join(nl), '',
-      ['口頭表達：請填寫1,2,3,4', '表達清晰為1', '表達尚可為2', '口語不清為3', '無法表達為4', '其他請填5，並且在後一欄位填寫原因', '只可包含一個數字'].join(nl), '',
-      ['健康情況：請填寫1,2,3,4', '健康良好為1', '稍有病痛為2', '按時用藥為3', '定期門診為4', '其他請填5，並且在後一欄位填寫原因', '可包含多個數字', '請用逗號分隔'].join(nl), '',
-      ['生活狀況：請填寫1,2,3,4', '三餐定時為1', '餐不定時為2', '參與活動為3', '極少互動為4', '其他請填5，並且在後一欄位填寫原因', '可包含多個數字', '請用逗號分隔'].join(nl), '',
-      ['親友互動：請填寫1,2,3,4', '常有互動為1', '偶有互動為2', '很少互動為3', '極少互動為4', '其他請填5，並且在後一欄位填寫原因', '只可包含一個數字'].join(nl), '',
-      ['精神狀況：請填寫1,2,3,4', '精神愉快為1', '尚可為2', '精神不佳為3', '輕生念頭為4', '其他請填5，並且在後一欄位填寫原因', '只可包含一個數字'].join(nl), '',
+      '接聽情形：請填寫1,2,3,4\n親自接聽為1\n親友接聽為2\n無人接聽為3\n電話故障為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '口頭表達：請填寫1,2,3,4\n表達清晰為1\n表達尚可為2\n口語不清為3\n無法表達為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '健康情況：請填寫1,2,3,4\n健康良好為1\n稍有病痛為2\n按時用藥為3\n定期門診為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
+      '生活狀況：請填寫1,2,3,4\n三餐定時為1\n餐不定時為2\n參與活動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n可包含多個數字\n請用逗號分隔', '',
+      '親友互動：請填寫1,2,3,4\n常有互動為1\n偶有互動為2\n很少互動為3\n極少互動為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
+      '精神狀況：請填寫1,2,3,4\n精神愉快為1\n尚可為2\n精神不佳為3\n輕生念頭為4\n其他請填5，並且在後一欄位填寫原因\n只可包含一個數字', '',
       '填寫欲補充之資料'
     ];
     const headerRow = [
@@ -2015,6 +2167,7 @@
     XLSX.writeFile(wb, '電話問安資料匯入範本_' + rocYear + '年' + pad2(month) + '月.xlsx');
   }
 
+  bindUiEvents();
   initPage();
 </script>
 </body>
