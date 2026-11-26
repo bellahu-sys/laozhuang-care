@@ -479,7 +479,8 @@
           <input type="text" id="remarkInput" style="width:100%;" placeholder="填寫欲補充之關懷說明...">
         </div>
 
-        <div style="margin-top:14px; display:flex; gap:10px; justify-content:flex-end;">
+        <div style="margin-top:14px; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+          <button type="button" class="btn btn-amber" style="padding:10px 20px; font-size:1rem;" onclick="saveCurrentFormAsPreset()">儲存問安設定</button>
           <button type="button" class="btn btn-primary" style="padding:10px 24px; font-size:1rem;" onclick="saveCheckinRecord()">儲存此筆電話問安記錄</button>
         </div>
       </div>
@@ -1306,7 +1307,7 @@
   function rebuildPresetLookup(list) {
     presetLookup = {};
     (list || []).forEach(function(item) {
-      const n = String(item.name || '').trim();
+      const n = normalizePersonName(item.name);
       const c = String(item.code || '').trim();
       if (!n) return;
       if (!presetLookup[n]) presetLookup[n] = item;
@@ -1319,7 +1320,7 @@
 
   function findPresetForCase(c) {
     if (!c) return null;
-    const n = String(c.name || '').trim();
+    const n = normalizePersonName(c.name);
     const g = String(c.gov_system_id || '').trim();
     const num = String(c.case_number || '').trim();
     return presetLookup[n] || presetLookup[g] || presetLookup[num] || null;
@@ -1536,6 +1537,63 @@
       return false;
     }
     return true;
+  }
+
+  async function saveCurrentFormAsPreset() {
+    if (!selectedCase) {
+      alert('請先從左側名單點選一位長輩！');
+      return;
+    }
+    const cleanName = normalizePersonName(selectedCase.name);
+    if (!cleanName) {
+      alert('無法取得長輩姓名');
+      return;
+    }
+    const existing = findPresetForCase(selectedCase);
+    const presetItem = {
+      code: selectedCase.gov_system_id || selectedCase.case_number || (existing ? existing.code : '') || '',
+      name: cleanName,
+      gender: selectedCase.gender || (existing ? existing.gender : '') || '',
+      call_datetime: document.getElementById('callDatetimeInput').value.trim() || '',
+      answer_status: cleanCode(getRadioVal('q_answer')) || '',
+      answer_other: document.getElementById('other_answer').value.trim() || '',
+      speech_status: cleanCode(getRadioVal('q_speech')) || '',
+      speech_other: document.getElementById('other_speech').value.trim() || '',
+      health_status: cleanCode(getCheckboxCsv('q_health')) || '',
+      health_other: document.getElementById('other_health').value.trim() || '',
+      life_status: cleanCode(getCheckboxCsv('q_life')) || '',
+      life_other: document.getElementById('other_life').value.trim() || '',
+      interaction_status: cleanCode(getRadioVal('q_interaction')) || '',
+      interaction_other: document.getElementById('other_interaction').value.trim() || '',
+      mental_status: cleanCode(getRadioVal('q_mental')) || '',
+      mental_other: document.getElementById('other_mental').value.trim() || '',
+      remark: document.getElementById('remarkInput').value.trim() || ''
+    };
+
+    const idx = currentPresetsList.findIndex(function(x) {
+      return normalizePersonName(x.name) === cleanName;
+    });
+    if (idx >= 0) {
+      currentPresetsList[idx] = presetItem;
+    } else {
+      currentPresetsList.push(presetItem);
+    }
+
+    rebuildPresetLookup(currentPresetsList);
+    renderCasePicker();
+    if (document.getElementById('presetListModal')?.classList.contains('open')) {
+      renderPresetModalTable();
+    }
+
+    const ok = await savePresetsToCloud(currentPresetsList, false);
+    if (ok) {
+      presetCloudState = 'cloud';
+      setFormModePill(true);
+      setStatusPart('presets', '原始設定名單：雲端 ' + currentPresetsList.length + ' 人', false);
+      const info = document.getElementById('presetMatchInfo');
+      if (info) info.textContent = '已將「' + cleanName + '」的最新問安設定同步儲存至雲端！';
+      alert('已將「' + cleanName + '」的問安設定更新並同步至雲端！');
+    }
   }
 
   async function deletePresetByName(name) {
