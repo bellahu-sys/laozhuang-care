@@ -476,7 +476,7 @@
     let periodSum = 0;
     months.forEach(m => { periodSum += calcMonthTotal(m); });
     document.getElementById('periodBanner').innerHTML =
-      `本區間關懷業務費合計：<span style="color:#dc2626;font-size:1.25rem;">${fmt(periodSum)}</span> 元　　大寫：<span style="color:#b91c1c;">${numberToChinese(periodSum)}</span>`;
+      `本區間關懷業務費合計：<span style="color:#dc2626;font-size:1.25rem;">${fmt(periodSum)}</span> 元  大寫：<span style="color:#b91c1c;">${numberToChinese(periodSum)}</span>`;
 
     const sums = { food: 0, gas: 0, net: 0, phone: 0, elec: 0, water: 0, staff: 0, total: 0 };
 
