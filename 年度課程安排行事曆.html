@@ -452,6 +452,8 @@
     }
     #pasteCtxMenu .ctx-item { padding: 9px 14px; cursor: pointer; font-weight: bold; color: #1e293b; }
     #pasteCtxMenu .ctx-item:hover { background: #ecfdf5; color: #166534; }
+    #pasteCtxMenu .ctx-item.ctx-danger { color: #b91c1c; }
+    #pasteCtxMenu .ctx-item.ctx-danger:hover { background: #fef2f2; color: #991b1b; }
     #pasteCtxMenu .ctx-item.ctx-muted { font-weight: normal; color: #64748b; border-top: 1px solid #e2e8f0; }
     #pasteBar {
       position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 9000;
@@ -1672,19 +1674,66 @@
     } catch (e) {}
   }
 
+  // 空白日期格：只有已複製課程時才接管右鍵（貼上）
   function onCellContextMenu(ev, isoDate) {
-    if (!courseClipboard) return; // 尚未複製課程時維持瀏覽器原本的右鍵選單
+    if (!courseClipboard) return; // 未複製時維持瀏覽器原本右鍵選單
+    showCourseMenu(ev, isoDate, null);
+  }
+
+  // 課程／提醒卡片：永遠顯示（貼上、複製、刪除）
+  function onChipContextMenu(ev, courseId) {
+    const c = yearCourses.find(item => item.id === courseId);
+    if (!c) return;
+    showCourseMenu(ev, c.course_date, c);
+  }
+
+  function showCourseMenu(ev, isoDate, course) {
     ev.preventDefault();
     ev.stopPropagation();
     ensurePasteUi();
     const m = document.getElementById('pasteCtxMenu');
-    m.innerHTML = `
-      <div class="ctx-item" onclick="pasteCourseToDate('${isoDate}')">貼上「${escapeHtml(courseLabel(courseClipboard))}」到 ${isoDate}</div>
-      <div class="ctx-item ctx-muted" onclick="clearCourseClipboard()">取消複製</div>`;
+    const isReminder = course && course.plan_type === '提醒';
+    let html = '';
+    if (courseClipboard) {
+      html += `<div class="ctx-item" onclick="pasteCourseToDate('${isoDate}')">貼上「${escapeHtml(courseLabel(courseClipboard))}」到 ${isoDate}</div>`;
+    }
+    if (course && !isReminder) {
+      html += `<div class="ctx-item" onclick="copyCourseToClipboard(null, ${course.id})">複製此課程</div>`;
+    }
+    if (course) {
+      const label = isReminder ? String(course.course_name || '') : courseLabel(course);
+      html += `<div class="ctx-item ctx-danger" onclick="deleteCourseById(${course.id})">刪除此${isReminder ? '提醒' : '課程'}「${escapeHtml(label)}」</div>`;
+    }
+    if (courseClipboard) {
+      html += `<div class="ctx-item ctx-muted" onclick="clearCourseClipboard()">取消複製</div>`;
+    }
+    m.innerHTML = html;
     m.style.display = 'block';
     const w = m.offsetWidth, h = m.offsetHeight;
     m.style.left = Math.max(4, Math.min(ev.clientX, window.innerWidth - w - 8)) + 'px';
     m.style.top = Math.max(4, Math.min(ev.clientY, window.innerHeight - h - 8)) + 'px';
+  }
+
+  async function deleteCourseById(courseId) {
+    hidePasteMenu();
+    const c = yearCourses.find(item => item.id === courseId);
+    if (!c) return;
+    const isReminder = c.plan_type === '提醒';
+    const label = isReminder ? String(c.course_name || '') : courseLabel(c);
+    if (!confirm(`確定要刪除 ${c.course_date} 的${isReminder ? '提醒' : '課程'}「${label}」嗎？`)) return;
+    setStatus('正在刪除...');
+    const { error } = await supabaseClient.from('course_schedules').delete().eq('id', courseId);
+    if (error) {
+      alert('刪除失敗：' + error.message);
+      setStatus('刪除失敗：' + error.message, true);
+      return;
+    }
+    if (courseClipboard && courseClipboard.id === courseId) {
+      courseClipboard = null;
+      renderPasteBar();
+    }
+    await loadYearCourses();
+    setStatus(`已刪除 ${c.course_date}「${label}」`);
   }
 
   async function pasteCourseToDate(isoDate) {
@@ -1854,6 +1903,7 @@
               <div class="reminder-chip"
                    style="border-left-color:${escapeHtml(remColor)}; background:${hexToRgbaBg(remColor, 0.14)}; color:#0f172a;"
                    onclick="openEditModal(${c.id}); event.stopPropagation();"
+                   oncontextmenu="onChipContextMenu(event, ${c.id})"
                    title="${escapeHtml(c.course_name)}${c.time_slot ? '：' + escapeHtml(c.time_slot) : ''}">
                 <div style="overflow:hidden; text-overflow:ellipsis;">
                   <span class="reminder-chip-badge" style="background:${escapeHtml(remColor)};">提醒</span>
@@ -1870,6 +1920,7 @@
                  ondragstart="onCalendarCourseDragStart(event, ${c.id})"
                  style="border-left-color:${escapeHtml(getPlanColor(pType))}; background:${hexToRgbaBg(getPlanColor(pType), 0.1)};"
                  onclick="openEditModal(${c.id}); event.stopPropagation();"
+                 oncontextmenu="onChipContextMenu(event, ${c.id})"
                  title="點擊編輯，或直接按住拖曳到其他日期格子複製">
               <button type="button" class="chip-copy-btn no-print" onclick="copyCourseToClipboard(event, ${c.id})" title="複製此課程，再到想要的日期按右鍵貼上（也可直接按住卡片拖曳到目標日期）">複製</button>
               <div><span class="chip-plan-badge">${escapeHtml(pType)}</span><span class="chip-title">${escapeHtml(nameParts.category)}</span></div>
