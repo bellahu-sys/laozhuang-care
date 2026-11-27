@@ -1013,18 +1013,6 @@
     } catch (e) {}
   }
 
-  async function saveFeeExcludedCloud(yr, m, names) {
-    if (!supabaseClient) return;
-    try {
-      await supabaseClient.from('ltc_delay_funding_records').upsert([{
-        roc_year: parseInt(yr, 10) || 115,
-        section_key: `ltc_voucher_fee_exclude_m${m}`,
-        payload: { names },
-        updated_at: new Date().toISOString()
-      }], { onConflict: 'roc_year,section_key' });
-    } catch (e) {}
-  }
-
   async function loadFeeExcludedFromCloud(yr, m) {
     if (!supabaseClient) return;
     try {
@@ -1037,31 +1025,6 @@
         saveFeeExcludedLocal(yr, m, data[0].payload.names);
       }
     } catch (e) {}
-  }
-
-  async function setFeeExcluded(yr, m, names) {
-    saveFeeExcludedLocal(yr, m, names);
-    await saveFeeExcludedCloud(yr, m, names);
-  }
-
-  async function onToggleFeeInstructor(name, checked) {
-    const yr = getSelectedYear();
-    const m = getSelectedMonth();
-    const set = new Set(getFeeExcluded(yr, m));
-    if (checked) set.delete(name); else set.add(name);
-    saveFeeExcludedLocal(yr, m, [...set]);
-    await applySources(yr, m, { force: true });
-    saveFeeExcludedCloud(yr, m, [...set]);
-  }
-
-  async function onFeeSelectAll(selectAll) {
-    const yr = getSelectedYear();
-    const m = getSelectedMonth();
-    const names = (sourceInfo.fee && sourceInfo.fee.list) ? sourceInfo.fee.list.map(x => x.name) : [];
-    const next = selectAll ? [] : names;
-    saveFeeExcludedLocal(yr, m, next);
-    await applySources(yr, m, { force: true });
-    saveFeeExcludedCloud(yr, m, next);
   }
 
   function monthSignature(yr, m) {
@@ -1222,32 +1185,27 @@
       } else if (fee.list.length === 0) {
         state = `<div class="src-state src-warn">依「講師鐘點費核銷」的費率與行事曆天數，${yr} 年 ${m} 月沒有算出長照講師費（行事曆沒有對應的長照授課，或費率未設定）</div>`;
       } else if (selList.length === 0) {
-        state = '<div class="src-state src-warn">本月沒有勾選任何講師，明細表不會列出講師費</div>';
+        state = '<div class="src-state src-warn">本月講師都已在「講師鐘點費核銷」設為不核銷，明細表不會列出講師費</div>';
       } else if (manualFee > 0 && sheetFee === 0) {
         state = `<div class="src-state src-warn">本月已有 ${manualFee} 列手動輸入的講師費，為避免重複沒有自動覆蓋</div>`;
       } else if (sheetFee === selTotal) {
-        state = '<div class="src-state src-ok">已連動，金額與勾選的來源一致</div>';
+        state = '<div class="src-state src-ok">已連動，金額與來源一致</div>';
       } else {
-        state = `<div class="src-state src-err">明細表講師費 ${fmt(sheetFee)} 與勾選來源 ${fmt(selTotal)} 不一致，請按「重新讀取來源資料」</div>`;
+        state = `<div class="src-state src-err">明細表講師費 ${fmt(sheetFee)} 與來源 ${fmt(selTotal)} 不一致，請按「重新讀取來源資料」</div>`;
       }
       const picks = fee.ok && fee.list.length ? `
         <div class="fee-pick-list">
           ${fee.list.map(x => {
             const on = !excluded.includes(x.name);
-            return `<label class="fee-pick ${on ? 'is-on' : ''}">
-              <input type="checkbox" ${on ? 'checked' : ''} onchange="onToggleFeeInstructor('${escAttr(x.name)}', this.checked)">
+            return `<span class="fee-pick ${on ? 'is-on' : ''}" style="cursor:default;${on ? '' : ' color:#94a3b8; text-decoration:line-through;'}">
               <strong>${escHtml(x.name)}</strong>
-              <span class="fp-sub">${fmt(x.unit)} × ${x.days} 天 = ${fmt(x.amount)}${x.manual ? '（手動天數）' : ''}</span>
-            </label>`;
+              <span class="fp-sub">${fmt(x.unit)} × ${x.days} 天 = ${fmt(x.amount)}${x.manual ? '（手動天數）' : ''}${on ? '' : '（本月不核銷）'}</span>
+            </span>`;
           }).join('')}
         </div>
-        <div class="src-actions" style="margin-top:6px;">
-          <button type="button" class="btn btn-outline btn-sm" style="background:#fff;border:1px solid #cbd5e1;" onclick="onFeeSelectAll(true)">全選</button>
-          <button type="button" class="btn btn-outline btn-sm" style="background:#fff;border:1px solid #cbd5e1;" onclick="onFeeSelectAll(false)">全不選</button>
-          <span class="src-detail">勾選本月要核銷的講師，沒勾選的不會帶入下方明細表</span>
-        </div>` : '';
+        <div class="src-detail">要調整本月核銷哪些講師，請到「講師鐘點費核銷」取消勾選該講師的「核銷」（所得稅彙總會一併調整）</div>` : '';
       gBody = `
-        <div class="src-line">來源：講師鐘點費核銷（長照）可核銷 ${fee.list.length} 位，已勾選 ${selList.length} 位，合計 <strong>${fmt(selTotal)}</strong> 元（費用 × 時數 × 課堂天數）</div>
+        <div class="src-line">來源：講師鐘點費核銷（長照）共 ${fee.list.length} 位有金額，本月核銷 ${selList.length} 位，合計 <strong>${fmt(selTotal)}</strong> 元（費用 × 時數 × 課堂天數）</div>
         ${picks}
         ${state}`;
     }

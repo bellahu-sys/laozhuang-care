@@ -216,6 +216,9 @@
     .sess-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.85rem; color: #475569; }
     .sess-input { width: 58px !important; text-align: right; padding: 4px 6px !important; font-weight: bold; }
     .sess-manual { font-size: 0.73rem; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 4px; padding: 1px 5px; font-weight: bold; }
+    .claim-toggle { display: inline-flex; align-items: center; gap: 3px; font-size: 0.8rem; color: #0f766e; font-weight: bold; cursor: pointer; margin-left: auto; }
+    .claim-toggle.is-off { color: #b45309; }
+    .claim-off-tag { font-size: 0.74rem; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 4px; padding: 0 5px; font-weight: bold; }
     .sess-restore { font-size: 0.75rem; color: #2563eb; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
     .mini-copy-btn {
       font-size: 0.72rem; padding: 1px 6px; border-radius: 4px;
@@ -449,8 +452,9 @@
           </div>
           <button type="button" class="btn btn-outline btn-sm" onclick="reloadCalendarDays(true)">重新讀取行事曆天數</button>
           <button type="button" class="btn btn-outline btn-sm" onclick="resetLtcManualForCurrentView()">本表還原為行事曆天數</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="resetLtcClaimForCurrentView()">本表全部設為核銷</button>
         </div>
-        <span style="font-size:0.82rem; color:#64748b;">（核銷金額 ＝ 費用 × 時數 × 課堂天數；天數預設讀取行事曆，可直接手動修改，修改後按「儲存至資料庫」）</span>
+        <span style="font-size:0.82rem; color:#64748b;">（核銷金額 ＝ 費用 × 時數 × 課堂天數；天數預設讀取行事曆，可直接手動修改，修改後按「儲存至資料庫」。當月不核銷的講師請取消「核銷」勾選，金額會從合計、所得稅彙總與長照核銷統計中扣除，勾選結果立即存檔）</span>
         <div id="calDiag" style="width:100%; font-size:0.82rem; color:#9a3412; font-weight:bold;"></div>
       </div>
       <div id="ltcPeriodSheetContainer"></div>
@@ -697,6 +701,90 @@
     renderTaxSummaryTable();
   }
 
+  // ===== 每月「是否核銷」（長照）：取消核銷的月份不計入合計、所得稅彙總與長照核銷統計 =====
+  const FEE_EXCLUDE_KEY = 'laozhuang_ltc_fee_excluded_v1';
+
+  function monthNumOfCol(colKey) {
+    const m = parseInt(String(colKey), 10);
+    return Number.isFinite(m) ? m : 0;
+  }
+
+  function readExcludedMap() {
+    try { return JSON.parse(localStorage.getItem(FEE_EXCLUDE_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+
+  function getClaimExcluded(yr, m) {
+    const arr = readExcludedMap()[`${yr}_${m}`];
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function isClaimExcluded(yr, colKey, instName) {
+    const m = monthNumOfCol(colKey);
+    return m > 0 && getClaimExcluded(yr, m).includes(instName);
+  }
+
+  function writeClaimExcludedLocal(yr, m, names) {
+    const o = readExcludedMap();
+    o[`${yr}_${m}`] = names;
+    try { localStorage.setItem(FEE_EXCLUDE_KEY, JSON.stringify(o)); } catch (e) {}
+  }
+
+  async function saveClaimExcludedCloud(yr, m, names) {
+    if (!supabaseClient) return;
+    try {
+      await supabaseClient.from('ltc_delay_funding_records').upsert([{
+        roc_year: yr,
+        section_key: `ltc_voucher_fee_exclude_m${m}`,
+        payload: { names },
+        updated_at: new Date().toISOString()
+      }], { onConflict: 'roc_year,section_key' });
+    } catch (e) {}
+  }
+
+  async function loadClaimExclusions() {
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('ltc_delay_funding_records')
+        .select('*')
+        .eq('roc_year', currentYear)
+        .like('section_key', 'ltc_voucher_fee_exclude_m%');
+      if (error || !Array.isArray(data)) return;
+      data.forEach(row => {
+        const mm = parseInt(String(row.section_key).replace('ltc_voucher_fee_exclude_m', ''), 10);
+        if (mm > 0 && row.payload && Array.isArray(row.payload.names)) writeClaimExcludedLocal(currentYear, mm, row.payload.names);
+      });
+    } catch (e) {}
+  }
+
+  async function onClaimToggle(instName, colKey, claimed) {
+    const m = monthNumOfCol(colKey);
+    if (!m) return;
+    const set = new Set(getClaimExcluded(currentYear, m));
+    if (claimed) set.delete(instName); else set.add(instName);
+    const names = [...set];
+    writeClaimExcludedLocal(currentYear, m, names);
+    renderLtcPeriodView();
+    renderTaxSummaryTable();
+    setStatus(claimed
+      ? `已將「${instName} ${m}月」列入核銷（長照核銷統計與所得稅彙總會一併計入）`
+      : `已將「${instName} ${m}月」設為不核銷（不計入合計、所得稅彙總與長照核銷統計）`);
+    await saveClaimExcludedCloud(currentYear, m, names);
+  }
+
+  async function resetLtcClaimForCurrentView() {
+    const blk = getLtcPeriodDef();
+    for (const colKey of blk.cols) {
+      const m = monthNumOfCol(colKey);
+      if (!m) continue;
+      writeClaimExcludedLocal(currentYear, m, []);
+      await saveClaimExcludedCloud(currentYear, m, []);
+    }
+    renderLtcPeriodView();
+    renderTaxSummaryTable();
+    setStatus(`已將「${blk.title}」所有講師設為核銷`);
+  }
+
   function getLinkedCellData(blk, colKey, instName) {
     const pName = resolveLinkedPlanForCell(blk, colKey, instName);
     const scopeFromMonth = MONTH_COL_TO_SCOPE[colKey] || 'YEAR';
@@ -715,11 +803,15 @@
       calDays = unitAmt > 0 ? DELAY_DEFAULT_SESSIONS : 0;
       sess = isManual ? Number(savedEntry.sessions) : calDays;
     }
+    const rawAmount = Math.round(unitAmt * sess);
+    const excluded = (blk.program === 'LTC') && isClaimExcluded(currentYear, colKey, instName);
     return {
       planName: pName,
       unitAmt,
       sessions: sess,
-      amount: Math.round(unitAmt * sess),
+      rawAmount,
+      excluded,
+      amount: excluded ? 0 : rawAmount,
       manual: isManual,
       calendarDays: calDays
     };
@@ -1472,12 +1564,15 @@
                 <span>${unitLabel}：</span>
                 <input type="text" inputmode="decimal" class="num-input sess-input" value="${escapeAttr(String(cell.sessions))}" title="${escapeAttr(tip)}" onchange="onSessionsInput(${args}, this.value)">
                 ${cell.manual ? `<span class="sess-manual no-print">手動（${defLabel} ${fmtNum(cell.calendarDays)}）</span><button type="button" class="sess-restore no-print" onclick="restoreCalendarDays(${args})">還原</button>` : ''}
+                ${isLtc ? `<label class="claim-toggle no-print ${cell.excluded ? 'is-off' : ''}" title="取消勾選＝本月不核銷此講師，金額不計入合計、所得稅彙總與長照核銷統計"><input type="checkbox" ${cell.excluded ? '' : 'checked'} onchange="onClaimToggle('${escapeAttr(instName)}', '${escapeAttr(colKey)}', this.checked)">核銷</label>` : ''}
               </div>
               <div class="cell-amt-line">
-                <strong>${escapeHtml(amtStr)}</strong>
+                ${cell.excluded
+                  ? `<strong style="color:#94a3b8; text-decoration:line-through;">${escapeHtml(fmtNum(cell.rawAmount) + ' 元')}</strong> <span class="claim-off-tag">不核銷</span>`
+                  : `<strong>${escapeHtml(amtStr)}</strong>`}
               </div>
               <div class="cell-upper-line">
-                <span>${escapeHtml(upperStr)}</span>
+                <span>${cell.excluded ? '' : escapeHtml(upperStr)}</span>
               </div>
             </div>`;
         return `<td style="min-width:185px;">${inner}</td>`;
@@ -1805,6 +1900,7 @@
     }
 
     await loadCalendarDays(false);
+    await loadClaimExclusions();
     renderAllSections();
     if (showMsg) {
       setStatus(calendarLoaded
