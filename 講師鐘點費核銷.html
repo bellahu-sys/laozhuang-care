@@ -437,6 +437,7 @@
           <button type="button" class="btn btn-outline btn-sm" onclick="resetLtcManualForCurrentView()">本表還原為行事曆天數</button>
         </div>
         <span style="font-size:0.82rem; color:#64748b;">（核銷金額 ＝ 費用 × 時數 × 課堂天數；天數預設讀取行事曆，可直接手動修改，修改後按「儲存至資料庫」）</span>
+        <div id="calDiag" style="width:100%; font-size:0.82rem; color:#9a3412; font-weight:bold;"></div>
       </div>
       <div id="ltcPeriodSheetContainer"></div>
     </div>
@@ -588,10 +589,18 @@
     return Number((calendarDays[instName] && calendarDays[instName][m]) || 0);
   }
 
+  function updateCalDiag(msg) {
+    const el = document.getElementById('calDiag');
+    if (el) el.textContent = msg || '';
+  }
+
   async function loadCalendarDays(showMsg) {
     calendarDays = {};
     calendarLoaded = false;
-    if (!supabaseClient) return;
+    if (!supabaseClient) {
+      updateCalDiag('尚未連線資料庫，無法讀取行事曆天數（暫以 1 天計，可手動修改）');
+      return;
+    }
     const adYear = currentYear + 1911;
     try {
       let all = [];
@@ -600,7 +609,7 @@
       while (true) {
         const { data, error } = await supabaseClient
           .from('course_schedules')
-          .select('course_date, plan_type, instructor_name')
+          .select('course_date, plan_type, course_name, instructor_name')
           .gte('course_date', `${adYear}-01-01`)
           .lte('course_date', `${adYear}-12-31`)
           .like('plan_type', '%長照%')
@@ -612,11 +621,27 @@
         if (!data || data.length < step) break;
         from += step;
       }
+      const masterNames = masterInstructors.map(m => m.name);
       const sets = {};
+      const unmatched = new Set();
+      let withInst = 0;
       all.forEach(r => {
-        if (!r.instructor_name || !r.course_date) return;
+        if (!r.course_date) return;
         const month = parseInt(String(r.course_date).split('-')[1], 10);
-        String(r.instructor_name).split(/[、,，;；\/\s]+/).map(x => x.trim()).filter(Boolean).forEach(nm => {
+        const names = [];
+        const raw = String(r.instructor_name || '').trim();
+        if (raw) {
+          raw.split(/[、,，;；\/\s]+/).map(x => x.trim()).filter(Boolean).forEach(tok => {
+            const hit = masterNames.find(n => n === tok) || masterNames.find(n => tok.includes(n) || (tok.length >= 2 && n.includes(tok)));
+            if (hit) names.push(hit); else unmatched.add(tok);
+          });
+        } else {
+          const cn = String(r.course_name || '');
+          const hit = masterNames.find(n => cn.includes(n));
+          if (hit) names.push(hit);
+        }
+        if (names.length) withInst++;
+        names.forEach(nm => {
           if (!sets[nm]) sets[nm] = {};
           if (!sets[nm][month]) sets[nm][month] = new Set();
           sets[nm][month].add(r.course_date);
@@ -627,10 +652,17 @@
         Object.keys(sets[nm]).forEach(m => { calendarDays[nm][m] = sets[nm][m].size; });
       });
       calendarLoaded = true;
-      if (showMsg) setStatus(`已讀取 ${currentYear} 年度行事曆長照課程天數（共 ${all.length} 筆排課）`);
+      let diag = `行事曆 ${currentYear} 年度長照排課共 ${all.length} 筆，可對應到講師 ${withInst} 筆`;
+      if (unmatched.size) diag += `；名字對不上講師名單：${[...unmatched].join('、')}`;
+      if (all.length === 0) diag = `行事曆 ${currentYear} 年度找不到「長照」排課（plan_type 需含「長照」），天數全部為 0，請手動輸入`;
+      else if (withInst === 0) diag += '（排課沒有填授課講師，所以天數為 0，請到行事曆補上講師或在此手動輸入）';
+      updateCalDiag(diag);
+      if (showMsg) setStatus(diag);
     } catch (e) {
       calendarLoaded = false;
-      setStatus('讀取行事曆天數失敗：' + (e.message || e), true);
+      const msg = '讀取行事曆天數失敗：' + (e.message || e) + '（暫以 1 天計，可手動修改）';
+      updateCalDiag(msg);
+      setStatus(msg, true);
     }
   }
 
@@ -679,7 +711,7 @@
     } else {
       const n = Number(cleaned);
       if (!Number.isFinite(n) || n < 0) {
-        alert('天數／堂數請輸入大於或等於 0 的數字');
+        setStatus('天數／堂數請輸入大於或等於 0 的數字', true);
         renderLtcPeriodView();
         renderDelayPeriodView();
         return;
@@ -816,11 +848,30 @@
   function escapeAttr(s) {
     return String(s || '').replace(/"/g, '&quot;');
   }
+  function showFloat(msg, isErr) {
+    let box = document.getElementById('floatToast');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'floatToast';
+      box.className = 'no-print';
+      box.style.cssText = 'position:fixed; left:50%; bottom:28px; transform:translateX(-50%); z-index:9999; max-width:88vw; padding:11px 18px; border-radius:8px; font-size:0.92rem; font-weight:bold; color:#fff; box-shadow:0 6px 20px rgba(0,0,0,0.25); cursor:pointer; display:none;';
+      box.onclick = () => { box.style.display = 'none'; };
+      document.body.appendChild(box);
+    }
+    box.style.background = isErr ? '#dc2626' : '#0f766e';
+    box.textContent = msg;
+    box.style.display = 'block';
+    clearTimeout(box._timer);
+    box._timer = setTimeout(() => { box.style.display = 'none'; }, isErr ? 15000 : 5000);
+  }
+
   function setStatus(msg, isErr = false) {
     const el = document.getElementById('statusText');
-    if (!el) return;
-    el.style.color = isErr ? '#dc2626' : '#0f766e';
-    el.textContent = msg;
+    if (el) {
+      el.style.color = isErr ? '#dc2626' : '#0f766e';
+      el.textContent = msg;
+    }
+    showFloat(msg, isErr);
   }
   function showToast(id, msg) {
     const el = document.getElementById(id);
@@ -1342,7 +1393,7 @@
             <div style="display:flex; flex-direction:column; gap:4px; line-height:1.45;">
               <div class="sess-row">
                 <span>${unitLabel}：</span>
-                <input type="text" inputmode="decimal" class="num-input sess-input" value="${escapeAttr(cell.sessions)}" title="${escapeAttr(tip)}" onchange="onSessionsInput(${args}, this.value)">
+                <input type="text" inputmode="decimal" class="num-input sess-input" value="${escapeAttr(String(cell.sessions))}" title="${escapeAttr(tip)}" onchange="onSessionsInput(${args}, this.value)">
                 ${cell.manual ? `<span class="sess-manual no-print">手動（${defLabel} ${fmtNum(cell.calendarDays)}）</span><button type="button" class="sess-restore no-print" onclick="restoreCalendarDays(${args})">還原</button>` : ''}
               </div>
               <div style="text-align:right; font-size:0.9rem;"><strong>${fmtNum(cell.amount)}</strong> 元</div>
@@ -1647,7 +1698,6 @@
 
     if (!supabaseClient) {
       setStatus('尚未連線至 Supabase 資料庫，請確認 config.js 設定', true);
-      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
       return;
     }
 
@@ -1721,15 +1771,13 @@
 
       if (sessionsColumnMissing) {
         const msg = '核銷金額已儲存，但資料表缺少 sessions／sessions_manual 欄位，手動修改的天數無法保存。請先在 Supabase SQL Editor 執行：\n\nalter table instructor_reimburse_claims add column if not exists sessions numeric, add column if not exists sessions_manual boolean default false;';
-        setStatus('已儲存金額，但手動天數未保存（缺少欄位）', true);
-        alert(msg);
+        setStatus('已儲存金額，但手動天數未保存：資料表缺少 sessions、sessions_manual 欄位，請先執行新增欄位的 SQL', true);
       } else {
         setStatus(`已直接儲存 ${currentYear} 年度鐘點費基準、核銷金額與手動天數至資料庫`);
-        alert(`已直接儲存 ${currentYear} 年度鐘點費基準、核銷金額與手動天數至資料庫！`);
       }
     } catch (e) {
       setStatus('儲存至資料庫失敗：' + (e.message || e), true);
-      alert('儲存失敗：' + (e.message || e));
+
     }
   }
 
