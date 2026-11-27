@@ -546,7 +546,7 @@
     try {
       const [vRes, iRes] = await Promise.all([
         supabaseClient.from('ltc_voucher_details').select('*').order('day', { ascending: true }),
-        supabaseClient.from('instructors').select('name').order('id', { ascending: true })
+        supabaseClient.from('instructors').select('id, staff_number, name').order('staff_number', { ascending: true }).order('id', { ascending: true })
       ]);
 
       if (!vRes.error && Array.isArray(vRes.data)) {
@@ -856,30 +856,134 @@
     };
   }
 
+  const LTC_SEED_RATES = {
+    '林熙鈴': { mode: 'per_hour', rate: 1000, hours: 1 },
+    '張國堂': { mode: 'per_hour', rate: 2000, hours: 1 },
+    '鄧美續': { mode: 'per_hour', rate: 1600, hours: 1 },
+    '蔡牡連': { mode: 'per_hour', rate: 1000, hours: 1 },
+    '黃仲慧': { mode: 'per_hour', rate: 1000, hours: 1 },
+    '吳貴英': { mode: 'none', rate: '', hours: '' },
+    '詹細珍': { mode: 'none', rate: '', hours: '' },
+    '詹益誠': { mode: 'none', rate: '', hours: '' },
+  };
+
+  function ltcUnitAmount(rule) {
+    if (!rule || rule.mode === 'none') return 0;
+    const r = Number(rule.rate || 0);
+    const h = (rule.hours !== '' && rule.hours !== null && rule.hours !== undefined && Number(rule.hours) > 0) ? Number(rule.hours) : 1;
+    return Math.round(r * h);
+  }
+
+  // 與「講師鐘點費核銷」同一套算法：長照鐘點費基準（費用 × 時數）× 課堂天數（行事曆；手動修改天數優先）
   async function fetchFeeSource(yr, m) {
     if (!supabaseClient) {
-      return { ok: false, error: '尚未連線雲端資料庫，無法讀取講師鐘點費核銷', list: [], total: 0 };
+      return { ok: false, error: '尚未連線雲端資料庫，無法計算講師費', list: [], total: 0 };
     }
+    const yrNum = parseInt(yr, 10) || 115;
+    const adYear = yrNum + 1911;
+    const mm = String(m).padStart(2, '0');
+    const scope = 'M' + mm;
+    const lastDay = new Date(adYear, m, 0).getDate();
     try {
-      const { data, error } = await supabaseClient
-        .from('instructor_reimburse_claims')
-        .select('instructor_name, amount, col_key, program_type')
-        .eq('roc_year', parseInt(yr, 10) || 115)
-        .eq('program_type', 'LTC')
-        .in('col_key', [`${m}月講師`, `${m}月`]);
-      if (error) return { ok: false, error: error.message || String(error), list: [], total: 0 };
-      const byName = new Map();
-      (data || []).forEach(r => {
-        const name = String(r.instructor_name || '').trim();
-        const amt = Math.round(Number(r.amount) || 0);
-        if (!name || amt === 0) return;
-        byName.set(name, (byName.get(name) || 0) + amt);
+      // 1. 費率基準（只取「長照課程」）
+      const yearRates = JSON.parse(JSON.stringify(LTC_SEED_RATES));
+      const monthRates = {};
+      const { data: rateRows, error: rErr } = await supabaseClient.from('instructor_reimburse_rate_configs').select('*');
+      if (rErr) throw rErr;
+      (rateRows || []).forEach(row => {
+        if (row.roc_year !== undefined && row.roc_year !== null && Number(row.roc_year) !== yrNum) return;
+        const sc = String(row.scope_key || 'YEAR').trim() || 'YEAR';
+        const inst = String(row.instructor_name || '').trim();
+        let plan = String(row.plan_name || '').trim();
+        if (plan === '關懷課程') plan = '長照課程';
+        if (!inst || plan !== '長照課程') return;
+        const isNone = row.pay_mode === 'none' || (row.rate === null && row.hours === null);
+        const rule = isNone
+          ? { mode: 'none', rate: '', hours: '' }
+          : { mode: 'per_hour', rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '', hours: (row.hours !== null && row.hours !== undefined && Number(row.hours) > 0) ? Number(row.hours) : 1 };
+        if (sc === 'YEAR') yearRates[inst] = rule;
+        else { if (!monthRates[sc]) monthRates[sc] = {}; monthRates[sc][inst] = rule; }
       });
-      const list = [...byName.entries()].map(([name, amount]) => ({ name, amount }))
-        .sort((a, b) => {
-          const ia = cachedInstructorNames.indexOf(a.name), ib = cachedInstructorNames.indexOf(b.name);
-          return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.name.localeCompare(b.name, 'zh-Hant');
+      const unitOf = (inst) => {
+        const rule = (monthRates[scope] && monthRates[scope][inst]) || yearRates[inst] || { mode: 'none', rate: '', hours: '' };
+        return ltcUnitAmount(rule);
+      };
+
+      // 2. 行事曆課堂天數（長照計畫；關懷計畫課程只計有長照費率的講師）
+      const masterNames = [...new Set([...cachedInstructorNames, ...Object.keys(LTC_SEED_RATES)])];
+      let all = [];
+      let from = 0;
+      const step = 1000;
+      while (true) {
+        const { data, error } = await supabaseClient
+          .from('course_schedules')
+          .select('course_date, plan_type, course_name, instructor_name')
+          .gte('course_date', `${adYear}-${mm}-01`)
+          .lte('course_date', `${adYear}-${mm}-${String(lastDay).padStart(2, '0')}`)
+          .order('course_date', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + step - 1);
+        if (error) throw error;
+        all = all.concat(data || []);
+        if (!data || data.length < step) break;
+        from += step;
+      }
+      const daySets = {};
+      all.forEach(r => {
+        if (!r.course_date) return;
+        const pType = String(r.plan_type || '').trim();
+        if (pType === '提醒') return;
+        const isLtcPlan = pType.includes('長照');
+        const isCarePlan = pType === '關懷';
+        if (!isLtcPlan && !isCarePlan) return;
+        const names = [];
+        const raw = String(r.instructor_name || '').trim();
+        if (raw) {
+          raw.split(/[、,，;；\/\s]+/).map(x => x.trim()).filter(Boolean).forEach(tok => {
+            const hit = masterNames.find(n => n === tok) || masterNames.find(n => tok.includes(n) || (tok.length >= 2 && n.includes(tok)));
+            if (hit) names.push(hit);
+          });
+        } else {
+          const cn = String(r.course_name || '');
+          const hit = masterNames.find(n => cn.includes(n));
+          if (hit) names.push(hit);
+        }
+        names.forEach(nm => {
+          if (isCarePlan && !isLtcPlan && unitOf(nm) <= 0) return;
+          if (!daySets[nm]) daySets[nm] = new Set();
+          daySets[nm].add(r.course_date);
         });
+      });
+
+      // 3. 在「講師鐘點費核銷」手動修改並儲存過的天數（優先於行事曆）
+      const manual = {};
+      try {
+        const { data: cRows } = await supabaseClient
+          .from('instructor_reimburse_claims')
+          .select('*')
+          .eq('roc_year', yrNum)
+          .eq('program_type', 'LTC')
+          .in('col_key', [`${m}月講師`, `${m}月`]);
+        (cRows || []).forEach(r => {
+          const nm = String(r.instructor_name || '').trim();
+          if (nm && r.sessions_manual === true && r.sessions !== null && r.sessions !== undefined) manual[nm] = Number(r.sessions) || 0;
+        });
+      } catch (e) {}
+
+      // 4. 計算：金額 ＝ 單堂（費用 × 時數）× 天數
+      const nameSet = new Set([...masterNames, ...Object.keys(daySets), ...Object.keys(manual)]);
+      const list = [];
+      nameSet.forEach(name => {
+        const unit = unitOf(name);
+        const isManual = Object.prototype.hasOwnProperty.call(manual, name);
+        const days = isManual ? manual[name] : (daySets[name] ? daySets[name].size : 0);
+        const amount = Math.round(unit * days);
+        if (amount !== 0) list.push({ name, amount, days, unit, manual: isManual });
+      });
+      list.sort((a, b) => {
+        const ia = cachedInstructorNames.indexOf(a.name), ib = cachedInstructorNames.indexOf(b.name);
+        return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.name.localeCompare(b.name, 'zh-Hant');
+      });
       return { ok: true, error: '', list, total: list.reduce((acc, x) => acc + x.amount, 0) };
     } catch (e) {
       return { ok: false, error: e.message || String(e), list: [], total: 0 };
@@ -1030,7 +1134,7 @@
       if (!fee.ok) {
         state = `<div class="src-state src-err">讀取失敗：${escHtml(fee.error)}</div>`;
       } else if (fee.list.length === 0) {
-        state = `<div class="src-state src-warn">「講師鐘點費核銷」尚無 ${yr} 年 ${m} 月已儲存的長照核銷金額。請到該頁確認天數後按「儲存至資料庫」</div>`;
+        state = `<div class="src-state src-warn">依「講師鐘點費核銷」的費率與行事曆天數，${yr} 年 ${m} 月沒有算出長照講師費（行事曆沒有對應的長照授課，或費率未設定）</div>`;
       } else if (manualFee > 0 && sheetFee === 0) {
         state = `<div class="src-state src-warn">本月已有 ${manualFee} 列手動輸入的講師費，為避免重複沒有自動覆蓋</div>`;
       } else if (sheetFee === fee.total) {
@@ -1039,8 +1143,8 @@
         state = `<div class="src-state src-err">明細表講師費 ${fmt(sheetFee)} 與來源 ${fmt(fee.total)} 不一致，請按「重新讀取來源資料」</div>`;
       }
       gBody = `
-        <div class="src-line">來源：講師鐘點費核銷（長照）${fee.list.length} 位，合計 <strong>${fmt(fee.total)}</strong> 元</div>
-        ${fee.list.length ? `<div class="src-detail">${fee.list.map(x => `${escHtml(x.name)}：${fmt(x.amount)}`).join('｜')}</div>` : ''}
+        <div class="src-line">來源：講師鐘點費核銷（長照）${fee.list.length} 位，合計 <strong>${fmt(fee.total)}</strong> 元（費用 × 時數 × 課堂天數）</div>
+        ${fee.list.length ? `<div class="src-detail">${fee.list.map(x => `${escHtml(x.name)}：${fmt(x.unit)} × ${x.days} 天 = ${fmt(x.amount)}${x.manual ? '（手動天數）' : ''}`).join('｜')}</div>` : ''}
         ${state}`;
     }
     const replaceFeeBtn = (fee && fee.ok && manualFee > 0 && sheetFee === 0 && fee.list.length > 0)
