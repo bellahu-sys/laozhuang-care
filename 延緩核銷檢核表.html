@@ -278,6 +278,7 @@
       border-radius: 8px;
       background: #fff;
     }
+    .done-date { font-size: 0.74rem; color: #0f766e; font-weight: normal; margin-top: 2px; }
     table.mirror-chk-table {
       width: 100%;
       border-collapse: collapse;
@@ -450,7 +451,7 @@
       <div>
         <h1>延緩核銷檢核表（預防及延緩失能服務計畫）</h1>
         <p class="sub-note">
-          依期別獨立保存檢核進度（不走本機暫存，勾選與修改直接寫入雲端資料庫）。將「事前影印保留」、「課前／課後即時辦理」與「政府規定核銷排列順序」分階段整理，避免漏件或裝訂順序錯誤。
+          依期別獨立保存檢核進度（不走本機暫存，勾選與修改直接寫入雲端資料庫）。已完成的項目打勾即可，系統會記下完成日期，隔很久回來也不會重複做。
         </p>
       </div>
       <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
@@ -495,74 +496,11 @@
   <!-- 依圖雙欄對照檢核總表（可先印好影本 vs 結束才能列印，即時寫入雲端資料庫） -->
   <div class="card excel-mirror-card">
     <h2>
-      <span id="mirrorTableHeading">一、115 年 延緩第 1 期 — 送件文件快速檢核總表（勾選即自動存檔至雲端）</span>
-      <span style="font-size:0.82rem; color:#475569; font-weight:normal;">已完成項目請直接打勾，切換期別或重新整理皆會保留進度</span>
+      <span id="mirrorTableHeading">115 年 延緩第 1 期 — 送件文件檢核表（勾選即自動存檔至雲端）</span>
+      <span style="font-size:0.82rem; color:#475569; font-weight:normal;">已完成的請直接打勾，會記下完成日期；切換期別或重新整理皆會保留進度</span>
     </h2>
     <div class="mirror-table-wrap">
       <table class="mirror-chk-table" id="mirrorChecklistTable"></table>
-    </div>
-  </div>
-
-  <!-- 主檢核區：雙欄配置 -->
-  <div class="main-layout">
-    <!-- 左欄：階段一（事前影印保留）＋ 階段二（課前／課後即時辦理） -->
-    <div>
-      <!-- 階段一 -->
-      <div class="stage-card pre-copy">
-        <div class="stage-header">
-          <div>
-            <div class="stage-title">一、事前預備與影印留存（先印好放資料夾）</div>
-          </div>
-          <span class="stage-badge badge-teal">平時收據與封面先備妥</span>
-        </div>
-        <div class="stage-desc">
-          收據與封面並非等結案核銷時才產生，平時取得正本即先影印留存於資料夾（送件共 3 份：<strong>縣府 1 份正本、社區自留 1 份、淑貞 1 份</strong>）。
-        </div>
-        <div class="chk-list" id="list_pre_copy"></div>
-        <div class="add-item-bar no-print">
-          <input type="text" id="newInput_pre_copy" placeholder="新增事前預備／影印項目..." style="flex:1; min-width:160px;">
-          <button type="button" class="btn btn-primary" onclick="addCustomItem('pre_copy')">＋ 新增</button>
-        </div>
-      </div>
-
-      <!-- 階段二 -->
-      <div class="stage-card class-time">
-        <div class="stage-header">
-          <div>
-            <div class="stage-title">二、課前／課後即時處理項目</div>
-          </div>
-          <span class="stage-badge badge-amber">開課前後即時完成</span>
-        </div>
-        <div class="stage-desc">
-          須於每期開課前與結訓後即時完成之評估與品質指標表單。
-        </div>
-        <div class="chk-list" id="list_class_time"></div>
-        <div class="add-item-bar no-print">
-          <input type="text" id="newInput_class_time" placeholder="新增課前／課後項目..." style="flex:1; min-width:160px;">
-          <button type="button" class="btn btn-amber" onclick="addCustomItem('class_time')">＋ 新增</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 右欄：階段三（政府核銷規定排列順序檢核） -->
-    <div>
-      <div class="stage-card official-order">
-        <div class="stage-header">
-          <div>
-            <div class="stage-title" id="officialStageTitle">三、115 年 延緩第 1 期 — 政府規定核銷文件排列順序</div>
-          </div>
-          <span class="stage-badge badge-blue">依序排列裝訂（結束後列印）</span>
-        </div>
-        <div class="stage-desc">
-          課程結束且金額核對無誤後列印（金額可提前計算），並<strong>嚴格依照下列編號順序由上往下排列裝訂</strong>：
-        </div>
-        <div class="chk-list" id="list_official_order"></div>
-        <div class="add-item-bar no-print">
-          <input type="text" id="newSeq_official_order" placeholder="順序(如 11)" style="width:95px;">
-          <input type="text" id="newInput_official_order" placeholder="新增送件核銷文件項目..." style="flex:1; min-width:160px;">
-          <button type="button" class="btn btn-delay" onclick="addCustomItem('official_order')">＋ 新增</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -815,9 +753,7 @@
         stage: 'official_order',
         seq: '6',
         title: '6. 支出憑證黏貼存單正本憑證',
-        sub: '依序黏貼：
-• 6-1 課程材料費收據（正本）
-• 6-2 講師領據（正本，日期寫課程最後一天）',
+        sub: '依序黏貼：\n• 6-1 課程材料費收據（正本）\n• 6-2 講師領據（正本，日期寫課程最後一天）',
         checked: false,
         note: ''
       },
@@ -995,6 +931,12 @@
     const it = checklistItems.find(x => x.id === itemId);
     if (!it) return;
     it.checked = Boolean(isChecked);
+    if (it.checked) {
+      const d = new Date();
+      it.doneAt = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    } else {
+      delete it.doneAt;
+    }
     renderAll();
     scheduleAutoSave();
   }
@@ -1104,22 +1046,26 @@
     }).join('');
   }
 
+  const MIRROR_LEFT_IDS = ['pre_1', 'pre_2', 'pre_3', 'pre_extra', 'pre_4', 'pre_5'];
+  const MIRROR_RIGHT_IDS = ['ord_0', 'ord_1', 'ord_2', 'ord_3', 'ord_4', 'ord_5', 'ord_6', 'ord_7', 'ord_8', 'ord_9', 'ord_10', 'ord_11'];
+
+  function mirrorCounts() {
+    const byId = (id) => checklistItems.find(x => x.id === id);
+    const leftItems = MIRROR_LEFT_IDS.map(byId).filter(it => it && (it.id !== 'pre_extra' || String(it.title || '').trim()));
+    const rightItems = MIRROR_RIGHT_IDS.map(byId).filter(Boolean);
+    return {
+      leftDone: leftItems.filter(x => x.checked).length, leftTotal: leftItems.length,
+      rightDone: rightItems.filter(x => x.checked).length, rightTotal: rightItems.length
+    };
+  }
+
   function renderProgressSummary() {
     const grid = document.getElementById('progressGrid');
     if (!grid) return;
-
-    const preList = checklistItems.filter(x => x.stage === 'pre_copy');
-    const clsList = checklistItems.filter(x => x.stage === 'class_time');
-    const ordList = checklistItems.filter(x => x.stage === 'official_order');
-
-    const preDone = preList.filter(x => x.checked).length;
-    const clsDone = clsList.filter(x => x.checked).length;
-    const ordDone = ordList.filter(x => x.checked).length;
-
-    const totalAll = checklistItems.length;
-    const doneAll = preDone + clsDone + ordDone;
+    const c = mirrorCounts();
+    const doneAll = c.leftDone + c.rightDone;
+    const totalAll = c.leftTotal + c.rightTotal;
     const pct = totalAll > 0 ? Math.round((doneAll / totalAll) * 100) : 0;
-
     grid.innerHTML = `
       <div class="stat-box blue">
         <div class="stat-lbl">目前檢核期別</div>
@@ -1127,18 +1073,13 @@
         <div class="stat-sub">共 3 份：縣府正本 1、社區 1、淑貞 1</div>
       </div>
       <div class="stat-box teal">
-        <div class="stat-lbl">一、事前影印與預備</div>
-        <div class="stat-val">${preDone} / ${preList.length} 項</div>
+        <div class="stat-lbl">可先印好影本（暫存於資料夾）</div>
+        <div class="stat-val">${c.leftDone} / ${c.leftTotal} 項</div>
         <div class="stat-sub">核定函、收據影本、信封封面</div>
       </div>
-      <div class="stat-box amber">
-        <div class="stat-lbl">二、課前／課後即時評估</div>
-        <div class="stat-val">${clsDone} / ${clsList.length} 項</div>
-        <div class="stat-sub">前測、品質指標、後測</div>
-      </div>
       <div class="stat-box green">
-        <div class="stat-lbl">三、政府核銷順序與總進度</div>
-        <div class="stat-val">${ordDone} / ${ordList.length} 項（總計 ${pct}%）</div>
+        <div class="stat-lbl">結束才能列印（依序裝訂）</div>
+        <div class="stat-val">${c.rightDone} / ${c.rightTotal} 項（總計 ${pct}%）</div>
         <div class="stat-sub">依 1～10 號規定順序裝訂送件</div>
       </div>
     `;
@@ -1169,7 +1110,7 @@
 
     const heading = document.getElementById('mirrorTableHeading');
     if (heading) {
-      heading.textContent = `一、${currentYear} 年 延緩第 ${currentTerm} 期 — 送件文件快速檢核總表（勾選即自動存檔至雲端）`;
+      heading.textContent = `${currentYear} 年 延緩第 ${currentTerm} 期 — 送件文件檢核表（勾選即自動存檔至雲端）`;
     }
 
     const getIt = (id) => checklistItems.find(x => x.id === id) || { id, title: '', checked: false };
@@ -1212,11 +1153,12 @@
         const lContent = lSpec.editable
           ? `<input type="text" class="mirror-inline-inp" value="${escAttr(lItem.title || '')}" placeholder="（預留欄位，可自由輸入其他影本項目）" onchange="onItemTitleChange('${lSpec.id}', this.value)">`
           : escHtml(lSpec.label);
+        const lDate = (lItem.checked && lItem.doneAt) ? `<div class="done-date">完成於 ${escHtml(lItem.doneAt)}</div>` : '';
         leftCellsHtml = `
           <td class="chk-cell">
             <input type="checkbox" ${lItem.checked ? 'checked' : ''} onchange="onToggleCheck('${lSpec.id}', this.checked)">
           </td>
-          <td class="item-cell ${lDoneCls}">${lContent}</td>
+          <td class="item-cell ${lDoneCls}">${lContent}${lDate}</td>
         `;
       } else if (i === 6) {
         leftCellsHtml = `<td colspan="2" rowspan="5" class="blank-span"></td>`;
@@ -1230,7 +1172,7 @@
           <td class="chk-cell">
             <input type="checkbox" ${rItem.checked ? 'checked' : ''} onchange="onToggleCheck('${rSpec.id}', this.checked)">
           </td>
-          <td class="item-cell ${rDoneCls}">${rSpec.html}</td>
+          <td class="item-cell ${rDoneCls}">${rSpec.html}${(rItem.checked && rItem.doneAt) ? `<div class="done-date">完成於 ${escHtml(rItem.doneAt)}</div>` : ''}</td>
         </tr>
       `;
     }
@@ -1249,14 +1191,8 @@
   }
 
   function renderAll() {
-    document.getElementById('officialStageTitle').textContent =
-      `三、${currentYear} 年 延緩第 ${currentTerm} 期 — 政府規定核銷文件排列順序`;
-
     renderProgressSummary();
     renderMirrorChecklistTable();
-    renderStageList('pre_copy', 'list_pre_copy');
-    renderStageList('class_time', 'list_class_time');
-    renderStageList('official_order', 'list_official_order');
 
     const ta = document.getElementById('importantNotesTextarea');
     if (ta && document.activeElement !== ta) {
@@ -1265,20 +1201,21 @@
   }
 
   function copyChecklistSummary() {
-    const lines = [`【${currentYear}年 延緩第${currentTerm}期 核銷檢核表】`];
-    const stageNames = {
-      pre_copy: '一、事前預備與影印留存',
-      class_time: '二、課前／課後即時處理',
-      official_order: '三、政府規定核銷文件排列順序'
-    };
-    ['pre_copy', 'class_time', 'official_order'].forEach(st => {
-      lines.push('');
-      lines.push(stageNames[st]);
-      checklistItems.filter(x => x.stage === st).forEach(it => {
-        const mark = it.checked ? '[✓]' : '[ ]';
-        const noteStr = it.note ? `（備註：${it.note}）` : '';
-        lines.push(`${mark} ${it.title}${noteStr}`);
-      });
+    const byId = (id) => checklistItems.find(x => x.id === id);
+    const leftLabels = { pre_1: '核定函', pre_2: '6.1 材料費影本', pre_3: '6.2 領款收據-講師影本', pre_extra: '', pre_4: '郵寄標籤+信封', pre_5: '裝訂封面' };
+    const lines = [`【${currentYear}年 延緩第${currentTerm}期 核銷檢核表】`, '', '可先印好影本（暫存於資料夾）'];
+    MIRROR_LEFT_IDS.forEach(id => {
+      const it = byId(id);
+      if (!it) return;
+      const title = id === 'pre_extra' ? String(it.title || '').trim() : leftLabels[id];
+      if (!title) return;
+      lines.push(`${it.checked ? '[✓]' : '[ ]'} ${title}${it.checked && it.doneAt ? `（${it.doneAt} 完成）` : ''}`);
+    });
+    lines.push('', '結束才能列印（金額可提前算好）');
+    MIRROR_RIGHT_IDS.forEach(id => {
+      const it = byId(id);
+      if (!it) return;
+      lines.push(`${it.checked ? '[✓]' : '[ ]'} ${String(it.title || '').replace(/\n/g, ' ')}${it.checked && it.doneAt ? `（${it.doneAt} 完成）` : ''}`);
     });
     navigator.clipboard?.writeText(lines.join('\n')).then(() => {
       alert('已複製本期延緩核銷檢核進度！');
