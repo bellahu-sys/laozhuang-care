@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>延緩核銷統計 ｜ 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --accent: #0284c7;
+      --bg: #f1f5f9;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1180px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 6px 0; font-size: 1.4rem; color: var(--primary); }
+    .sub-note { font-size: 0.9rem; color: #475569; margin: 0; }
+    h2 {
+      margin: 0 0 14px 0; font-size: 1.12rem; color: var(--primary);
+      border-bottom: 2px solid var(--primary); padding-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+
+    .toolbar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      background: #f8fafc; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    input[type="text"], input[type="number"], select {
+      padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.94rem; background: #fff;
+    }
+    input:focus, select:focus { outline: 2px solid #99f6e4; border-color: var(--primary); }
+
+    button.btn {
+      padding: 8px 15px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.92rem; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: var(--accent); color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
+    .btn-teal { background: #0d9488; color: #fff; }
+    .btn-teal:hover { background: #0f766e; }
+    .btn-gray { background: #64748b; color: #fff; }
+    .btn-gray:hover { background: #475569; }
+    .btn-danger { background: #dc2626; color: #fff; padding: 4px 9px; font-size: 0.82rem; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    .voucher-sheet-wrap {
+      border: 1px solid #cbd5e1; border-radius: 8px; padding: 20px;
+      background: #fff; overflow-x: auto;
+    }
+    .voucher-header-org {
+      text-align: center; font-weight: bold; font-size: 1.18rem; color: #000;
+      margin-bottom: 4px; letter-spacing: 1px;
+    }
+    .voucher-header-sub {
+      text-align: center; font-size: 1.05rem; color: #000; margin-bottom: 12px;
+    }
+    .voucher-meta-row {
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+      font-size: 0.96rem; color: #000; margin-bottom: 6px;
+    }
+    .voucher-meta-row .red-txt { color: #dc2626; font-weight: bold; }
+    .voucher-meta-row .blue-txt { color: #0369a1; font-weight: bold; }
+
+    table.voucher-table {
+      width: 100%; border-collapse: collapse; min-width: 820px;
+      color: #000; font-size: 0.95rem;
+    }
+    table.voucher-table th, table.voucher-table td {
+      border: 1.5px solid #000; padding: 5px 7px;
+    }
+    table.voucher-table th {
+      background: #ffffff; text-align: center; font-weight: normal;
+    }
+    .th-red-hint { color: #dc2626; font-size: 0.82rem; display: block; }
+    .td-center { text-align: center; }
+    .td-right { text-align: right; font-variant-numeric: tabular-nums; }
+    .td-sub-label { text-align: right; font-weight: bold; }
+    .highlight-yellow { background: #ffff00; padding: 1px 6px; font-weight: bold; }
+
+    table.voucher-table input.cell-edit {
+      width: 100%; border: 1px solid #cbd5e1; border-radius: 3px;
+      padding: 4px 6px; font-size: 0.93rem; background: #fffef7; color: #000;
+      display: block;
+    }
+    table.voucher-table input.cell-edit:focus {
+      outline: 2px solid #0284c7; border-color: #0284c7; background: #f0f9ff;
+    }
+    table.voucher-table input.cell-num {
+      text-align: right; font-variant-numeric: tabular-nums; font-weight: bold;
+    }
+    table.voucher-table input.cell-ctr {
+      text-align: center;
+    }
+
+    .voucher-notes {
+      margin-top: 10px; font-size: 0.92rem; color: #000; line-height: 1.65;
+    }
+    .voucher-notes .red-note { color: #dc2626; font-weight: bold; }
+
+    #syncStatus { font-size: 0.85rem; font-weight: bold; color: #0f766e; }
+
+    .fee-pick-list { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 6px; }
+    .fee-pick { display: inline-flex; align-items: center; gap: 5px; font-size: 0.85rem; padding: 4px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; cursor: pointer; }
+    .fee-pick.is-on { border-color: #0d9488; background: #f0fdfa; }
+    .fee-pick .fp-sub { color: #64748b; font-size: 0.78rem; }
+    table.voucher-table input.cell-edit[readonly] { background: #f1f5f9; color: #1e293b; border-color: #e2e8f0; cursor: default; }
+    .auto-tag { font-size: 0.78rem; font-weight: bold; color: #0f766e; background: #ccfbf1; border-radius: 4px; padding: 2px 7px; white-space: nowrap; }
+    .src-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .src-card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 14px; background: #fff; }
+    .src-card h3 { margin: 0 0 6px 0; font-size: 1rem; color: var(--primary); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .src-line { font-size: 0.88rem; color: #334155; line-height: 1.6; }
+    .src-detail { font-size: 0.82rem; color: #64748b; margin-top: 2px; line-height: 1.55; }
+    .src-state { margin-top: 6px; font-size: 0.88rem; font-weight: bold; }
+    .src-ok { color: #0f766e; } .src-warn { color: #b45309; } .src-err { color: #dc2626; }
+    .src-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+    .src-actions a { font-size: 0.85rem; color: #0369a1; font-weight: bold; }
+    button.btn-sm { padding: 5px 11px; font-size: 0.84rem; }
+    @media print {
+      nav.topbar, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card, .voucher-sheet-wrap { border: none; box-shadow: none; padding: 0; }
+    }
+
+    .section-subnav {
+      background: #fff1f2;
+      border-bottom: 1px solid #fecdd3;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(190, 18, 60, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: #9f1239;
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #fecdd3;
+      background: #ffffff;
+      color: #9f1239;
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #ffe4e6;
+      border-color: #be123c;
+    }
+    .section-subnav a.active {
+      background: #be123c;
+      color: #ffffff;
+      border-color: #be123c;
+      box-shadow: 0 2px 6px rgba(190, 18, 60, 0.22);
+    }
+    @media print { .section-subnav { display: none !important; } }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar no-print">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="食材費收據管理.html">食材費計算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+        <a href="延緩核銷統計.html">3. 延緩核銷統計</a>
+      </div>
+    </div>
+  </div>
+</nav>
+<!-- 常駐長照與延緩核銷快速切換列 -->
+<div class="section-subnav no-print" aria-label="長照與延緩核銷快速切換">
+  <span class="section-subnav-label">長照與延緩核銷快速切換：</span>
+  <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+  <a href="長照核銷食材費.html">長照核銷食材費</a>
+  <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
+  <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+  <a href="延緩核銷統計.html" class="active">3. 延緩核銷統計</a>
+</div>
+
+<div class="container">
+  <div class="card no-print">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>3. 延緩核銷統計</h1>
+        <p class="sub-note">接受衛生福利部補助經費支出憑證明細表（預防及延緩失能服務計畫）— 自動連動「講師鐘點費核銷（延緩 1–3 期）」與材料費收據，依憑證編號順序分列「講師費小計」與「材料費小計」，支援一鍵複製貼上 Word 核銷文件。</p>
+      </div>
+      <div id="syncStatus">雲端同步準備中...</div>
+    </div>
+  </div>
+
+  <div class="card no-print">
+    <h2>
+      <span>一、延緩期別選擇與講師費／材料費合併工具</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-gray" onclick="clearCurrentTerm()">重設本期（清除後重新帶入來源）</button>
+      </div>
+    </h2>
+
+    <div class="toolbar">
+      <label><strong>會計年度（民國年）：</strong>
+        <select id="rocYearSelect" onchange="onYearTermChange()">
+          <option value="115">115 年</option>
+          <option value="116">116 年</option>
+          <option value="117">117 年</option>
+        </select>
+      </label>
+      <label><strong>延緩期別：</strong>
+        <select id="termSelect" onchange="onYearTermChange()">
+          <option value="1">延緩第 1 期</option>
+          <option value="2">延緩第 2 期</option>
+          <option value="3">延緩第 3 期</option>
+        </select>
+      </label>
+      <label><strong>補助計畫編號：</strong>
+        <input type="text" id="planCodeInput" value="11500K0201" style="width:140px;" oninput="renderSheet()">
+      </label>
+      <label><strong>計畫名稱：</strong>
+        <input type="text" id="planNameInput" value="115年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫" style="width:360px;" oninput="renderSheet()">
+      </label>
+    </div>
+
+    <div class="src-grid" id="sourcePanel"></div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-teal" onclick="syncSources({ force: true })">重新讀取講師鐘點費來源</button>
+      <button type="button" class="btn btn-primary" onclick="addMaterialRow()">＋ 新增一列材料費（憑證編號 2）</button>
+      <button type="button" class="btn btn-gray" onclick="addBlankRow()">＋ 新增一列空白明細</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="no-print">
+      <span id="sheetHeading">二、115 年 延緩第 1 期接受衛生福利部補助經費支出憑證明細表</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-blue" onclick="copyOfficialTable()">一鍵複製明細表（貼上 Word 核銷文件）</button>
+        <button type="button" class="btn btn-gray" onclick="window.print()">列印明細表</button>
+      </div>
+    </h2>
+
+    <div class="voucher-sheet-wrap" id="officialCopyArea">
+      <div class="voucher-header-org">苗栗縣卓蘭鎮老庄社區發展協會</div>
+      <div class="voucher-header-sub">接受衛生福利部補助經費支出憑證明細表</div>
+      <div class="voucher-meta-row">
+        <span>會計年度：<span class="red-txt" id="vYear">115</span></span>
+        <span>補助計畫編號：<span class="blue-txt" id="vPlanCode">11500K0201</span></span>
+      </div>
+      <div class="voucher-meta-row">
+        <span>補助計畫名稱：<span id="vPlanName">115年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫</span></span>
+      </div>
+
+      <table class="voucher-table" id="voucherTable">
+        <thead>
+          <tr>
+            <th colspan="3" style="width:15%;">支出日期</th>
+            <th rowspan="2" style="width:31%;">摘要</th>
+            <th rowspan="2" style="width:10%;">支出憑<br>證編號</th>
+            <th colspan="3" style="width:34%;">金　　　額（新臺幣元）</th>
+            <th rowspan="2" class="no-print" style="width:10%;">操作</th>
+          </tr>
+          <tr>
+            <th style="width:5%;">年</th>
+            <th style="width:5%;">月</th>
+            <th style="width:5%;">日</th>
+            <th style="width:11.5%;">合計<span class="th-red-hint">(實際支出金額)</span></th>
+            <th style="width:11%;">自籌<span class="th-red-hint">(不可空白)</span></th>
+            <th style="width:11.5%;">補助<span class="th-red-hint">(申請補助金額)</span></th>
+          </tr>
+        </thead>
+        <tbody id="voucherTbody"></tbody>
+      </table>
+
+      <div class="voucher-notes">
+        <div>填表說明：</div>
+        <div>1. <strong>一張憑證填寫一列。摘要填寫：收據之用途別(如：食材費、活動材料費、文具材料費)</strong></div>
+        <div class="red-note">2. 請依支出憑證編號順序填列，並依補助項目分類列計金額（小計），俾利查核。</div>
+        <div>3. 如接受二個以上政府機關補助者，應列明各機關補助項目及金額(並填列於自籌欄位)。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY_DELAY_VOUCHERS = 'laozhuang_delay_vouchers_v1';
+  const FEE_EXCLUDE_KEY = 'laozhuang_delay_fee_excluded_v1';
+
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
+  let allRows = [];
+  let cachedInstructorNames = ['林熙鈴', '張國堂', '鄧美續', '蔡牡連', '黃仲慧', '吳佩珊'];
+  let cloudSaveTimer = null;
+
+  (function initCurrentYear() {
+    const today = new Date();
+    const rocY = String(today.getFullYear() - 1911);
+    const ySel = document.getElementById('rocYearSelect');
+    if ([...ySel.options].some(o => o.value === rocY)) ySel.value = rocY;
+  })();
+
+  function fmt(num) { return Math.round(Number(num) || 0).toLocaleString('en-US'); }
+  function parseNum(v) {
+    if (v === '' || v === null || v === undefined) return 0;
+    const n = parseFloat(String(v).replace(/[,，\s$元]/g, ''));
+    return Number.isFinite(n) ? Math.round(n) : 0;
+  }
+  function getSelectedYear() {
+    return String(document.getElementById('rocYearSelect').value || '115');
+  }
+  function getSelectedTerm() {
+    return parseInt(document.getElementById('termSelect').value, 10) || 1;
+  }
+  function escAttr(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function escHtml(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function setSyncBanner(text, isErr = false) {
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    el.style.color = isErr ? '#dc2626' : '#0f766e';
+    el.textContent = text;
+  }
+
+  function loadLocal() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STORAGE_KEY_DELAY_VOUCHERS) || '[]');
+      allRows = Array.isArray(raw) ? raw : [];
+    } catch (e) { allRows = []; }
+  }
+
+  function saveLocal() {
+    localStorage.setItem(STORAGE_KEY_DELAY_VOUCHERS, JSON.stringify(allRows));
+  }
+
+  function isRowActive(r) {
+    return (r.summary && r.summary.trim() !== '') ||
+      (Number(r.totalAmt) || 0) !== 0 ||
+      (Number(r.selfAmt) || 0) !== 0 ||
+      (Number(r.grantAmt) || 0) !== 0;
+  }
+
+  function isFeeRow(r) {
+    if (r.category === '講師費') return true;
+    if (r.category === '材料費') return false;
+    if (String(r.voucherNo).trim() === '1') return true;
+    return (r.summary || '').includes('講師');
+  }
+
+  function isAutoFee(r) { return String(r.id).startsWith('auto_delay_fee_'); }
+
+  function nameFromSummary(summary) {
+    const t = String(summary || '');
+    const i = t.indexOf('(');
+    const j = t.lastIndexOf(')');
+    if (i >= 0 && j > i) return t.slice(i + 1, j).trim();
+    const i2 = t.indexOf('（');
+    const j2 = t.lastIndexOf('）');
+    if (i2 >= 0 && j2 > i2) return t.slice(i2 + 1, j2).trim();
+    return '';
+  }
+
+  function feeOrderIndex(r) {
+    const idx = cachedInstructorNames.indexOf(nameFromSummary(r.summary));
+    return idx < 0 ? 999 : idx;
+  }
+
+  async function syncTermToCloud(yr, term) {
+    const yrStr = String(yr);
+    const tNum = parseInt(term, 10) || 1;
+    if (!supabaseClient) {
+      setSyncBanner('本機儲存模式（已就緒）');
+      return;
+    }
+    setSyncBanner('正在即時同步至雲端資料庫...');
+    try {
+      const activeRows = allRows.filter(
+        r => String(r.rocYear) === yrStr && Number(r.term) === tNum && isRowActive(r)
+      );
+      const { error: delErr } = await supabaseClient
+        .from('delay_voucher_details')
+        .delete()
+        .eq('roc_year', yrStr)
+        .eq('term', tNum);
+      if (delErr) throw delErr;
+
+      if (activeRows.length > 0) {
+        const payload = activeRows.map(row => ({
+          id: String(row.id),
+          roc_year: yrStr,
+          term: tNum,
+          month: parseNum(row.month),
+          day: parseNum(row.day),
+          category: row.category || (isFeeRow(row) ? '講師費' : '材料費'),
+          summary: row.summary || '',
+          voucher_no: row.voucherNo || '',
+          total_amt: parseNum(row.totalAmt),
+          self_amt: parseNum(row.selfAmt),
+          grant_amt: parseNum(row.grantAmt)
+        }));
+        const { error: upErr } = await supabaseClient
+          .from('delay_voucher_details')
+          .upsert(payload, { onConflict: 'id' });
+        if (upErr) throw upErr;
+      }
+
+      const now = new Date();
+      const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      setSyncBanner(`✅ 已即時雲端同步（${tStr}）`);
+    } catch (e) {
+      setSyncBanner('本機儲存模式（已就緒；若需雲端同步請建立 delay_voucher_details 資料表）');
+    }
+  }
+
+  function scheduleCloudSave(yr, term) {
+    saveLocal();
+    if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = setTimeout(() => {
+      syncTermToCloud(yr, term);
+    }, 220);
+  }
+
+  async function syncFromCloud() {
+    if (!supabaseClient) {
+      setSyncBanner('本機瀏覽器儲存模式（已就緒）');
+      return;
+    }
+    try {
+      const [vRes, iRes] = await Promise.all([
+        supabaseClient.from('delay_voucher_details').select('*').order('voucher_no', { ascending: true }).order('day', { ascending: true }),
+        supabaseClient.from('instructors').select('id, staff_number, name').order('staff_number', { ascending: true }).order('id', { ascending: true })
+      ]);
+
+      if (!vRes.error && Array.isArray(vRes.data)) {
+        const cloudRows = vRes.data.map(r => ({
+          id: String(r.id),
+          rocYear: String(r.roc_year || '115'),
+          term: parseInt(r.term, 10) || 1,
+          month: r.month !== null && r.month !== undefined && Number(r.month) > 0 ? String(r.month) : '',
+          day: r.day !== null && r.day !== undefined && Number(r.day) > 0 ? String(r.day) : '',
+          category: r.category || '講師費',
+          summary: r.summary || '',
+          voucherNo: r.voucher_no !== null && r.voucher_no !== undefined ? String(r.voucher_no) : '',
+          totalAmt: Number(r.total_amt) || 0,
+          selfAmt: Number(r.self_amt) || 0,
+          grantAmt: Number(r.grant_amt) || 0
+        }));
+        allRows = allRows.filter(r => !isRowActive(r)).concat(cloudRows);
+        saveLocal();
+      }
+
+      if (!iRes.error && Array.isArray(iRes.data) && iRes.data.length > 0) {
+        const names = iRes.data.map(x => (x.name || '').trim()).filter(Boolean);
+        if (names.length > 0) cachedInstructorNames = names;
+      }
+
+      setSyncBanner(!vRes.error ? '✅ 已連線雲端資料庫同步' : '本機儲存模式（已就緒）');
+    } catch (e) {
+      setSyncBanner('本機儲存模式（已就緒）');
+    }
+  }
+
+  function ensureTermSlots(yr, term, minRows = 12) {
+    const targetYear = String(yr || '115');
+    const targetTerm = parseInt(term, 10) || 1;
+    const existing = allRows.filter(r => String(r.rocYear) === targetYear && Number(r.term) === targetTerm);
+    const needed = Math.max(0, minRows - existing.length);
+    for (let i = 0; i < needed; i++) {
+      allRows.push({
+        id: 'dv_' + targetYear + '_T' + targetTerm + '_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 5),
+        rocYear: targetYear,
+        term: targetTerm,
+        month: '',
+        day: '',
+        category: '材料費',
+        summary: '',
+        voucherNo: '',
+        totalAmt: 0,
+        selfAmt: 0,
+        grantAmt: 0
+      });
+    }
+  }
+
+  async function addMaterialRow() {
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    allRows.push({
+      id: 'dv_mat_' + yr + '_T' + term + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      rocYear: yr,
+      term: term,
+      month: '',
+      day: '',
+      category: '材料費',
+      summary: '活動材料費',
+      voucherNo: '2',
+      totalAmt: 0,
+      selfAmt: 0,
+      grantAmt: 0
+    });
+    saveLocal();
+    renderSheet();
+    await syncTermToCloud(yr, term);
+  }
+
+  async function addBlankRow() {
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    allRows.push({
+      id: 'dv_' + yr + '_T' + term + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      rocYear: yr,
+      term: term,
+      month: '',
+      day: '',
+      category: '材料費',
+      summary: '',
+      voucherNo: '',
+      totalAmt: 0,
+      selfAmt: 0,
+      grantAmt: 0
+    });
+    saveLocal();
+    renderSheet();
+    await syncTermToCloud(yr, term);
+  }
+
+  function onYearTermChange() {
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    document.getElementById('planCodeInput').value = `${yr}00K0201`;
+    document.getElementById('planNameInput').value = `${yr}年度社區整體照顧服務體系社照C單位-預防及延緩失能服務計畫`;
+    ensureTermSlots(yr, term, 12);
+    renderSheet();
+    sourceInfo = { fee: null };
+    renderSourcePanel();
+    syncSources({});
+  }
+
+  function sumItems(items) {
+    return items.reduce((acc, r) => {
+      acc.total += Number(r.totalAmt) || 0;
+      acc.self += Number(r.selfAmt) || 0;
+      acc.grant += Number(r.grantAmt) || 0;
+      return acc;
+    }, { total: 0, self: 0, grant: 0 });
+  }
+
+  function onCellEdit(id, field, val) {
+    const item = allRows.find(r => String(r.id) === String(id));
+    if (!item) return;
+
+    if (field === 'month') {
+      const cleaned = String(val ?? '').trim();
+      item.month = cleaned === '' ? '' : String(Math.min(12, Math.max(1, parseNum(cleaned) || 1)));
+    } else if (field === 'day') {
+      item.day = String(val ?? '').trim();
+    } else if (field === 'summary') {
+      item.summary = val;
+      if (val.includes('講師')) {
+        item.category = '講師費';
+        if (!item.voucherNo) item.voucherNo = '1';
+      } else if (val.trim() !== '') {
+        item.category = '材料費';
+        if (!item.voucherNo) item.voucherNo = '2';
+      }
+    } else if (field === 'voucherNo') {
+      item.voucherNo = String(val ?? '').trim();
+      if (item.voucherNo === '1') item.category = '講師費';
+      else if (item.voucherNo !== '') item.category = '材料費';
+    } else if (field === 'totalAmt') {
+      item.totalAmt = parseNum(val);
+      item.grantAmt = Math.max(0, item.totalAmt - (Number(item.selfAmt) || 0));
+      const gInp = document.getElementById(`inp_grant_${id}`);
+      if (gInp) gInp.value = item.grantAmt;
+    } else if (field === 'selfAmt') {
+      item.selfAmt = parseNum(val);
+      item.grantAmt = Math.max(0, (Number(item.totalAmt) || 0) - item.selfAmt);
+      const gInp = document.getElementById(`inp_grant_${id}`);
+      if (gInp) gInp.value = item.grantAmt;
+    } else if (field === 'grantAmt') {
+      item.grantAmt = parseNum(val);
+    }
+
+    scheduleCloudSave(item.rocYear, item.term);
+    recalcTotalsDom();
+  }
+
+  function recalcTotalsDom() {
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    const termRows = allRows.filter(r => String(r.rocYear) === yr && Number(r.term) === term);
+    const active = termRows.filter(isRowActive);
+    const feeSub = sumItems(active.filter(isFeeRow));
+    const matSub = sumItems(active.filter(r => !isFeeRow(r)));
+    const tot = sumItems(active);
+
+    const setGroup = (prefix, s) => {
+      const tEl = document.getElementById(`${prefix}_tot`);
+      const sEl = document.getElementById(`${prefix}_self`);
+      const gEl = document.getElementById(`${prefix}_grant`);
+      if (tEl) tEl.textContent = fmt(s.total);
+      if (sEl) sEl.textContent = fmt(s.self);
+      if (gEl) gEl.textContent = fmt(s.grant);
+    };
+    setGroup('fee', feeSub);
+    setGroup('mat', matSub);
+    setGroup('term', tot);
+  }
+
+  function renderSheet() {
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    const planCode = document.getElementById('planCodeInput').value.trim();
+    const planName = document.getElementById('planNameInput').value.trim();
+
+    document.getElementById('sheetHeading').textContent = `二、${yr} 年 延緩第 ${term} 期接受衛生福利部補助經費支出憑證明細表`;
+    document.getElementById('vYear').textContent = yr;
+    document.getElementById('vPlanCode').textContent = planCode;
+    document.getElementById('vPlanName').textContent = planName;
+
+    const termRows = allRows.filter(r => String(r.rocYear) === yr && Number(r.term) === term);
+    const active = termRows.filter(isRowActive);
+    const blanks = termRows.filter(r => !isRowActive(r)).slice(0, Math.max(4, 12 - active.length));
+
+    const feeRows = active.filter(isFeeRow).sort((a, b) => (parseNum(a.month) - parseNum(b.month)) || (parseNum(a.day) - parseNum(b.day)) || (feeOrderIndex(a) - feeOrderIndex(b)));
+    const matRows = active.filter(r => !isFeeRow(r)).sort((a, b) => (parseNum(a.voucherNo) - parseNum(b.voucherNo)) || (parseNum(a.month) - parseNum(b.month)) || (parseNum(a.day) - parseNum(b.day)));
+
+    const feeSub = sumItems(feeRows);
+    const matSub = sumItems(matRows);
+    const termTot = sumItems(active);
+
+    const buildRowHtml = (r) => {
+      const auto = isAutoFee(r);
+      const ro = auto ? ' readonly title="此欄由「講師鐘點費核銷」連動帶入，請到來源頁修改"' : '';
+      return `
+        <tr>
+          <td class="td-center">${yr}</td>
+          <td class="td-center"><input type="text" class="cell-edit cell-ctr" value="${escAttr(r.month)}" placeholder="月" onchange="onCellEdit('${r.id}','month',this.value)"></td>
+          <td class="td-center"><input type="text" class="cell-edit cell-ctr" value="${escAttr(r.day)}" placeholder="日" onchange="onCellEdit('${r.id}','day',this.value)"></td>
+          <td><input type="text" class="cell-edit" value="${escAttr(r.summary)}" placeholder="摘要（如：講師費、活動材料費）" ${ro} onchange="onCellEdit('${r.id}','summary',this.value)"></td>
+          <td class="td-center"><input type="text" class="cell-edit cell-ctr" value="${escAttr(r.voucherNo)}" placeholder="編號" ${ro} onchange="onCellEdit('${r.id}','voucherNo',this.value)"></td>
+          <td class="td-right"><input type="number" class="cell-edit cell-num" value="${r.totalAmt || ''}" placeholder="0" ${ro} onchange="onCellEdit('${r.id}','totalAmt',this.value)"></td>
+          <td class="td-right"><input type="number" class="cell-edit cell-num" value="${r.selfAmt !== 0 || isRowActive(r) ? r.selfAmt : ''}" placeholder="0" onchange="onCellEdit('${r.id}','selfAmt',this.value)"></td>
+          <td class="td-right"><input type="number" id="inp_grant_${r.id}" class="cell-edit cell-num" value="${r.grantAmt || ''}" placeholder="0" onchange="onCellEdit('${r.id}','grantAmt',this.value)"></td>
+          <td class="td-center no-print">
+            ${auto ? '<span class="auto-tag">連動</span>' : `<button type="button" class="btn btn-danger" onclick="clearSingleRow('${r.id}')">清除</button>`}
+          </td>
+        </tr>
+      `;
+    };
+
+    let html = '';
+    // 1. 憑證編號 1：講師費＋講師費小計（對應 6. 社照 支出憑證明細表.doc 格式）
+    feeRows.forEach(r => { html += buildRowHtml(r); });
+    if (feeRows.length > 0) {
+      html += `
+        <tr>
+          <td></td><td></td><td></td>
+          <td class="td-sub-label"><span class="highlight-yellow">講師費小計</span></td>
+          <td></td>
+          <td class="td-right" id="fee_tot">${fmt(feeSub.total)}</td>
+          <td class="td-right" id="fee_self">${fmt(feeSub.self)}</td>
+          <td class="td-right" id="fee_grant">${fmt(feeSub.grant)}</td>
+          <td class="no-print"></td>
+        </tr>
+      `;
+    }
+
+    // 2. 憑證編號 2 起：材料費＋材料費小計（若無材料費則保留一列示範與黃底小計列，方便直接填入）
+    if (matRows.length > 0) {
+      matRows.forEach(r => { html += buildRowHtml(r); });
+      html += `
+        <tr>
+          <td></td><td></td><td></td>
+          <td class="td-sub-label"><span class="highlight-yellow">材料費小計</span></td>
+          <td></td>
+          <td class="td-right" id="mat_tot">${fmt(matSub.total)}</td>
+          <td class="td-right" id="mat_self">${fmt(matSub.self)}</td>
+          <td class="td-right" id="mat_grant">${fmt(matSub.grant)}</td>
+          <td class="no-print"></td>
+        </tr>
+      `;
+    } else if (blanks.length > 0) {
+      const firstBlank = blanks.shift();
+      html += buildRowHtml(firstBlank);
+      html += `
+        <tr>
+          <td></td><td></td><td></td>
+          <td class="td-sub-label"><span class="highlight-yellow">材料費小計</span></td>
+          <td></td>
+          <td class="td-right" id="mat_tot">0</td>
+          <td class="td-right" id="mat_self">0</td>
+          <td class="td-right" id="mat_grant">0</td>
+          <td class="no-print"></td>
+        </tr>
+      `;
+    }
+
+    blanks.forEach(r => { html += buildRowHtml(r); });
+
+    html += `
+      <tr>
+        <td></td><td></td><td></td>
+        <td class="td-sub-label">總計</td>
+        <td></td>
+        <td class="td-right"><strong id="term_tot">${fmt(termTot.total)}</strong></td>
+        <td class="td-right"><strong id="term_self">${fmt(termTot.self)}</strong></td>
+        <td class="td-right"><strong id="term_grant">${fmt(termTot.grant)}</strong></td>
+        <td class="no-print"></td>
+      </tr>
+    `;
+
+    document.getElementById('voucherTbody').innerHTML = html;
+  }
+
+  // =====================================================================
+  // 來源連動：讀取「講師鐘點費核銷」延緩第 1–3 期鐘點費基準與堂數
+  // =====================================================================
+  let sourceInfo = { fee: null };
+  let lastSourceSync = 0;
+  let sourceSyncing = false;
+
+  const DELAY_SEED_RATES = {
+    '林熙鈴': { '延緩1期': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩2期': { mode: 'per_hour', rate: 2400, hours: 1 } },
+    '張國堂': { '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' } },
+    '鄧美續': { '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' } },
+    '蔡牡連': { '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' } },
+    '黃仲慧': { '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' } },
+    '吳貴英': { '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' } },
+    '詹細珍': { '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' } },
+    '詹益誠': { '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' } }
+  };
+
+  function delayUnitAmount(rule) {
+    if (!rule || rule.mode === 'none') return 0;
+    const r = Number(rule.rate || 0);
+    const h = (rule.hours !== '' && rule.hours !== null && rule.hours !== undefined && Number(rule.hours) > 0) ? Number(rule.hours) : 1;
+    return Math.round(r * h);
+  }
+
+  async function fetchDelayFeeSource(yr, term) {
+    if (!supabaseClient) {
+      return { ok: false, error: '尚未連線雲端資料庫，無法讀取講師費', list: [], total: 0 };
+    }
+    const yrNum = parseInt(yr, 10) || 115;
+    const tNum = parseInt(term, 10) || 1;
+    const periodKey = `T${tNum}`;
+    const colLabel = `第${tNum}期`;
+    const candidatePlans = tNum === 1 ? ['延緩1期', '延緩2期'] : ['延緩2期', '延緩1期'];
+
+    try {
+      const yearRates = JSON.parse(JSON.stringify(DELAY_SEED_RATES));
+      const { data: rateRows, error: rErr } = await supabaseClient
+        .from('instructor_reimburse_rate_configs')
+        .select('*');
+      if (rErr) throw rErr;
+
+      const extraDelayPlans = new Set();
+      (rateRows || []).forEach(row => {
+        if (row.roc_year !== undefined && row.roc_year !== null && Number(row.roc_year) !== yrNum) return;
+        const sc = String(row.scope_key || 'YEAR').trim() || 'YEAR';
+        if (sc !== 'YEAR') return;
+        const inst = String(row.instructor_name || '').trim();
+        const plan = String(row.plan_name || '').trim();
+        if (!inst || !plan.includes('延緩')) return;
+        extraDelayPlans.add(plan);
+        const isNone = row.pay_mode === 'none' || (row.rate === null && row.hours === null);
+        const rule = isNone
+          ? { mode: 'none', rate: '', hours: '' }
+          : { mode: 'per_hour', rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '', hours: (row.hours !== null && row.hours !== undefined && Number(row.hours) > 0) ? Number(row.hours) : 1 };
+        if (!yearRates[inst]) yearRates[inst] = {};
+        yearRates[inst][plan] = rule;
+      });
+
+      const allPlans = [...new Set([...candidatePlans, ...extraDelayPlans])];
+      const unitOf = (inst) => {
+        const instMap = yearRates[inst] || {};
+        for (const p of allPlans) {
+          const amt = delayUnitAmount(instMap[p]);
+          if (amt > 0) return amt;
+        }
+        return 0;
+      };
+
+      const manual = {};
+      try {
+        const { data: cRows } = await supabaseClient
+          .from('instructor_reimburse_claims')
+          .select('*')
+          .eq('roc_year', yrNum)
+          .eq('program_type', 'DELAY')
+          .eq('period_key', periodKey);
+        (cRows || []).forEach(r => {
+          const nm = String(r.instructor_name || '').trim();
+          if (!nm) return;
+          if (r.sessions_manual === true && r.sessions !== null && r.sessions !== undefined) {
+            manual[nm] = Number(r.sessions) || 0;
+          }
+        });
+      } catch (e) {}
+
+      const masterNames = [...new Set([...cachedInstructorNames, ...Object.keys(yearRates), ...Object.keys(manual)])];
+      const list = [];
+      masterNames.forEach(name => {
+        const unit = unitOf(name);
+        const isManual = Object.prototype.hasOwnProperty.call(manual, name);
+        const sessions = isManual ? manual[name] : (unit > 0 ? 12 : 0);
+        const amount = Math.round(unit * sessions);
+        if (amount !== 0) {
+          list.push({ name, amount, sessions, unit, manual: isManual });
+        }
+      });
+
+      list.sort((a, b) => {
+        const ia = cachedInstructorNames.indexOf(a.name), ib = cachedInstructorNames.indexOf(b.name);
+        return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.name.localeCompare(b.name, 'zh-Hant');
+      });
+      return { ok: true, error: '', list, total: list.reduce((acc, x) => acc + x.amount, 0), colLabel };
+    } catch (e) {
+      return { ok: false, error: e.message || String(e), list: [], total: 0, colLabel };
+    }
+  }
+
+  function getFeeExcluded(yr, term) {
+    try {
+      const o = JSON.parse(localStorage.getItem(FEE_EXCLUDE_KEY) || '{}');
+      const arr = o[`${yr}_T${term}`];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function saveFeeExcludedLocal(yr, term, names) {
+    try {
+      const o = JSON.parse(localStorage.getItem(FEE_EXCLUDE_KEY) || '{}');
+      o[`${yr}_T${term}`] = names;
+      localStorage.setItem(FEE_EXCLUDE_KEY, JSON.stringify(o));
+    } catch (e) {}
+  }
+
+  async function saveFeeExcludedCloud(yr, term, names) {
+    if (!supabaseClient) return;
+    try {
+      await supabaseClient.from('ltc_delay_funding_records').upsert([{
+        roc_year: parseInt(yr, 10) || 115,
+        section_key: `delay_voucher_fee_exclude_t${term}`,
+        payload: { names },
+        updated_at: new Date().toISOString()
+      }], { onConflict: 'roc_year,section_key' });
+    } catch (e) {}
+  }
+
+  async function loadFeeExcludedFromCloud(yr, term) {
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('ltc_delay_funding_records')
+        .select('*')
+        .eq('roc_year', parseInt(yr, 10) || 115)
+        .eq('section_key', `delay_voucher_fee_exclude_t${term}`);
+      if (!error && Array.isArray(data) && data.length > 0 && data[0].payload && Array.isArray(data[0].payload.names)) {
+        saveFeeExcludedLocal(yr, term, data[0].payload.names);
+      }
+    } catch (e) {}
+  }
+
+  async function onToggleFeeInstructor(name, checked) {
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    const set = new Set(getFeeExcluded(yr, term));
+    if (checked) set.delete(name); else set.add(name);
+    saveFeeExcludedLocal(yr, term, [...set]);
+    await applySources(yr, term, { force: true });
+    saveFeeExcludedCloud(yr, term, [...set]);
+  }
+
+  async function onFeeSelectAll(selectAll) {
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    const names = (sourceInfo.fee && sourceInfo.fee.list) ? sourceInfo.fee.list.map(x => x.name) : [];
+    const next = selectAll ? [] : names;
+    saveFeeExcludedLocal(yr, term, next);
+    await applySources(yr, term, { force: true });
+    saveFeeExcludedCloud(yr, term, next);
+  }
+
+  function termSignature(yr, term) {
+    return JSON.stringify(allRows
+      .filter(r => String(r.rocYear) === yr && Number(r.term) === term && isRowActive(r))
+      .map(r => [r.id, r.month, r.day, r.summary, r.voucherNo, r.totalAmt, r.selfAmt, r.grantAmt])
+      .sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
+  }
+
+  function mergeSources(yr, term, fee, opts) {
+    const inTerm = r => String(r.rocYear) === yr && Number(r.term) === term;
+    const termRows = () => allRows.filter(inTerm);
+
+    if (fee && fee.ok) {
+      const active = termRows().filter(isRowActive);
+      const manual = active.filter(r => isFeeRow(r) && !isAutoFee(r));
+      if (manual.length === 0 || opts.replaceFee) {
+        const carry = new Map();
+        const toRemove = termRows().filter(r => isFeeRow(r) && !isAutoFee(r) && opts.replaceFee && isRowActive(r));
+        toRemove.forEach(r => {
+          const nm = nameFromSummary(r.summary);
+          if (nm) carry.set(nm, { month: String(parseNum(r.month) || ''), day: String(parseNum(r.day) || ''), self: Number(r.selfAmt) || 0 });
+        });
+        allRows = allRows.filter(r => !toRemove.includes(r));
+
+        const existing = new Map(termRows().filter(isAutoFee).map(r => [String(r.id), r]));
+        const keep = new Set();
+        const excludedNames = getFeeExcluded(yr, term);
+        const activeFeeList = fee.list.filter(x => !excludedNames.includes(x.name));
+        const multiInst = activeFeeList.length > 1;
+
+        activeFeeList.forEach(({ name, amount }) => {
+          const id = `auto_delay_fee_${yr}_T${term}_${name}`;
+          keep.add(id);
+          let row = existing.get(id);
+          if (!row) {
+            const c = carry.get(name) || {};
+            row = { id, rocYear: yr, term, month: c.month || '', day: c.day || '', category: '講師費', summary: '', voucherNo: '1', totalAmt: 0, selfAmt: c.self || 0, grantAmt: 0 };
+            allRows.push(row);
+          }
+          row.category = '講師費';
+          row.summary = multiInst ? `講師費(${name})` : '講師費';
+          row.voucherNo = '1';
+          row.totalAmt = amount;
+          row.grantAmt = Math.max(0, amount - (Number(row.selfAmt) || 0));
+        });
+        allRows = allRows.filter(r => !(inTerm(r) && isAutoFee(r) && !keep.has(String(r.id))));
+      }
+    }
+  }
+
+  async function applySources(yr, term, opts = {}) {
+    if (yr !== getSelectedYear() || term !== getSelectedTerm()) return false;
+    const before = termSignature(yr, term);
+    mergeSources(yr, term, sourceInfo.fee, opts);
+    ensureTermSlots(yr, term, 12);
+    const changed = before !== termSignature(yr, term);
+    if (changed || opts.force) {
+      saveLocal();
+      renderSheet();
+      if (changed) await syncTermToCloud(yr, term);
+    }
+    renderSourcePanel();
+    return changed;
+  }
+
+  async function syncSources(opts = {}) {
+    if (sourceSyncing) return;
+    sourceSyncing = true;
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    try {
+      const [fee] = await Promise.all([fetchDelayFeeSource(yr, term), loadFeeExcludedFromCloud(yr, term)]);
+      if (yr !== getSelectedYear() || term !== getSelectedTerm()) return;
+      sourceInfo = { fee };
+      const changed = await applySources(yr, term, opts);
+      lastSourceSync = Date.now();
+      if (opts.force) {
+        setSyncBanner(changed ? `✅ 已重新帶入 ${yr} 年延緩第 ${term} 期講師費來源` : `✅ 來源資料與明細表一致（${yr} 年延緩第 ${term} 期）`);
+      }
+    } finally {
+      sourceSyncing = false;
+    }
+  }
+
+  function renderSourcePanel() {
+    const el = document.getElementById('sourcePanel');
+    if (!el) return;
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    const { fee } = sourceInfo;
+    const active = allRows.filter(r => String(r.rocYear) === yr && Number(r.term) === term && isRowActive(r));
+    const manualFee = active.filter(r => isFeeRow(r) && !isAutoFee(r)).length;
+    const sheetFee = sumItems(active.filter(isAutoFee)).total;
+    const matRows = active.filter(r => !isFeeRow(r));
+    const sheetMat = sumItems(matRows).total;
+
+    let gBody = '<div class="src-line">讀取來源中...</div>';
+    let selList = [];
+    let selTotal = 0;
+    if (fee) {
+      const excluded = getFeeExcluded(yr, term);
+      selList = fee.ok ? fee.list.filter(x => !excluded.includes(x.name)) : [];
+      selTotal = selList.reduce((acc, x) => acc + x.amount, 0);
+      let state = '';
+      if (!fee.ok) {
+        state = `<div class="src-state src-err">讀取失敗：${escHtml(fee.error)}</div>`;
+      } else if (fee.list.length === 0) {
+        state = `<div class="src-state src-warn">在「講師鐘點費核銷」的延緩第 ${term} 期尚未設定有費率的講師（或堂數為 0）</div>`;
+      } else if (selList.length === 0) {
+        state = '<div class="src-state src-warn">本期沒有勾選任何講師，明細表不會列出講師費</div>';
+      } else if (manualFee > 0 && sheetFee === 0) {
+        state = `<div class="src-state src-warn">本期已有 ${manualFee} 列手動輸入的講師費，為避免重複沒有自動覆蓋</div>`;
+      } else if (sheetFee === selTotal) {
+        state = '<div class="src-state src-ok">已連動，金額與勾選的來源一致（支出憑證編號 1）</div>';
+      } else {
+        state = `<div class="src-state src-err">明細表講師費 ${fmt(sheetFee)} 與勾選來源 ${fmt(selTotal)} 不一致，請按「重新讀取講師鐘點費來源」</div>`;
+      }
+      const picks = fee.ok && fee.list.length ? `
+        <div class="fee-pick-list">
+          ${fee.list.map(x => {
+            const on = !excluded.includes(x.name);
+            return `<label class="fee-pick ${on ? 'is-on' : ''}">
+              <input type="checkbox" ${on ? 'checked' : ''} onchange="onToggleFeeInstructor('${escAttr(x.name)}', this.checked)">
+              <strong>${escHtml(x.name)}</strong>
+              <span class="fp-sub">${fmt(x.unit)} × ${x.sessions} 堂 = ${fmt(x.amount)}${x.manual ? '（手動堂數）' : ''}</span>
+            </label>`;
+          }).join('')}
+        </div>
+        <div class="src-actions" style="margin-top:6px;">
+          <button type="button" class="btn btn-outline btn-sm" style="background:#fff;border:1px solid #cbd5e1;" onclick="onFeeSelectAll(true)">全選</button>
+          <button type="button" class="btn btn-outline btn-sm" style="background:#fff;border:1px solid #cbd5e1;" onclick="onFeeSelectAll(false)">全不選</button>
+          <span class="src-detail">勾選本期要核銷的講師，沒勾選的不會帶入下方明細表</span>
+        </div>` : '';
+      gBody = `
+        <div class="src-line">來源：講師鐘點費核銷（延緩第 ${term} 期）可核銷 ${fee.list.length} 位，已勾選 ${selList.length} 位，合計 <strong>${fmt(selTotal)}</strong> 元（費用 × 時數 × 堂數）</div>
+        ${picks}
+        ${state}`;
+    }
+    const replaceFeeBtn = (fee && fee.ok && manualFee > 0 && sheetFee === 0 && selList.length > 0)
+      ? '<button type="button" class="btn btn-sm" style="background:#d97706;color:#fff;" onclick="confirmReplaceFee()">改用連動資料（取代手動列）</button>' : '';
+
+    el.innerHTML = `
+      <div class="src-card">
+        <h3><span>講師費（支出憑證編號 1）</span></h3>
+        ${gBody}
+        <div class="src-actions">${replaceFeeBtn}<a href="講師鐘點費核銷.html" target="_blank">開啟「講師鐘點費核銷」</a></div>
+      </div>
+      <div class="src-card">
+        <h3><span>材料費（支出憑證編號 2 起）</span></h3>
+        <div class="src-line">目前已登錄 <strong>${matRows.length}</strong> 筆材料費收據，合計 <strong>${fmt(sheetMat)}</strong> 元</div>
+        <div class="src-detail">依填表說明：一張憑證填寫一列（如：活動材料費、文具材料費），憑證編號請依序填寫 2、3、4…，系統會自動計算「材料費小計」。</div>
+        <div class="src-actions">
+          <button type="button" class="btn btn-primary btn-sm" onclick="addMaterialRow()">＋ 新增一列材料費</button>
+        </div>
+      </div>`;
+  }
+
+  async function confirmReplaceFee() {
+    if (!confirm('確定要用「講師鐘點費核銷」連動資料取代本期手動輸入的講師費明細嗎？')) return;
+    await syncSources({ force: true, replaceFee: true });
+  }
+
+  window.addEventListener('focus', () => {
+    if (Date.now() - lastSourceSync > 8000) syncSources({});
+  });
+
+  async function clearSingleRow(id) {
+    const item = allRows.find(r => String(r.id) === String(id));
+    if (!item) return;
+    const yr = String(item.rocYear);
+    const term = parseInt(item.term, 10) || getSelectedTerm();
+    item.month = ''; item.day = ''; item.summary = ''; item.voucherNo = '';
+    item.totalAmt = 0; item.selfAmt = 0; item.grantAmt = 0;
+    saveLocal();
+    renderSheet();
+    renderSourcePanel();
+    await syncTermToCloud(yr, term);
+  }
+
+  async function clearCurrentTerm() {
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    if (!confirm(`確定要重設 ${yr} 年延緩第 ${term} 期的明細嗎？手動輸入與材料費會清除，並重新從來源帶入講師費。`)) return;
+    allRows = allRows.filter(r => !(String(r.rocYear) === yr && Number(r.term) === term));
+    ensureTermSlots(yr, term, 12);
+    saveLocal();
+    renderSheet();
+    await syncTermToCloud(yr, term);
+    await syncSources({ force: true });
+  }
+
+  async function copyOfficialTable() {
+    const area = document.getElementById('officialCopyArea');
+    const clone = area.cloneNode(true);
+    clone.querySelectorAll('.no-print').forEach(node => node.remove());
+    clone.querySelectorAll('input.cell-edit').forEach(inp => {
+      const isNum = inp.classList.contains('cell-num');
+      const rawV = inp.value;
+      const txt = isNum ? (rawV === '' ? '' : fmt(rawV)) : rawV;
+      const span = document.createElement('span');
+      span.textContent = txt;
+      inp.parentNode.replaceChild(span, inp);
+    });
+
+    const tempWrap = document.createElement('div');
+    tempWrap.style.position = 'fixed';
+    tempWrap.style.left = '-9999px';
+    tempWrap.appendChild(clone);
+    document.body.appendChild(tempWrap);
+
+    try {
+      const htmlBlob = new Blob([clone.innerHTML], { type: 'text/html' });
+      const textBlob = new Blob([clone.innerText], { type: 'text/plain' });
+      await navigator.clipboard.write([ new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob }) ]);
+      alert('已複製《接受衛生福利部補助經費支出憑證明細表》！可直接到 Word 核銷文件中按 Ctrl+V 貼上。');
+    } catch (e) {
+      const range = document.createRange();
+      range.selectNode(clone);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('copy');
+      sel.removeAllRanges();
+      alert('已複製明細表內容！請至 Word 核銷文件按 Ctrl+V 貼上。');
+    } finally {
+      document.body.removeChild(tempWrap);
+    }
+  }
+
+  (async function init() {
+    loadLocal();
+    const yr = getSelectedYear();
+    const term = getSelectedTerm();
+    ensureTermSlots(yr, term, 12);
+    await syncFromCloud();
+    ensureTermSlots(yr, term, 12);
+    renderSheet();
+    renderSourcePanel();
+    await syncSources({});
+  })();
+</script>
+</body>
+</html>
