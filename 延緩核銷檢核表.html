@@ -465,18 +465,10 @@
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
       <div>
         <h1>延緩核銷檢核表（預防及延緩失能服務計畫）</h1>
-        <p class="sub-note">
-          依期別獨立保存檢核進度（不走本機暫存，勾選與修改直接寫入雲端資料庫）。已完成的項目打勾即可，系統會記下完成日期，隔很久回來也不會重複做。
-        </p>
       </div>
       <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
         <div id="syncStatus">雲端連線準備中...</div>
-        <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button type="button" class="btn btn-outline" onclick="loadTermFromCloud(true)">重新載入雲端資料</button>
-          <button type="button" class="btn btn-outline" onclick="copyChecklistTableSql()">複製建表 SQL</button>
-          <button type="button" class="btn btn-outline" onclick="copyChecklistSummary()">複製本期檢核狀態</button>
-          <button type="button" class="btn btn-primary" onclick="window.print()">列印檢核表</button>
-        </div>
+        <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
       </div>
     </div>
 
@@ -501,8 +493,8 @@
 
       <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
         <button type="button" class="btn btn-outline" onclick="restoreDefaultItems()">恢復預設項目</button>
-        <button type="button" class="btn btn-outline" onclick="applyItemsToAllTerms()">套用項目到本年度全部期別</button>
         <button type="button" class="btn btn-outline" onclick="resetCurrentTermChecks()">重設本期勾選（保留項目）</button>
+        <button type="button" class="btn btn-primary" onclick="window.print()">列印檢核表</button>
       </div>
     </div>
   </div>
@@ -513,8 +505,7 @@
   <!-- 依圖雙欄對照檢核總表（可先印好影本 vs 結束才能列印，即時寫入雲端資料庫） -->
   <div class="card excel-mirror-card">
     <h2>
-      <span id="mirrorTableHeading">115 年 延緩第 1 期 — 送件文件檢核表（勾選即自動存檔至雲端）</span>
-      <span style="font-size:0.82rem; color:#475569; font-weight:normal;">已完成的請直接打勾，會記下完成日期；項目名稱可直接修改，也能新增、刪除、上下移動或拖曳排序</span>
+      <span id="mirrorTableHeading">115 年 延緩第 1 期 — 送件文件檢核表</span>
     </h2>
     <div class="mirror-table-wrap">
       <table class="mirror-chk-table" id="mirrorChecklistTable"></table>
@@ -1279,7 +1270,7 @@
 
     const heading = document.getElementById('mirrorTableHeading');
     if (heading) {
-      heading.textContent = `${currentYear} 年 延緩第 ${currentTerm} 期 — 送件文件檢核表（勾選即自動存檔至雲端）`;
+      heading.textContent = `${currentYear} 年 延緩第 ${currentTerm} 期 — 送件文件檢核表`;
     }
 
     const L = visibleItems(MIRROR_LEFT_STAGE);
