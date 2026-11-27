@@ -261,13 +261,10 @@
   </div>
 </nav>
 
-<div class="section-subnav no-print" aria-label="長照與延緩核銷快速切換">
-  <span class="section-subnav-label">長照與延緩核銷快速切換：</span>
-  <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
-  <a href="長照核銷食材費.html">長照核銷食材費</a>
-  <a href="延緩核銷材料費.html" class="active">延緩核銷材料費</a>
-  <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
-  <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+<div class="section-subnav no-print" aria-label="延緩核銷快速切換">
+  <span class="section-subnav-label">延緩核銷快速切換：</span>
+  <a href="#secTermPaste">1. 延緩期別選擇與收據批次貼上</a>
+  <a href="#secMaterialTable" class="active">2. 延緩核銷材料費收據明細表</a>
   <a href="延緩核銷統計.html">3. 延緩核銷統計</a>
 </div>
 
@@ -283,7 +280,7 @@
   </div>
 
   <!-- 一、期別條件與快速批次貼上 -->
-  <div class="card no-print">
+  <div class="card no-print" id="secTermPaste">
     <h2>
       <span>一、延緩期別選擇與收據批次貼上</span>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -323,7 +320,7 @@
       <summary style="cursor:pointer; font-weight:bold; color:#0f766e;">展開：從 Excel / AI 估算結果整批貼上材料費明細（支援 Tab 分隔）</summary>
       <div style="margin-top:10px;">
         <div style="font-size:0.84rem; color:#475569; margin-bottom:6px;">
-          欄位順序：<code>收據日期（如 115/09/20）　用途摘要（如 活動材料費）　品名　數量　單位　單價　總價</code>（每列一筆，系統會自動略過「小計」「總計」列並直接寫入資料庫）
+          欄位順序：<code>收據日期（如 115/09/20） 用途摘要（如 活動材料費） 品名 數量 單位 單價 總價</code>（每列一筆，系統會自動略過「小計」「總計」列並直接寫入資料庫）
         </div>
         <textarea id="batchPasteInput" rows="5" style="width:100%;" placeholder="115/09/20&#9;活動材料費&#9;色紙與膠水&#9;10&#9;份&#9;120&#9;1200"></textarea>
         <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
@@ -335,7 +332,7 @@
   </div>
 
   <!-- 二、延緩核銷材料費資料表 -->
-  <div class="card">
+  <div class="card" id="secMaterialTable">
     <h2>
       <span id="tableHeading">二、115 年 延緩第 1 期材料費收據明細表</span>
       <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -581,12 +578,11 @@
     const yr = getYear();
     const term = getTerm();
     const defCat = document.getElementById('defaultCategorySelect').value || '活動材料費';
-    const lines = raw.split(/?
-/).map(l => l.trim()).filter(Boolean);
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     let added = 0;
 
     lines.forEach(line => {
-      const cols = line.split('	').map(c => c.trim());
+      const cols = line.split('\t').map(c => c.trim());
       if (cols.length < 2) return;
       const joined = cols.join('');
       if (joined.includes('收據日期') && joined.includes('品名')) return;
@@ -639,7 +635,6 @@
   }
 
   function groupReceiptsForVoucher() {
-    // 依「收據日期 + 用途摘要」分組，對應「3. 延緩核銷統計」支出憑證編號 2, 3, 4...
     const map = new Map();
     items.forEach(r => {
       const amt = Math.round(Number(r.totalPrice) || 0);
@@ -695,7 +690,6 @@
       return;
     }
 
-    // 計算每張收據（依收據日期+用途摘要）對應的憑證編號（從 2 開始）
     const groups = groupReceiptsForVoucher();
     const voucherNoMap = new Map();
     groups.forEach((g, idx) => {
@@ -738,16 +732,15 @@
   function copySummaryForExcel() {
     const yr = getYear();
     const term = getTerm();
-    const lines = [`${yr}年延緩第${term}期材料費明細	收據日期	用途摘要	品名	數量	單位	單價	總價`];
+    const lines = [`${yr}年延緩第${term}期材料費明細\t收據日期\t用途摘要\t品名\t數量\t單位\t單價\t總價`];
     let sum = 0;
     items.forEach(r => {
       const amt = Math.round(Number(r.totalPrice) || 0);
       sum += amt;
-      lines.push(`	${r.receiptDate}	${r.summary}	${r.itemName}	${r.qty}	${r.unit}	${r.unitPrice}	${amt}`);
+      lines.push(`\t${r.receiptDate}\t${r.summary}\t${r.itemName}\t${r.qty}\t${r.unit}\t${r.unitPrice}\t${amt}`);
     });
-    lines.push(`		合計					${sum}`);
-    navigator.clipboard?.writeText(lines.join('
-')).then(() => {
+    lines.push(`\t\t合計\t\t\t\t\t${sum}`);
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
       alert('已複製材料費明細，可直接貼上 Excel！');
     });
   }
