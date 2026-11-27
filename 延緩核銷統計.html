@@ -277,6 +277,8 @@
         <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
         <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
         <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照核銷食材費.html">長照核銷食材費</a>
+        <a href="延緩核銷材料費.html">延緩核銷材料費</a>
         <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
         <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
         <a href="延緩核銷統計.html">3. 延緩核銷統計</a>
@@ -289,6 +291,7 @@
   <span class="section-subnav-label">長照與延緩核銷快速切換：</span>
   <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
   <a href="長照核銷食材費.html">長照核銷食材費</a>
+  <a href="延緩核銷材料費.html">延緩核銷材料費</a>
   <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
   <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
   <a href="延緩核銷統計.html" class="active">3. 延緩核銷統計</a>
@@ -339,8 +342,8 @@
     <div class="src-grid" id="sourcePanel"></div>
 
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button type="button" class="btn btn-teal" onclick="syncSources({ force: true })">重新讀取講師鐘點費來源</button>
-      <button type="button" class="btn btn-primary" onclick="addMaterialRow()">＋ 新增一列材料費（憑證編號 2）</button>
+      <button type="button" class="btn btn-teal" onclick="syncSources({ force: true })">重新讀取講師費與材料費來源</button>
+      <a href="延緩核銷材料費.html" target="_blank" class="btn btn-primary" style="text-decoration:none; padding:8px 15px; border-radius:6px; font-weight:bold; font-size:0.92rem; display:inline-flex; align-items:center; gap:6px;">前往「延緩核銷材料費」登錄</a>
       <button type="button" class="btn btn-gray" onclick="addBlankRow()">＋ 新增一列空白明細</button>
     </div>
   </div>
@@ -469,6 +472,8 @@
   }
 
   function isAutoFee(r) { return String(r.id).startsWith('auto_delay_fee_'); }
+  function isAutoMat(r) { return String(r.id).startsWith('auto_delay_mat_'); }
+  function isAutoRow(r) { return isAutoFee(r) || isAutoMat(r); }
 
   function nameFromSummary(summary) {
     const t = String(summary || '');
@@ -751,8 +756,8 @@
     const termTot = sumItems(active);
 
     const buildRowHtml = (r) => {
-      const auto = isAutoFee(r);
-      const ro = auto ? ' readonly title="此欄由「講師鐘點費核銷」連動帶入，請到來源頁修改"' : '';
+      const auto = isAutoRow(r);
+      const ro = auto ? ' readonly title="此欄由來源頁（講師鐘點費核銷／延緩核銷材料費）連動帶入，請到來源頁修改"' : '';
       return `
         <tr>
           <td class="td-center">${yr}</td>
@@ -835,11 +840,76 @@
   }
 
   // =====================================================================
-  // 來源連動：讀取「講師鐘點費核銷」延緩第 1–3 期鐘點費基準與堂數
+  // 來源連動：讀取「講師鐘點費核銷」延緩第 1–3 期 ＋「延緩核銷材料費」資料表
   // =====================================================================
-  let sourceInfo = { fee: null };
+  let sourceInfo = { fee: null, mat: null };
   let lastSourceSync = 0;
   let sourceSyncing = false;
+
+  function parseRocMonthDay(rDateStr) {
+    const s = String(rDateStr || '').trim();
+    if (!s) return { month: '', day: '' };
+    const parts = s.replace(/[年月]/g, '/').replace(/日/g, '').replace(/-/g, '/').split('/').map(p => p.trim()).filter(Boolean);
+    if (parts.length >= 3) {
+      const mo = parseInt(parts[1], 10);
+      const da = parseInt(parts[2], 10);
+      return {
+        month: Number.isFinite(mo) && mo > 0 ? String(mo) : '',
+        day: Number.isFinite(da) && da > 0 ? String(da) : ''
+      };
+    }
+    if (parts.length === 2) {
+      const mo = parseInt(parts[0], 10);
+      const da = parseInt(parts[1], 10);
+      return {
+        month: Number.isFinite(mo) && mo > 0 ? String(mo) : '',
+        day: Number.isFinite(da) && da > 0 ? String(da) : ''
+      };
+    }
+    return { month: '', day: '' };
+  }
+
+  async function fetchDelayMatSource(yr, term) {
+    if (!supabaseClient) {
+      return { ok: false, error: '尚未連線雲端資料庫，無法讀取材料費', vouchers: [], itemCount: 0, total: 0 };
+    }
+    try {
+      const { data, error } = await supabaseClient
+        .from('delay_material_items')
+        .select('*')
+        .eq('roc_year', String(yr))
+        .eq('term', parseInt(term, 10) || 1)
+        .order('sort_order', { ascending: true })
+        .order('receipt_date', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
+      const map = new Map();
+      rows.forEach(r => {
+        const amt = Math.round(Number(r.total_price) || 0);
+        const rDate = String(r.receipt_date || '').trim();
+        const summary = String(r.summary || '活動材料費').trim() || '活動材料費';
+        const key = `${rDate}__${summary}`;
+        if (!map.has(key)) {
+          const md = parseRocMonthDay(rDate);
+          map.set(key, { key, receiptDate: rDate, month: md.month, day: md.day, summary, total: 0, count: 0 });
+        }
+        const g = map.get(key);
+        g.total += amt;
+        g.count += 1;
+      });
+      const vouchers = [...map.values()].filter(v => v.total > 0 || v.receiptDate !== '');
+      return {
+        ok: true,
+        error: '',
+        vouchers,
+        itemCount: rows.length,
+        total: vouchers.reduce((acc, v) => acc + v.total, 0)
+      };
+    } catch (e) {
+      return { ok: false, error: e.message || String(e), vouchers: [], itemCount: 0, total: 0 };
+    }
+  }
 
   const DELAY_SEED_RATES = {
     '林熙鈴': { '延緩1期': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩2期': { mode: 'per_hour', rate: 2400, hours: 1 } },
@@ -1011,13 +1081,13 @@
       .sort((a, b) => String(a[0]).localeCompare(String(b[0]))));
   }
 
-  function mergeSources(yr, term, fee, opts) {
+  function mergeSources(yr, term, fee, mat, opts) {
     const inTerm = r => String(r.rocYear) === yr && Number(r.term) === term;
     const termRows = () => allRows.filter(inTerm);
 
     if (fee && fee.ok) {
       const active = termRows().filter(isRowActive);
-      const manual = active.filter(r => isFeeRow(r) && !isAutoFee(r));
+      const manual = active.filter(r => isFeeRow(r) && !isAutoRow(r));
       if (manual.length === 0 || opts.replaceFee) {
         const carry = new Map();
         const toRemove = termRows().filter(r => isFeeRow(r) && !isAutoFee(r) && opts.replaceFee && isRowActive(r));
@@ -1051,12 +1121,42 @@
         allRows = allRows.filter(r => !(inTerm(r) && isAutoFee(r) && !keep.has(String(r.id))));
       }
     }
+
+    if (mat && mat.ok) {
+      const active = termRows().filter(isRowActive);
+      const manual = active.filter(r => !isFeeRow(r) && !isAutoRow(r));
+      if (manual.length === 0 || opts.replaceMat) {
+        const toRemove = termRows().filter(r => !isFeeRow(r) && !isAutoMat(r) && opts.replaceMat && isRowActive(r));
+        allRows = allRows.filter(r => !toRemove.includes(r));
+
+        const existing = new Map(termRows().filter(isAutoMat).map(r => [String(r.id), r]));
+        const keep = new Set();
+        mat.vouchers.forEach((v, idx) => {
+          const vNo = String(idx + 2);
+          const id = `auto_delay_mat_${yr}_T${term}_${idx + 1}`;
+          keep.add(id);
+          let row = existing.get(id);
+          if (!row) {
+            row = { id, rocYear: yr, term, month: v.month || '', day: v.day || '', category: '材料費', summary: v.summary, voucherNo: vNo, totalAmt: 0, selfAmt: 0, grantAmt: 0 };
+            allRows.push(row);
+          }
+          if (v.month) row.month = v.month;
+          if (v.day) row.day = v.day;
+          row.category = '材料費';
+          row.summary = v.summary;
+          row.voucherNo = vNo;
+          row.totalAmt = v.total;
+          row.grantAmt = Math.max(0, v.total - (Number(row.selfAmt) || 0));
+        });
+        allRows = allRows.filter(r => !(inTerm(r) && isAutoMat(r) && !keep.has(String(r.id))));
+      }
+    }
   }
 
   async function applySources(yr, term, opts = {}) {
     if (yr !== getSelectedYear() || term !== getSelectedTerm()) return false;
     const before = termSignature(yr, term);
-    mergeSources(yr, term, sourceInfo.fee, opts);
+    mergeSources(yr, term, sourceInfo.fee, sourceInfo.mat, opts);
     ensureTermSlots(yr, term, 12);
     const changed = before !== termSignature(yr, term);
     if (changed || opts.force) {
@@ -1074,13 +1174,17 @@
     const yr = getSelectedYear();
     const term = getSelectedTerm();
     try {
-      const [fee] = await Promise.all([fetchDelayFeeSource(yr, term), loadFeeExcludedFromCloud(yr, term)]);
+      const [fee, mat] = await Promise.all([
+        fetchDelayFeeSource(yr, term),
+        fetchDelayMatSource(yr, term),
+        loadFeeExcludedFromCloud(yr, term)
+      ]);
       if (yr !== getSelectedYear() || term !== getSelectedTerm()) return;
-      sourceInfo = { fee };
+      sourceInfo = { fee, mat };
       const changed = await applySources(yr, term, opts);
       lastSourceSync = Date.now();
       if (opts.force) {
-        setSyncBanner(changed ? `✅ 已重新帶入 ${yr} 年延緩第 ${term} 期講師費來源` : `✅ 來源資料與明細表一致（${yr} 年延緩第 ${term} 期）`);
+        setSyncBanner(changed ? `✅ 已重新帶入 ${yr} 年延緩第 ${term} 期講師費與材料費來源` : `✅ 來源資料與明細表一致（${yr} 年延緩第 ${term} 期）`);
       }
     } finally {
       sourceSyncing = false;
@@ -1092,12 +1196,12 @@
     if (!el) return;
     const yr = getSelectedYear();
     const term = getSelectedTerm();
-    const { fee } = sourceInfo;
+    const { fee, mat } = sourceInfo;
     const active = allRows.filter(r => String(r.rocYear) === yr && Number(r.term) === term && isRowActive(r));
-    const manualFee = active.filter(r => isFeeRow(r) && !isAutoFee(r)).length;
+    const manualFee = active.filter(r => isFeeRow(r) && !isAutoRow(r)).length;
     const sheetFee = sumItems(active.filter(isAutoFee)).total;
-    const matRows = active.filter(r => !isFeeRow(r));
-    const sheetMat = sumItems(matRows).total;
+    const manualMat = active.filter(r => !isFeeRow(r) && !isAutoRow(r)).length;
+    const sheetMat = sumItems(active.filter(isAutoMat)).total;
 
     let gBody = '<div class="src-line">讀取來源中...</div>';
     let selList = [];
@@ -1118,7 +1222,7 @@
       } else if (sheetFee === selTotal) {
         state = '<div class="src-state src-ok">已連動，金額與勾選的來源一致（支出憑證編號 1）</div>';
       } else {
-        state = `<div class="src-state src-err">明細表講師費 ${fmt(sheetFee)} 與勾選來源 ${fmt(selTotal)} 不一致，請按「重新讀取講師鐘點費來源」</div>`;
+        state = `<div class="src-state src-err">明細表講師費 ${fmt(sheetFee)} 與勾選來源 ${fmt(selTotal)} 不一致，請按「重新讀取講師費與材料費來源」</div>`;
       }
       const picks = fee.ok && fee.list.length ? `
         <div class="fee-pick-list">
@@ -1144,6 +1248,28 @@
     const replaceFeeBtn = (fee && fee.ok && manualFee > 0 && sheetFee === 0 && selList.length > 0)
       ? '<button type="button" class="btn btn-sm" style="background:#d97706;color:#fff;" onclick="confirmReplaceFee()">改用連動資料（取代手動列）</button>' : '';
 
+    let mBody = '<div class="src-line">讀取材料費來源中...</div>';
+    if (mat) {
+      let mState = '';
+      if (!mat.ok) {
+        mState = `<div class="src-state src-err">讀取失敗：${escHtml(mat.error)}</div>`;
+      } else if (mat.vouchers.length === 0) {
+        mState = `<div class="src-state src-warn">尚未在「延緩核銷材料費」登錄 ${yr} 年延緩第 ${term} 期材料費收據</div>`;
+      } else if (manualMat > 0 && sheetMat === 0) {
+        mState = `<div class="src-state src-warn">本期已有 ${manualMat} 列手動輸入的材料費，為避免重複沒有自動覆蓋</div>`;
+      } else if (sheetMat === mat.total) {
+        mState = '<div class="src-state src-ok">已連動「延緩核銷材料費」資料表，金額與來源一致</div>';
+      } else {
+        mState = `<div class="src-state src-err">明細表材料費 ${fmt(sheetMat)} 與來源 ${fmt(mat.total)} 不一致，請按「重新讀取講師費與材料費來源」</div>`;
+      }
+      mBody = `
+        <div class="src-line">來源：延緩核銷材料費（延緩第 ${term} 期）共 <strong>${mat.vouchers.length}</strong> 張收據（${mat.itemCount} 筆品項），合計 <strong>${fmt(mat.total)}</strong> 元</div>
+        ${mat.vouchers.length ? `<div class="src-detail">${mat.vouchers.map((v, i) => `憑證${i + 2}（${escHtml(v.receiptDate || '無日期')} ${escHtml(v.summary)}）：${fmt(v.total)} 元`).join('｜')}</div>` : ''}
+        ${mState}`;
+    }
+    const replaceMatBtn = (mat && mat.ok && manualMat > 0 && sheetMat === 0 && mat.vouchers.length > 0)
+      ? '<button type="button" class="btn btn-sm" style="background:#d97706;color:#fff;" onclick="confirmReplaceMat()">改用連動資料（取代手動列）</button>' : '';
+
     el.innerHTML = `
       <div class="src-card">
         <h3><span>講師費（支出憑證編號 1）</span></h3>
@@ -1152,12 +1278,14 @@
       </div>
       <div class="src-card">
         <h3><span>材料費（支出憑證編號 2 起）</span></h3>
-        <div class="src-line">目前已登錄 <strong>${matRows.length}</strong> 筆材料費收據，合計 <strong>${fmt(sheetMat)}</strong> 元</div>
-        <div class="src-detail">依填表說明：一張憑證填寫一列（如：活動材料費、文具材料費），憑證編號請依序填寫 2、3、4…，系統會自動計算「材料費小計」。</div>
-        <div class="src-actions">
-          <button type="button" class="btn btn-primary btn-sm" onclick="addMaterialRow()">＋ 新增一列材料費</button>
-        </div>
+        ${mBody}
+        <div class="src-actions">${replaceMatBtn}<a href="延緩核銷材料費.html" target="_blank">開啟「延緩核銷材料費」登錄收據</a></div>
       </div>`;
+  }
+
+  async function confirmReplaceMat() {
+    if (!confirm('確定要用「延緩核銷材料費」連動資料取代本期手動輸入的材料費明細嗎？')) return;
+    await syncSources({ force: true, replaceMat: true });
   }
 
   async function confirmReplaceFee() {

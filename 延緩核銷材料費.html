@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>延緩核銷材料費 ｜ 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --accent: #0284c7;
+      --bg: #f1f5f9;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .section-subnav {
+      background: #fff1f2;
+      border-bottom: 1px solid #fecdd3;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(190, 18, 60, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: #9f1239;
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #fecdd3;
+      background: #ffffff;
+      color: #9f1239;
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #ffe4e6;
+      border-color: #be123c;
+    }
+    .section-subnav a.active {
+      background: #be123c;
+      color: #ffffff;
+      border-color: #be123c;
+      box-shadow: 0 2px 6px rgba(190, 18, 60, 0.22);
+    }
+
+    .container { max-width: 1220px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    h1 { margin: 0 0 6px 0; font-size: 1.4rem; color: var(--primary); }
+    .sub-note { font-size: 0.9rem; color: #475569; margin: 0; }
+    h2 {
+      margin: 0 0 14px 0; font-size: 1.12rem; color: var(--primary);
+      border-bottom: 2px solid var(--primary); padding-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+
+    .toolbar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      background: #f8fafc; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.93rem; background: #fff; color: var(--text);
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #99f6e4; border-color: var(--primary); }
+
+    button.btn {
+      padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: var(--accent); color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
+    .btn-teal { background: #0d9488; color: #fff; }
+    .btn-teal:hover { background: #0f766e; }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-gray { background: #64748b; color: #fff; }
+    .btn-gray:hover { background: #475569; }
+    .btn-danger { background: #dc2626; color: #fff; padding: 4px 9px; font-size: 0.82rem; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    .summary-strip {
+      display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;
+    }
+    .stat-pill {
+      background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 8px;
+      padding: 10px 16px; min-width: 190px;
+    }
+    .stat-pill .lbl { font-size: 0.82rem; color: #475569; font-weight: bold; }
+    .stat-pill .val { font-size: 1.25rem; color: #0f766e; font-weight: bold; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+    .table-wrap { overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 8px; }
+    table.mat-table {
+      width: 100%; border-collapse: collapse; min-width: 880px;
+      font-size: 0.92rem; background: #fff;
+    }
+    table.mat-table th {
+      background: #e2e8f0; color: #0f172a; font-weight: bold;
+      border: 1px solid #94a3b8; padding: 8px 8px; text-align: center;
+      white-space: nowrap;
+    }
+    table.mat-table td {
+      border: 1px solid #cbd5e1; padding: 5px 7px; vertical-align: middle;
+    }
+    table.mat-table tr.sub-row td {
+      background: #fef9c3; font-weight: bold; color: #854d0e;
+    }
+    table.mat-table tr.total-row td {
+      background: #dcfce7; font-weight: bold; color: #166534; font-size: 0.96rem;
+    }
+    table.mat-table input.cell-inp {
+      width: 100%; border: 1px solid #cbd5e1; border-radius: 4px;
+      padding: 4px 6px; font-size: 0.9rem; background: #fffef7;
+    }
+    table.mat-table input.cell-inp:focus {
+      outline: 2px solid #0284c7; border-color: #0284c7; background: #f0f9ff;
+    }
+    table.mat-table input.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: bold; }
+    table.mat-table input.ctr { text-align: center; }
+    .td-right { text-align: right; font-variant-numeric: tabular-nums; }
+    .td-center { text-align: center; }
+
+    #syncStatus { font-size: 0.86rem; font-weight: bold; color: #0f766e; }
+
+    @media print {
+      nav.topbar, .section-subnav, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card { border: none; box-shadow: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar no-print">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">長輩個案管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+        <div class="dropdown-divider">工作人員與師資</div>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="每日工作檢核表.html">每日工作檢核表</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="課程活動表.html">課程活動表</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="關懷核銷食材費.html">關懷核銷食材費</a>
+        <a href="每月業務費記錄.html">1. 每月業務費記錄</a>
+        <a href="專職人員薪資記錄.html">2. 專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">3. 臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">4. 關懷每季核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+        <a href="長照核銷食材費.html">長照核銷食材費</a>
+        <a href="延緩核銷材料費.html">延緩核銷材料費</a>
+        <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+        <a href="延緩核銷統計.html">3. 延緩核銷統計</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="section-subnav no-print" aria-label="長照與延緩核銷快速切換">
+  <span class="section-subnav-label">長照與延緩核銷快速切換：</span>
+  <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
+  <a href="長照核銷食材費.html">長照核銷食材費</a>
+  <a href="延緩核銷材料費.html" class="active">延緩核銷材料費</a>
+  <a href="講師鐘點費核銷.html">2. 講師鐘點費核銷</a>
+  <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
+  <a href="延緩核銷統計.html">3. 延緩核銷統計</a>
+</div>
+
+<div class="container">
+  <div class="card no-print">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h1>延緩核銷材料費</h1>
+        <p class="sub-note">登錄預防及延緩失能服務計畫（第 1～3 期）各張材料費收據與品項明細，直接存入雲端資料庫，並自動同步帶入「3. 延緩核銷統計」支出憑證明細表。</p>
+      </div>
+      <div id="syncStatus">雲端連線準備中...</div>
+    </div>
+  </div>
+
+  <!-- 一、期別條件與快速批次貼上 -->
+  <div class="card no-print">
+    <h2>
+      <span>一、延緩期別選擇與收據批次貼上</span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-teal" onclick="loadFromCloud(true)">重新載入雲端資料</button>
+        <button type="button" class="btn btn-blue" onclick="saveCurrentTermToCloud(false)">儲存本期至資料庫</button>
+      </div>
+    </h2>
+
+    <div class="toolbar">
+      <label><strong>會計年度（民國年）：</strong>
+        <select id="rocYearSelect" onchange="onFilterChange()">
+          <option value="115">115 年</option>
+          <option value="116">116 年</option>
+          <option value="117">117 年</option>
+        </select>
+      </label>
+      <label><strong>延緩期別：</strong>
+        <select id="termSelect" onchange="onFilterChange()">
+          <option value="1">延緩第 1 期</option>
+          <option value="2">延緩第 2 期</option>
+          <option value="3">延緩第 3 期</option>
+        </select>
+      </label>
+      <label><strong>預設用途摘要：</strong>
+        <select id="defaultCategorySelect">
+          <option value="活動材料費">活動材料費</option>
+          <option value="文具材料費">文具材料費</option>
+          <option value="教材印製費">教材印製費</option>
+          <option value="課程材料費">課程材料費</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn-primary" onclick="addNewReceiptRow()">＋ 新增一筆材料費收據</button>
+      <button type="button" class="btn btn-gray" onclick="clearCurrentTermCloud()">清除本期全部資料</button>
+    </div>
+
+    <details style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px 14px;">
+      <summary style="cursor:pointer; font-weight:bold; color:#0f766e;">展開：從 Excel / AI 估算結果整批貼上材料費明細（支援 Tab 分隔）</summary>
+      <div style="margin-top:10px;">
+        <div style="font-size:0.84rem; color:#475569; margin-bottom:6px;">
+          欄位順序：<code>收據日期（如 115/09/20）　用途摘要（如 活動材料費）　品名　數量　單位　單價　總價</code>（每列一筆，系統會自動略過「小計」「總計」列並直接寫入資料庫）
+        </div>
+        <textarea id="batchPasteInput" rows="5" style="width:100%;" placeholder="115/09/20&#9;活動材料費&#9;色紙與膠水&#9;10&#9;份&#9;120&#9;1200"></textarea>
+        <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" onclick="importBatchPaste()">解析並直接存入資料庫</button>
+          <button type="button" class="btn btn-gray" onclick="document.getElementById('batchPasteInput').value=''">清空貼上區</button>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- 二、延緩核銷材料費資料表 -->
+  <div class="card">
+    <h2>
+      <span id="tableHeading">二、115 年 延緩第 1 期材料費收據明細表</span>
+      <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" style="background:#fff; border:1px solid #cbd5e1;" onclick="copySummaryForExcel()">複製明細（貼上 Excel）</button>
+        <button type="button" class="btn btn-gray" onclick="window.print()">列印明細表</button>
+      </div>
+    </h2>
+
+    <div class="summary-strip" id="summaryStrip"></div>
+
+    <div class="table-wrap">
+      <table class="mat-table">
+        <thead>
+          <tr>
+            <th style="width:6%;">憑證<br>順序</th>
+            <th style="width:13%;">收據日期<br><span style="font-size:0.76rem; font-weight:normal;">(如 115/09/20)</span></th>
+            <th style="width:15%;">用途摘要<br><span style="font-size:0.76rem; font-weight:normal;">(如 活動材料費)</span></th>
+            <th style="width:20%;">品名／購買內容</th>
+            <th style="width:8%;">數量</th>
+            <th style="width:7%;">單位</th>
+            <th style="width:10%;">單價</th>
+            <th style="width:12%;">總價（元）</th>
+            <th class="no-print" style="width:9%;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="materialTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
+  let items = [];
+  let autoSaveTimer = null;
+
+  (function initYear() {
+    const today = new Date();
+    const rocY = String(today.getFullYear() - 1911);
+    const ySel = document.getElementById('rocYearSelect');
+    if ([...ySel.options].some(o => o.value === rocY)) ySel.value = rocY;
+  })();
+
+  function getYear() { return String(document.getElementById('rocYearSelect').value || '115'); }
+  function getTerm() { return parseInt(document.getElementById('termSelect').value, 10) || 1; }
+  function fmt(n) { return Math.round(Number(n) || 0).toLocaleString('en-US'); }
+  function parseNum(v) {
+    if (v === '' || v === null || v === undefined) return 0;
+    const n = parseFloat(String(v).replace(/[,，\s$元]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
+  function escAttr(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function escHtml(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    el.style.color = isErr ? '#dc2626' : '#0f766e';
+    el.textContent = msg;
+  }
+
+  async function loadFromCloud(showAlert = false) {
+    const yr = getYear();
+    const term = getTerm();
+    if (!supabaseClient) {
+      setStatus('尚未連線至 Supabase 資料庫，請確認 config.js 設定', true);
+      items = [];
+      renderTable();
+      return;
+    }
+    setStatus(`正在從資料庫讀取 ${yr} 年延緩第 ${term} 期材料費...`);
+    try {
+      const { data, error } = await supabaseClient
+        .from('delay_material_items')
+        .select('*')
+        .eq('roc_year', yr)
+        .eq('term', term)
+        .order('sort_order', { ascending: true })
+        .order('receipt_date', { ascending: true })
+        .order('id', { ascending: true });
+      if (error) throw error;
+      items = (data || []).map((r, idx) => ({
+        id: String(r.id),
+        rocYear: String(r.roc_year || yr),
+        term: parseInt(r.term, 10) || term,
+        sortOrder: Number(r.sort_order) || (idx + 1),
+        receiptDate: r.receipt_date || '',
+        summary: r.summary || '活動材料費',
+        itemName: r.item_name || '',
+        qty: Number(r.qty) || 0,
+        unit: r.unit || '份',
+        unitPrice: Number(r.unit_price) || 0,
+        totalPrice: Math.round(Number(r.total_price) || 0)
+      }));
+      renderTable();
+      setStatus(`已從資料庫載入 ${yr} 年延緩第 ${term} 期材料費（共 ${items.length} 筆）`);
+    } catch (e) {
+      items = [];
+      renderTable();
+      setStatus('讀取失敗（請確認已執行 delay_material_items 建表 SQL）：' + (e.message || e), true);
+      if (showAlert) alert('讀取資料庫失敗：' + (e.message || e));
+    }
+  }
+
+  async function saveCurrentTermToCloud(silent = true) {
+    const yr = getYear();
+    const term = getTerm();
+    if (!supabaseClient) {
+      setStatus('尚未連線至 Supabase 資料庫', true);
+      return;
+    }
+    setStatus('正在儲存至雲端資料庫...');
+    try {
+      const { error: delErr } = await supabaseClient
+        .from('delay_material_items')
+        .delete()
+        .eq('roc_year', yr)
+        .eq('term', term);
+      if (delErr) throw delErr;
+
+      const validRows = items.filter(r =>
+        (r.itemName && r.itemName.trim() !== '') ||
+        (r.receiptDate && r.receiptDate.trim() !== '') ||
+        (Number(r.totalPrice) || 0) !== 0
+      );
+
+      if (validRows.length > 0) {
+        const payload = validRows.map((r, idx) => ({
+          id: String(r.id),
+          roc_year: yr,
+          term: term,
+          sort_order: idx + 1,
+          receipt_date: String(r.receiptDate || '').trim(),
+          summary: String(r.summary || '活動材料費').trim() || '活動材料費',
+          item_name: String(r.itemName || '').trim(),
+          qty: Number(r.qty) || 0,
+          unit: String(r.unit || '份').trim() || '份',
+          unit_price: Number(r.unitPrice) || 0,
+          total_price: Math.round(Number(r.totalPrice) || 0),
+          updated_at: new Date().toISOString()
+        }));
+        const { error: insErr } = await supabaseClient
+          .from('delay_material_items')
+          .insert(payload);
+        if (insErr) throw insErr;
+      }
+
+      const now = new Date();
+      const tStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      setStatus(`✅ 已直接存入資料庫（${tStr}，共 ${validRows.length} 筆）`);
+      if (!silent) alert(`已將 ${yr} 年延緩第 ${term} 期材料費（${validRows.length} 筆）存入資料庫！`);
+    } catch (e) {
+      setStatus('儲存至資料庫失敗：' + (e.message || e), true);
+      if (!silent) alert('儲存至資料庫失敗：' + (e.message || e));
+    }
+  }
+
+  function scheduleCloudSave() {
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      saveCurrentTermToCloud(true);
+    }, 350);
+  }
+
+  function addNewReceiptRow() {
+    const yr = getYear();
+    const term = getTerm();
+    const defCat = document.getElementById('defaultCategorySelect').value || '活動材料費';
+    const lastDate = items.length > 0 ? (items[items.length - 1].receiptDate || '') : '';
+    items.push({
+      id: `dmat_${yr}_T${term}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      rocYear: yr,
+      term: term,
+      sortOrder: items.length + 1,
+      receiptDate: lastDate,
+      summary: defCat,
+      itemName: '',
+      qty: 1,
+      unit: '份',
+      unitPrice: 0,
+      totalPrice: 0
+    });
+    renderTable();
+    scheduleCloudSave();
+  }
+
+  function onRowEdit(id, field, rawVal) {
+    const row = items.find(r => String(r.id) === String(id));
+    if (!row) return;
+    if (field === 'receiptDate' || field === 'summary' || field === 'itemName' || field === 'unit') {
+      row[field] = String(rawVal ?? '').trim();
+    } else if (field === 'qty') {
+      row.qty = parseNum(rawVal);
+      if (row.unitPrice > 0) {
+        row.totalPrice = Math.round(row.qty * row.unitPrice);
+        const tInp = document.getElementById(`tot_${id}`);
+        if (tInp) tInp.value = row.totalPrice;
+      }
+    } else if (field === 'unitPrice') {
+      row.unitPrice = parseNum(rawVal);
+      if (row.qty > 0) {
+        row.totalPrice = Math.round(row.qty * row.unitPrice);
+        const tInp = document.getElementById(`tot_${id}`);
+        if (tInp) tInp.value = row.totalPrice;
+      }
+    } else if (field === 'totalPrice') {
+      row.totalPrice = Math.round(parseNum(rawVal));
+    }
+    renderSummaryOnly();
+    scheduleCloudSave();
+  }
+
+  async function deleteRow(id) {
+    items = items.filter(r => String(r.id) !== String(id));
+    renderTable();
+    await saveCurrentTermToCloud(true);
+  }
+
+  async function clearCurrentTermCloud() {
+    const yr = getYear();
+    const term = getTerm();
+    if (!confirm(`確定要清除 ${yr} 年延緩第 ${term} 期資料庫中的所有材料費收據嗎？`)) return;
+    items = [];
+    renderTable();
+    await saveCurrentTermToCloud(true);
+  }
+
+  async function importBatchPaste() {
+    const raw = (document.getElementById('batchPasteInput').value || '').trim();
+    if (!raw) {
+      alert('請先在文字框貼上材料費明細！');
+      return;
+    }
+    const yr = getYear();
+    const term = getTerm();
+    const defCat = document.getElementById('defaultCategorySelect').value || '活動材料費';
+    const lines = raw.split(/?
+/).map(l => l.trim()).filter(Boolean);
+    let added = 0;
+
+    lines.forEach(line => {
+      const cols = line.split('	').map(c => c.trim());
+      if (cols.length < 2) return;
+      const joined = cols.join('');
+      if (joined.includes('收據日期') && joined.includes('品名')) return;
+      if (cols[0] === '小計' || cols[0] === '總計' || cols[1] === '小計' || cols[1] === '總計') return;
+
+      let rDate = '', summary = defCat, itemName = '', qty = 1, unit = '份', unitPrice = 0, totalPrice = 0;
+      if (cols.length >= 7) {
+        [rDate, summary, itemName] = cols;
+        qty = parseNum(cols[3]) || 1;
+        unit = cols[4] || '份';
+        unitPrice = parseNum(cols[5]);
+        totalPrice = Math.round(parseNum(cols[6]) || (qty * unitPrice));
+      } else if (cols.length === 6) {
+        [rDate, itemName] = cols;
+        qty = parseNum(cols[2]) || 1;
+        unit = cols[3] || '份';
+        unitPrice = parseNum(cols[4]);
+        totalPrice = Math.round(parseNum(cols[5]) || (qty * unitPrice));
+      } else {
+        rDate = cols[0];
+        itemName = cols[1];
+        totalPrice = Math.round(parseNum(cols[cols.length - 1]));
+        unitPrice = totalPrice;
+      }
+
+      if (!itemName && totalPrice === 0) return;
+      items.push({
+        id: `dmat_${yr}_T${term}_${Date.now()}_${added}_${Math.random().toString(36).slice(2, 5)}`,
+        rocYear: yr,
+        term: term,
+        sortOrder: items.length + 1,
+        receiptDate: rDate,
+        summary: summary || defCat,
+        itemName: itemName,
+        qty,
+        unit,
+        unitPrice,
+        totalPrice
+      });
+      added++;
+    });
+
+    if (added === 0) {
+      alert('未解析到有效的材料費資料，請確認欄位是否以 Tab 分隔。');
+      return;
+    }
+    document.getElementById('batchPasteInput').value = '';
+    renderTable();
+    await saveCurrentTermToCloud(false);
+  }
+
+  function groupReceiptsForVoucher() {
+    // 依「收據日期 + 用途摘要」分組，對應「3. 延緩核銷統計」支出憑證編號 2, 3, 4...
+    const map = new Map();
+    items.forEach(r => {
+      const amt = Math.round(Number(r.totalPrice) || 0);
+      const dKey = String(r.receiptDate || '').trim();
+      const sKey = String(r.summary || '活動材料費').trim() || '活動材料費';
+      const key = `${dKey}__${sKey}`;
+      if (!map.has(key)) {
+        map.set(key, { receiptDate: dKey, summary: sKey, total: 0, count: 0 });
+      }
+      const grp = map.get(key);
+      grp.total += amt;
+      grp.count += 1;
+    });
+    return [...map.values()].filter(g => g.total > 0 || g.receiptDate !== '');
+  }
+
+  function renderSummaryOnly() {
+    const strip = document.getElementById('summaryStrip');
+    if (!strip) return;
+    const totalAmt = items.reduce((acc, r) => acc + Math.round(Number(r.totalPrice) || 0), 0);
+    const groups = groupReceiptsForVoucher();
+    strip.innerHTML = `
+      <div class="stat-pill">
+        <div class="lbl">品項筆數</div>
+        <div class="val">${items.length} 筆</div>
+      </div>
+      <div class="stat-pill">
+        <div class="lbl">憑證張數（將連動至 3. 延緩核銷統計）</div>
+        <div class="val">${groups.length} 張（編號 2 起）</div>
+      </div>
+      <div class="stat-pill" style="background:#fff1f2; border-color:#fecdd3;">
+        <div class="lbl" style="color:#9f1239;">本期材料費總計</div>
+        <div class="val" style="color:#be123c;">${fmt(totalAmt)} 元</div>
+      </div>
+    `;
+  }
+
+  function renderTable() {
+    const yr = getYear();
+    const term = getTerm();
+    document.getElementById('tableHeading').textContent = `二、${yr} 年 延緩第 ${term} 期材料費收據明細表`;
+    renderSummaryOnly();
+
+    const tbody = document.getElementById('materialTbody');
+    if (items.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" class="td-center" style="padding:24px; color:#64748b;">
+            本期尚無材料費收據資料，請點擊上方「＋ 新增一筆材料費收據」或展開批次貼上匯入。
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    // 計算每張收據（依收據日期+用途摘要）對應的憑證編號（從 2 開始）
+    const groups = groupReceiptsForVoucher();
+    const voucherNoMap = new Map();
+    groups.forEach((g, idx) => {
+      voucherNoMap.set(`${g.receiptDate}__${g.summary}`, idx + 2);
+    });
+
+    let totalAmt = 0;
+    const rowsHtml = items.map(r => {
+      const amt = Math.round(Number(r.totalPrice) || 0);
+      totalAmt += amt;
+      const gKey = `${String(r.receiptDate || '').trim()}__${String(r.summary || '活動材料費').trim() || '活動材料費'}`;
+      const vNo = voucherNoMap.get(gKey) || 2;
+
+      return `
+        <tr>
+          <td class="td-center" style="font-weight:bold; color:#0369a1;">${vNo}</td>
+          <td><input type="text" class="cell-inp ctr" value="${escAttr(r.receiptDate)}" placeholder="115/09/20" onchange="onRowEdit('${r.id}','receiptDate',this.value)"></td>
+          <td><input type="text" class="cell-inp" value="${escAttr(r.summary)}" placeholder="活動材料費" onchange="onRowEdit('${r.id}','summary',this.value)"></td>
+          <td><input type="text" class="cell-inp" value="${escAttr(r.itemName)}" placeholder="請輸入品名" onchange="onRowEdit('${r.id}','itemName',this.value)"></td>
+          <td><input type="number" class="cell-inp num" value="${r.qty || ''}" placeholder="1" onchange="onRowEdit('${r.id}','qty',this.value)"></td>
+          <td><input type="text" class="cell-inp ctr" value="${escAttr(r.unit)}" placeholder="份" onchange="onRowEdit('${r.id}','unit',this.value)"></td>
+          <td><input type="number" class="cell-inp num" value="${r.unitPrice || ''}" placeholder="0" onchange="onRowEdit('${r.id}','unitPrice',this.value)"></td>
+          <td><input type="number" id="tot_${r.id}" class="cell-inp num" value="${amt || ''}" placeholder="0" onchange="onRowEdit('${r.id}','totalPrice',this.value)"></td>
+          <td class="td-center no-print">
+            <button type="button" class="btn btn-danger" onclick="deleteRow('${r.id}')">刪除</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.innerHTML = rowsHtml + `
+      <tr class="total-row">
+        <td colspan="7" class="td-right">延緩第 ${term} 期材料費總計</td>
+        <td class="td-right">${fmt(totalAmt)} 元</td>
+        <td class="no-print"></td>
+      </tr>
+    `;
+  }
+
+  function copySummaryForExcel() {
+    const yr = getYear();
+    const term = getTerm();
+    const lines = [`${yr}年延緩第${term}期材料費明細	收據日期	用途摘要	品名	數量	單位	單價	總價`];
+    let sum = 0;
+    items.forEach(r => {
+      const amt = Math.round(Number(r.totalPrice) || 0);
+      sum += amt;
+      lines.push(`	${r.receiptDate}	${r.summary}	${r.itemName}	${r.qty}	${r.unit}	${r.unitPrice}	${amt}`);
+    });
+    lines.push(`		合計					${sum}`);
+    navigator.clipboard?.writeText(lines.join('
+')).then(() => {
+      alert('已複製材料費明細，可直接貼上 Excel！');
+    });
+  }
+
+  async function onFilterChange() {
+    await loadFromCloud(false);
+  }
+
+  (async function init() {
+    await loadFromCloud(false);
+  })();
+</script>
+</body>
+</html>
