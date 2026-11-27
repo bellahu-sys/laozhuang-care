@@ -278,6 +278,21 @@
       border-radius: 8px;
       background: #fff;
     }
+    .mirror-cell-flex { display: flex; align-items: flex-start; gap: 8px; }
+    .mirror-ta { flex: 1; width: 100%; min-height: 28px; border: 1px solid transparent; background: transparent; font: inherit; color: inherit; resize: none; overflow: hidden; padding: 4px 6px; border-radius: 4px; line-height: 1.45; }
+    .mirror-ta:hover { border-color: #cbd5e1; background: #fff; }
+    .mirror-ta:focus { outline: none; border-color: #2563eb; background: #fff; color: #0f172a; text-decoration: none; }
+    td.item-cell.is-done .mirror-ta { text-decoration: line-through; }
+    td.item-cell.is-done .done-date { text-decoration: none; }
+    .mv-tools { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+    .mv-tools button { border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; border-radius: 5px; font-size: 0.74rem; padding: 3px 6px; cursor: pointer; font-weight: normal; text-decoration: none; }
+    .mv-tools button:hover { background: #e2e8f0; }
+    .mv-tools button.mv-del { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
+    .mv-drag { font-size: 0.74rem; color: #64748b; border: 1px dashed #94a3b8; border-radius: 5px; padding: 3px 6px; cursor: grab; user-select: none; }
+    tr.mirror-add-row td { background: #f8fafc; }
+    .mirror-add-box { display: flex; gap: 6px; }
+    .mirror-add-box input { flex: 1; min-width: 120px; padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+    td.item-cell.drag-over { outline: 2px dashed #2563eb; outline-offset: -2px; }
     .done-date { font-size: 0.74rem; color: #0f766e; font-weight: normal; margin-top: 2px; }
     table.mirror-chk-table {
       width: 100%;
@@ -485,6 +500,8 @@
       </div>
 
       <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" onclick="restoreDefaultItems()">恢復預設項目</button>
+        <button type="button" class="btn btn-outline" onclick="applyItemsToAllTerms()">套用項目到本年度全部期別</button>
         <button type="button" class="btn btn-outline" onclick="resetCurrentTermChecks()">重設本期勾選（保留項目）</button>
       </div>
     </div>
@@ -497,7 +514,7 @@
   <div class="card excel-mirror-card">
     <h2>
       <span id="mirrorTableHeading">115 年 延緩第 1 期 — 送件文件檢核表（勾選即自動存檔至雲端）</span>
-      <span style="font-size:0.82rem; color:#475569; font-weight:normal;">已完成的請直接打勾，會記下完成日期；切換期別或重新整理皆會保留進度</span>
+      <span style="font-size:0.82rem; color:#475569; font-weight:normal;">已完成的請直接打勾，會記下完成日期；項目名稱可直接修改，也能新增、刪除、上下移動或拖曳排序</span>
     </h2>
     <div class="mirror-table-wrap">
       <table class="mirror-chk-table" id="mirrorChecklistTable"></table>
@@ -990,7 +1007,7 @@
 
   function resetCurrentTermChecks() {
     if (!confirm(`確定要將 ${currentYear} 年延緩第 ${currentTerm} 期的所有勾選恢復為未完成嗎？（項目與說明文字會保留）`)) return;
-    checklistItems.forEach(x => { x.checked = false; });
+    checklistItems.forEach(x => { x.checked = false; delete x.doneAt; });
     renderAll();
     scheduleAutoSave();
   }
@@ -1046,19 +1063,6 @@
     }).join('');
   }
 
-  const MIRROR_LEFT_IDS = ['pre_1', 'pre_2', 'pre_3', 'pre_extra', 'pre_4', 'pre_5'];
-  const MIRROR_RIGHT_IDS = ['ord_0', 'ord_1', 'ord_2', 'ord_3', 'ord_4', 'ord_5', 'ord_6', 'ord_7', 'ord_8', 'ord_9', 'ord_10', 'ord_11'];
-
-  function mirrorCounts() {
-    const byId = (id) => checklistItems.find(x => x.id === id);
-    const leftItems = MIRROR_LEFT_IDS.map(byId).filter(it => it && (it.id !== 'pre_extra' || String(it.title || '').trim()));
-    const rightItems = MIRROR_RIGHT_IDS.map(byId).filter(Boolean);
-    return {
-      leftDone: leftItems.filter(x => x.checked).length, leftTotal: leftItems.length,
-      rightDone: rightItems.filter(x => x.checked).length, rightTotal: rightItems.length
-    };
-  }
-
   function renderProgressSummary() {
     const grid = document.getElementById('progressGrid');
     if (!grid) return;
@@ -1086,96 +1090,214 @@
   }
 
 
-  function ensureMirrorItemsExist() {
-    const defaults = buildDefaultItems();
-    defaults.forEach(defItem => {
-      if (!checklistItems.some(x => x.id === defItem.id)) {
-        checklistItems.push(defItem);
+  // ===== 檢核表項目（可自由修改、新增、刪除、排序）=====
+  const MIRROR_DEFAULT_LABELS = {
+    pre_1: '核定函',
+    pre_2: '6.1 材料費影本',
+    pre_3: '6.2 領款收據-講師影本',
+    pre_4: '郵寄標籤+信封',
+    pre_5: '裝訂封面',
+    ord_0: '1.檢查表(群組另外給, 不用附)',
+    ord_1: '1. 核銷公文',
+    ord_2: '2. 領款收據',
+    ord_3: '3. 經費支出憑證簿',
+    ord_4: '4. 經費收支明細表',
+    ord_5: '5. 支出憑證明細表',
+    ord_6: '6. 支出憑證黏貼存單正本憑證\n-6.1 課程材料費收據\n-6.2 講師領據',
+    ord_7: '7. 特約單位服務量表-師資名冊',
+    ord_8: '8. 個案出席記錄表',
+    ord_9: '9. 據點開班資料滙出報表',
+    ord_10: '10.核定函及核定表 (影本)',
+    ord_11: '講師所得稅記錄'
+  };
+  const MIRROR_LEFT_STAGE = 'pre_copy';
+  const MIRROR_RIGHT_STAGE = 'official_order';
+
+  // 舊資料沒有 label 欄位時，帶入圖 3 的檢核表文字（只做一次，不會覆蓋你修改過的內容）
+  function migrateMirrorLabels() {
+    checklistItems.forEach(it => {
+      if (it.label !== undefined) return;
+      if (it.id === 'pre_extra') { it.label = String(it.title || ''); return; }
+      if (MIRROR_DEFAULT_LABELS[it.id] !== undefined) {
+        it.label = MIRROR_DEFAULT_LABELS[it.id];
+        if (it.id === 'ord_0') it.muted = true;
       }
     });
   }
 
-  function onItemTitleChange(itemId, newTitle) {
+  function itemLabel(it) {
+    return it.label !== undefined ? String(it.label) : String(it.title || '');
+  }
+
+  function visibleItems(stage) {
+    return checklistItems.filter(x => {
+      if (x.stage !== stage) return false;
+      if (x.id === 'pre_extra' && !itemLabel(x).trim()) return false;
+      if (x.label === undefined && MIRROR_DEFAULT_LABELS[x.id] === undefined && !x.isCustom && x.id !== 'pre_extra') return false;
+      return true;
+    });
+  }
+
+  function onLabelChange(itemId, val) {
     const it = checklistItems.find(x => x.id === itemId);
     if (!it) return;
-    it.title = String(newTitle ?? '');
-    renderStageList('pre_copy', 'list_pre_copy');
+    it.label = String(val ?? '');
+    it.title = it.label;
     scheduleAutoSave();
+  }
+
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight + 2) + 'px';
+  }
+
+  function addMirrorItem(stage) {
+    const inp = document.getElementById(`mirrorNew_${stage}`);
+    const text = (inp?.value || '').trim();
+    if (!text) { setStatus('請先輸入項目名稱', true); inp?.focus(); return; }
+    checklistItems.push({
+      id: `custom_${stage}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+      stage, isCustom: true, label: text, title: text, sub: '', checked: false, note: ''
+    });
+    if (inp) inp.value = '';
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function deleteMirrorItem(itemId) {
+    const it = checklistItems.find(x => x.id === itemId);
+    if (!it) return;
+    if (!confirm(`確定要刪除檢核項目「${itemLabel(it).split('\n')[0]}」嗎？`)) return;
+    checklistItems = checklistItems.filter(x => x.id !== itemId);
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function moveMirrorItem(itemId, dir) {
+    const it = checklistItems.find(x => x.id === itemId);
+    if (!it) return;
+    const list = visibleItems(it.stage);
+    const idx = list.findIndex(x => x.id === itemId);
+    const other = list[idx + dir];
+    if (!other) return;
+    const i1 = checklistItems.indexOf(it);
+    const i2 = checklistItems.indexOf(other);
+    [checklistItems[i1], checklistItems[i2]] = [checklistItems[i2], checklistItems[i1]];
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  let dragItemId = null;
+  function onMirrorDragStart(ev, itemId) {
+    dragItemId = itemId;
+    try { ev.dataTransfer.setData('text/plain', itemId); ev.dataTransfer.effectAllowed = 'move'; } catch (e) {}
+  }
+  function onMirrorDragOver(ev, targetId) {
+    const src = checklistItems.find(x => x.id === dragItemId);
+    const tgt = checklistItems.find(x => x.id === targetId);
+    if (!src || !tgt || src.stage !== tgt.stage) return;
+    ev.preventDefault();
+  }
+  function onMirrorDrop(ev, targetId) {
+    ev.preventDefault();
+    const src = checklistItems.find(x => x.id === dragItemId);
+    const tgt = checklistItems.find(x => x.id === targetId);
+    dragItemId = null;
+    if (!src || !tgt || src === tgt || src.stage !== tgt.stage) return;
+    checklistItems = checklistItems.filter(x => x !== src);
+    const ti = checklistItems.indexOf(tgt);
+    checklistItems.splice(ti, 0, src);
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function restoreDefaultItems() {
+    if (!confirm(`確定要把 ${currentYear} 年延緩第 ${currentTerm} 期的檢核項目恢復成預設內容嗎？（你修改、新增的項目與勾選都會清除）`)) return;
+    checklistItems = buildDefaultItems();
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  async function applyItemsToAllTerms() {
+    const client = ensureSupabaseClient();
+    if (!client) { setStatus('尚未連線至雲端資料庫，無法套用到其他期別', true); return; }
+    if (!confirm(`確定要把目前這份檢核項目套用到 ${currentYear} 年全部 3 期嗎？（其他期別的項目會被取代並清空勾選，說明區內容保留）`)) return;
+    const copy = checklistItems.map(it => { const c = { ...it, checked: false }; delete c.doneAt; return c; });
+    try {
+      for (const t of [1, 2, 3]) {
+        if (t === currentTerm) continue;
+        const { data } = await client.from('delay_reimburse_checklists').select('*').eq('roc_year', currentYear).eq('term', t).maybeSingle();
+        const notes = (data && data.important_notes) ? data.important_notes : importantNotesText;
+        const { error } = await client.from('delay_reimburse_checklists').upsert({
+          roc_year: currentYear, term: t, items: copy, important_notes: notes, updated_at: new Date().toISOString()
+        }, { onConflict: 'roc_year,term' });
+        if (error) throw error;
+      }
+      await saveTermToCloud(true);
+      setStatus(`已將目前檢核項目套用到 ${currentYear} 年全部 3 期`);
+    } catch (e) {
+      setStatus('套用失敗：' + (e.message || e), true);
+    }
+  }
+
+  function mirrorCounts() {
+    const L = visibleItems(MIRROR_LEFT_STAGE);
+    const R = visibleItems(MIRROR_RIGHT_STAGE);
+    return {
+      leftDone: L.filter(x => x.checked).length, leftTotal: L.length,
+      rightDone: R.filter(x => x.checked).length, rightTotal: R.length
+    };
+  }
+
+  function buildItemCells(it, side) {
+    const label = itemLabel(it);
+    const doneCls = it.checked ? 'is-done' : (it.muted ? 'muted-hint' : '');
+    const dateHtml = (it.checked && it.doneAt) ? `<div class="done-date">完成於 ${escHtml(it.doneAt)}</div>` : '';
+    const id = escAttr(it.id);
+    return `
+      <td class="chk-cell">
+        <input type="checkbox" ${it.checked ? 'checked' : ''} onchange="onToggleCheck('${id}', this.checked)">
+      </td>
+      <td class="item-cell ${doneCls}" ondragover="onMirrorDragOver(event, '${id}')" ondrop="onMirrorDrop(event, '${id}')">
+        <div class="mirror-cell-flex">
+          <textarea class="mirror-ta" rows="1" placeholder="輸入項目名稱" oninput="autoGrow(this)" onchange="onLabelChange('${id}', this.value)">${escHtml(label)}</textarea>
+          <div class="mv-tools no-print">
+            <button type="button" title="上移" onclick="moveMirrorItem('${id}', -1)">上移</button>
+            <button type="button" title="下移" onclick="moveMirrorItem('${id}', 1)">下移</button>
+            <span class="mv-drag" draggable="true" ondragstart="onMirrorDragStart(event, '${id}')" title="按住拖曳到想要的位置（同一欄內）">拖曳</span>
+            <button type="button" class="mv-del" onclick="deleteMirrorItem('${id}')">刪除</button>
+          </div>
+        </div>
+        ${dateHtml}
+      </td>`;
   }
 
   function renderMirrorChecklistTable() {
     const tbl = document.getElementById('mirrorChecklistTable');
     if (!tbl) return;
-    ensureMirrorItemsExist();
+    migrateMirrorLabels();
 
     const heading = document.getElementById('mirrorTableHeading');
     if (heading) {
       heading.textContent = `${currentYear} 年 延緩第 ${currentTerm} 期 — 送件文件檢核表（勾選即自動存檔至雲端）`;
     }
 
-    const getIt = (id) => checklistItems.find(x => x.id === id) || { id, title: '', checked: false };
-
-    const leftRows = [
-      { id: 'pre_1', label: '核定函' },
-      { id: 'pre_2', label: '6.1 材料費影本' },
-      { id: 'pre_3', label: '6.2 領款收據-講師影本' },
-      { id: 'pre_extra', editable: true },
-      { id: 'pre_4', label: '郵寄標籤+信封' },
-      { id: 'pre_5', label: '裝訂封面' }
-    ];
-
-    const rightRows = [
-      { id: 'ord_0', html: '1.檢查表(群組另外給, 不用附)', muted: true },
-      { id: 'ord_1', html: '1. 核銷公文' },
-      { id: 'ord_2', html: '2. 領款收據' },
-      { id: 'ord_3', html: '3. 經費支出憑證簿' },
-      { id: 'ord_4', html: '4. 經費收支明細表' },
-      { id: 'ord_5', html: '5. 支出憑證明細表' },
-      { id: 'ord_6', html: '6. 支出憑證黏貼存單正本憑證<br>-6.1 課程材料費收據<br>-6.2 講師領據' },
-      { id: 'ord_7', html: '7. 特約單位服務量表-師資名冊' },
-      { id: 'ord_8', html: '8. 個案出席記錄表' },
-      { id: 'ord_9', html: '9. 據點開班資料滙出報表' },
-      { id: 'ord_10', html: '10.核定函及核定表 (影本)' },
-      { id: 'ord_11', html: '講師所得稅記錄' }
-    ];
-
+    const L = visibleItems(MIRROR_LEFT_STAGE);
+    const R = visibleItems(MIRROR_RIGHT_STAGE);
+    const n = Math.max(L.length, R.length);
     let bodyHtml = '';
-    for (let i = 0; i < rightRows.length; i++) {
-      const rSpec = rightRows[i];
-      const rItem = getIt(rSpec.id);
-      const rDoneCls = rItem.checked ? 'is-done' : (rSpec.muted ? 'muted-hint' : '');
-
-      let leftCellsHtml = '';
-      if (i < leftRows.length) {
-        const lSpec = leftRows[i];
-        const lItem = getIt(lSpec.id);
-        const lDoneCls = lItem.checked ? 'is-done' : '';
-        const lContent = lSpec.editable
-          ? `<input type="text" class="mirror-inline-inp" value="${escAttr(lItem.title || '')}" placeholder="（預留欄位，可自由輸入其他影本項目）" onchange="onItemTitleChange('${lSpec.id}', this.value)">`
-          : escHtml(lSpec.label);
-        const lDate = (lItem.checked && lItem.doneAt) ? `<div class="done-date">完成於 ${escHtml(lItem.doneAt)}</div>` : '';
-        leftCellsHtml = `
-          <td class="chk-cell">
-            <input type="checkbox" ${lItem.checked ? 'checked' : ''} onchange="onToggleCheck('${lSpec.id}', this.checked)">
-          </td>
-          <td class="item-cell ${lDoneCls}">${lContent}${lDate}</td>
-        `;
-      } else if (i === 6) {
-        leftCellsHtml = `<td colspan="2" rowspan="5" class="blank-span"></td>`;
-      } else if (i === 11) {
-        leftCellsHtml = `<td class="gray-corner"></td><td class="blank-span"></td>`;
-      }
-
-      bodyHtml += `
-        <tr>
-          ${leftCellsHtml}
-          <td class="chk-cell">
-            <input type="checkbox" ${rItem.checked ? 'checked' : ''} onchange="onToggleCheck('${rSpec.id}', this.checked)">
-          </td>
-          <td class="item-cell ${rDoneCls}">${rSpec.html}${(rItem.checked && rItem.doneAt) ? `<div class="done-date">完成於 ${escHtml(rItem.doneAt)}</div>` : ''}</td>
-        </tr>
-      `;
+    for (let i = 0; i < n; i++) {
+      const left = L[i] ? buildItemCells(L[i]) : '<td colspan="2" class="blank-span"></td>';
+      const right = R[i] ? buildItemCells(R[i]) : '<td colspan="2" class="blank-span"></td>';
+      bodyHtml += `<tr>${left}${right}</tr>`;
     }
+    if (n === 0) bodyHtml = '<tr><td colspan="4" style="text-align:center; color:#64748b; padding:16px;">尚無檢核項目，請在下方新增</td></tr>';
+
+    const addBox = (stage, ph) => `
+      <div class="mirror-add-box">
+        <input type="text" id="mirrorNew_${stage}" placeholder="${ph}" onkeydown="if(event.key==='Enter'){addMirrorItem('${stage}');}">
+        <button type="button" class="btn btn-primary" onclick="addMirrorItem('${stage}')">＋ 新增</button>
+      </div>`;
 
     tbl.innerHTML = `
       <thead>
@@ -1186,8 +1308,13 @@
       </thead>
       <tbody>
         ${bodyHtml}
+        <tr class="mirror-add-row no-print">
+          <td colspan="2">${addBox(MIRROR_LEFT_STAGE, '新增影本項目...')}</td>
+          <td colspan="2">${addBox(MIRROR_RIGHT_STAGE, '新增核銷文件項目...')}</td>
+        </tr>
       </tbody>
     `;
+    tbl.querySelectorAll('.mirror-ta').forEach(autoGrow);
   }
 
   function renderAll() {
@@ -1201,22 +1328,11 @@
   }
 
   function copyChecklistSummary() {
-    const byId = (id) => checklistItems.find(x => x.id === id);
-    const leftLabels = { pre_1: '核定函', pre_2: '6.1 材料費影本', pre_3: '6.2 領款收據-講師影本', pre_extra: '', pre_4: '郵寄標籤+信封', pre_5: '裝訂封面' };
     const lines = [`【${currentYear}年 延緩第${currentTerm}期 核銷檢核表】`, '', '可先印好影本（暫存於資料夾）'];
-    MIRROR_LEFT_IDS.forEach(id => {
-      const it = byId(id);
-      if (!it) return;
-      const title = id === 'pre_extra' ? String(it.title || '').trim() : leftLabels[id];
-      if (!title) return;
-      lines.push(`${it.checked ? '[✓]' : '[ ]'} ${title}${it.checked && it.doneAt ? `（${it.doneAt} 完成）` : ''}`);
-    });
+    const fmtItem = (it) => `${it.checked ? '[✓]' : '[ ]'} ${itemLabel(it).replace(/\n/g, ' ')}${it.checked && it.doneAt ? `（${it.doneAt} 完成）` : ''}`;
+    visibleItems(MIRROR_LEFT_STAGE).forEach(it => lines.push(fmtItem(it)));
     lines.push('', '結束才能列印（金額可提前算好）');
-    MIRROR_RIGHT_IDS.forEach(id => {
-      const it = byId(id);
-      if (!it) return;
-      lines.push(`${it.checked ? '[✓]' : '[ ]'} ${String(it.title || '').replace(/\n/g, ' ')}${it.checked && it.doneAt ? `（${it.doneAt} 完成）` : ''}`);
-    });
+    visibleItems(MIRROR_RIGHT_STAGE).forEach(it => lines.push(fmtItem(it)));
     navigator.clipboard?.writeText(lines.join('\n')).then(() => {
       alert('已複製本期延緩核銷檢核進度！');
     });
