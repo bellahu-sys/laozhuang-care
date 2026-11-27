@@ -217,7 +217,21 @@
     .sess-input { width: 58px !important; text-align: right; padding: 4px 6px !important; font-weight: bold; }
     .sess-manual { font-size: 0.73rem; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 4px; padding: 1px 5px; font-weight: bold; }
     .sess-restore { font-size: 0.75rem; color: #2563eb; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
-    @media print { .section-subnav { display: none !important; } .sess-restore, .sess-manual { display: none !important; } }
+    .mini-copy-btn {
+      font-size: 0.72rem; padding: 1px 6px; border-radius: 4px;
+      border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;
+      cursor: pointer; font-weight: bold; line-height: 1.3;
+    }
+    .mini-copy-btn:hover { background: #ffe4e6; border-color: #be123c; color: #9f1239; }
+    .cell-amt-line {
+      display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+      font-size: 0.9rem; flex-wrap: wrap;
+    }
+    .cell-upper-line {
+      display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+      font-size: 0.78rem; color: #9f1239; font-weight: bold;
+    }
+    @media print { .section-subnav, .mini-copy-btn { display: none !important; } .sess-restore, .sess-manual { display: none !important; } }
 
   </style>
 </head>
@@ -1379,6 +1393,52 @@
     return `${neg}${out || '零'}元整`;
   }
 
+  function copySingleValue(text, toastLabel) {
+    const val = String(text || '');
+    navigator.clipboard?.writeText(val).then(() => {
+      showToast('summaryCopyToast', `已複製${toastLabel || '金額'}：${val}`);
+    }).catch(() => {
+      showToast('summaryCopyToast', `已準備${toastLabel || '金額'}：${val}`);
+    });
+  }
+
+  function copyPeriodWithMonthlyUpper(blk, label, teachers, withDays) {
+    const headerCols = [];
+    blk.cols.forEach(c => {
+      headerCols.push(`${c}（元）`, `${c}（大寫）`);
+    });
+    const lines = [`${label} ${currentYear}年度 ${blk.title}\t講師\t${headerCols.join('\t')}\t合計\t合計大寫`];
+    const colSums = {};
+    blk.cols.forEach(c => { colSums[c] = 0; });
+    let grandSum = 0;
+
+    teachers.forEach(instName => {
+      let rowSum = 0;
+      const vals = [];
+      blk.cols.forEach(colKey => {
+        const cell = getLinkedCellData(blk, colKey, instName);
+        rowSum += cell.amount;
+        colSums[colKey] += cell.amount;
+        const amtText = withDays ? `${cell.sessions}天 ${cell.amount}元` : `${cell.sessions}堂 ${cell.amount}元`;
+        vals.push(amtText, numberToChineseUpper(cell.amount));
+      });
+      grandSum += rowSum;
+      lines.push(`${label} ${blk.title}\t${instName}\t${vals.join('\t')}\t${rowSum}\t${numberToChineseUpper(rowSum)}`);
+    });
+
+    const footVals = [];
+    blk.cols.forEach(c => {
+      footVals.push(`${colSums[c]}`, numberToChineseUpper(colSums[c]));
+    });
+    lines.push(`${label} ${blk.title}\t總計\t${footVals.join('\t')}\t${grandSum}\t${numberToChineseUpper(grandSum)}`);
+
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
+      showToast('summaryCopyToast', `已複製「${blk.title}」含每月大寫金額表格`);
+    }).catch(() => {
+      showToast('summaryCopyToast', `已準備「${blk.title}」含每月大寫金額表格`);
+    });
+  }
+
   function buildPeriodSheetHtml(blk, badgeLabel, headerBg, teachers) {
     if (!teachers || teachers.length === 0) {
       return `<div class="period-card"><div style="text-align:center; padding:16px; color:#64748b;">請先點選「勾選講師」選擇要顯示的講師</div></div>`;
@@ -1400,6 +1460,12 @@
         const defLabel = isLtc ? '行事曆' : '預設';
         const args = `'${escapeAttr(blk.periodKey)}', '${escapeAttr(colKey)}', '${escapeAttr(instName)}'`;
         const tip = `單堂 ${fmtNum(cell.unitAmt)} 元 × ${unitLabel}；${defLabel}：${fmtNum(cell.calendarDays)}`;
+        const amtStr = `${fmtNum(cell.amount)} 元`;
+        const upperStr = numberToChineseUpper(cell.amount);
+        const copyAmtArg = escapeAttr(`${cell.amount}`);
+        const copyUpperArg = escapeAttr(upperStr);
+        const copyBothArg = escapeAttr(`${upperStr}（${cell.amount}元）`);
+
         const inner = `
             <div style="display:flex; flex-direction:column; gap:4px; line-height:1.45;">
               <div class="sess-row">
@@ -1407,9 +1473,17 @@
                 <input type="text" inputmode="decimal" class="num-input sess-input" value="${escapeAttr(String(cell.sessions))}" title="${escapeAttr(tip)}" onchange="onSessionsInput(${args}, this.value)">
                 ${cell.manual ? `<span class="sess-manual no-print">手動（${defLabel} ${fmtNum(cell.calendarDays)}）</span><button type="button" class="sess-restore no-print" onclick="restoreCalendarDays(${args})">還原</button>` : ''}
               </div>
-              <div style="text-align:right; font-size:0.9rem;"><strong>${fmtNum(cell.amount)}</strong> 元</div>
+              <div class="cell-amt-line">
+                <strong>${escapeHtml(amtStr)}</strong>
+                <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${copyAmtArg}', '${escapeAttr(instName + ' ' + colKey + ' 金額')}')" title="複製數字金額">複製</button>
+              </div>
+              <div class="cell-upper-line">
+                <span>${escapeHtml(upperStr)}</span>
+                <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${copyUpperArg}', '${escapeAttr(instName + ' ' + colKey + ' 大寫')}')" title="複製大寫金額">複大寫</button>
+                <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${copyBothArg}', '${escapeAttr(instName + ' ' + colKey + ' 大寫+金額')}')" title="複製大寫金額與數字">全</button>
+              </div>
             </div>`;
-        return `<td style="min-width:155px;">${inner}</td>`;
+        return `<td style="min-width:185px;">${inner}</td>`;
       }).join('');
 
       periodGrandTotal += rowTotal;
@@ -1418,19 +1492,53 @@
         <tr>
           <td style="font-weight:bold;">${escapeHtml(instName)}</td>
           ${colCells}
-          <td class="num-col" style="font-weight:bold;">${fmtNum(rowTotal)}</td>
-          <td class="center-col" style="font-weight:bold; color:#881337; background:#fffafa; white-space:nowrap;">${escapeHtml(upperChinese)}</td>
+          <td class="num-col" style="font-weight:bold;">
+            <div class="cell-amt-line">
+              <span>${fmtNum(rowTotal)}</span>
+              <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(String(rowTotal))}', '${escapeAttr(instName + ' 合計')}')" title="複製合計金額">複製</button>
+            </div>
+          </td>
+          <td class="center-col" style="font-weight:bold; color:#881337; background:#fffafa; white-space:nowrap;">
+            <div style="display:inline-flex; align-items:center; gap:5px;">
+              <span>${escapeHtml(upperChinese)}</span>
+              <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(upperChinese)}', '${escapeAttr(instName + ' 合計大寫')}')" title="複製合計大寫金額">複製</button>
+            </div>
+          </td>
         </tr>
       `;
     }).join('');
 
-    const footCells = blk.cols.map(c => `<td class="num-col">${fmtNum(colTotals[c])}</td>`).join('');
+    const footCells = blk.cols.map(c => {
+      const sumAmt = colTotals[c];
+      const sumUpper = numberToChineseUpper(sumAmt);
+      return `
+        <td class="num-col">
+          <div style="display:flex; flex-direction:column; gap:3px; align-items:flex-end;">
+            <div style="display:inline-flex; align-items:center; gap:4px;">
+              <span>${fmtNum(sumAmt)}</span>
+              <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(String(sumAmt))}', '${escapeAttr(c + ' 總計')}')" title="複製${escapeAttr(c)}總計">複製</button>
+            </div>
+            <div style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
+              <span>${escapeHtml(sumUpper)}</span>
+              <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(sumUpper)}', '${escapeAttr(c + ' 總計大寫')}')" title="複製${escapeAttr(c)}總計大寫">複大寫</button>
+            </div>
+          </div>
+        </td>
+      `;
+    }).join('');
     const grandUpperChinese = numberToChineseUpper(periodGrandTotal);
+
+    const copyAllUpperFn = blk.program === 'LTC'
+      ? `copyPeriodWithMonthlyUpper(getLtcPeriodDef(), '長照核銷', getPickedTeachers('ltc'), true)`
+      : `copyPeriodWithMonthlyUpper(getDelayPeriodDef(), '延緩核銷', getPickedTeachers('delay'), false)`;
 
     return `
       <div class="period-card">
         <div class="period-card-header">
           <span class="period-card-title">${escapeHtml(badgeLabel)} — ${currentYear}年度 ${escapeHtml(blk.title)}</span>
+          <div class="no-print" style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="${copyAllUpperFn}">複製含每月大寫金額（貼核銷文件）</button>
+          </div>
         </div>
         <div style="overflow-x:auto;">
           <table class="excel-table">
@@ -1438,8 +1546,8 @@
               <tr>
                 <th style="width:110px;${headerBg ? ` background:${headerBg};` : ''}">講師</th>
                 ${blk.cols.map(c => `<th${headerBg ? ` style="background:${headerBg};"` : ''}>${escapeHtml(c)}</th>`).join('')}
-                <th style="width:110px;${headerBg ? ` background:${headerBg};` : ''}">合計</th>
-                <th style="width:175px;${headerBg ? ` background:${headerBg};` : ''}">大寫金額</th>
+                <th style="width:125px;${headerBg ? ` background:${headerBg};` : ''}">合計</th>
+                <th style="width:195px;${headerBg ? ` background:${headerBg};` : ''}">大寫金額</th>
               </tr>
             </thead>
             <tbody>
@@ -1447,8 +1555,18 @@
               <tr class="total-row">
                 <td class="center-col">總計</td>
                 ${footCells}
-                <td class="num-col">${fmtNum(periodGrandTotal)}</td>
-                <td class="center-col">${escapeHtml(grandUpperChinese)}</td>
+                <td class="num-col">
+                  <div style="display:inline-flex; align-items:center; gap:4px;">
+                    <span>${fmtNum(periodGrandTotal)}</span>
+                    <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(String(periodGrandTotal))}', '總計金額')" title="複製總計金額">複製</button>
+                  </div>
+                </td>
+                <td class="center-col">
+                  <div style="display:inline-flex; align-items:center; gap:4px;">
+                    <span>${escapeHtml(grandUpperChinese)}</span>
+                    <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(grandUpperChinese)}', '總計大寫金額')" title="複製總計大寫金額">複製</button>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
