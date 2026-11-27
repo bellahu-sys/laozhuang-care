@@ -148,6 +148,10 @@
     }
     #syncStatus { font-size: 0.85rem; font-weight: bold; color: #0f766e; }
 
+    .fee-pick-list { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 6px; }
+    .fee-pick { display: inline-flex; align-items: center; gap: 5px; font-size: 0.85rem; padding: 4px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; cursor: pointer; }
+    .fee-pick.is-on { border-color: #0d9488; background: #f0fdfa; }
+    .fee-pick .fp-sub { color: #64748b; font-size: 0.78rem; }
     table.voucher-table input.cell-edit[readonly] { background: #f1f5f9; color: #1e293b; border-color: #e2e8f0; cursor: default; }
     .auto-tag { font-size: 0.78rem; font-weight: bold; color: #0f766e; background: #ccfbf1; border-radius: 4px; padding: 2px 7px; white-space: nowrap; }
     .src-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; margin-bottom: 14px; }
@@ -990,6 +994,76 @@
     }
   }
 
+  // ---- 每月「要核銷的講師」勾選（取消勾選的講師不會帶入明細表）----
+  const FEE_EXCLUDE_KEY = 'laozhuang_ltc_fee_excluded_v1';
+
+  function getFeeExcluded(yr, m) {
+    try {
+      const o = JSON.parse(localStorage.getItem(FEE_EXCLUDE_KEY) || '{}');
+      const arr = o[`${yr}_${m}`];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function saveFeeExcludedLocal(yr, m, names) {
+    try {
+      const o = JSON.parse(localStorage.getItem(FEE_EXCLUDE_KEY) || '{}');
+      o[`${yr}_${m}`] = names;
+      localStorage.setItem(FEE_EXCLUDE_KEY, JSON.stringify(o));
+    } catch (e) {}
+  }
+
+  async function saveFeeExcludedCloud(yr, m, names) {
+    if (!supabaseClient) return;
+    try {
+      await supabaseClient.from('ltc_delay_funding_records').upsert([{
+        roc_year: parseInt(yr, 10) || 115,
+        section_key: `ltc_voucher_fee_exclude_m${m}`,
+        payload: { names },
+        updated_at: new Date().toISOString()
+      }], { onConflict: 'roc_year,section_key' });
+    } catch (e) {}
+  }
+
+  async function loadFeeExcludedFromCloud(yr, m) {
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('ltc_delay_funding_records')
+        .select('*')
+        .eq('roc_year', parseInt(yr, 10) || 115)
+        .eq('section_key', `ltc_voucher_fee_exclude_m${m}`);
+      if (!error && Array.isArray(data) && data.length > 0 && data[0].payload && Array.isArray(data[0].payload.names)) {
+        saveFeeExcludedLocal(yr, m, data[0].payload.names);
+      }
+    } catch (e) {}
+  }
+
+  async function setFeeExcluded(yr, m, names) {
+    saveFeeExcludedLocal(yr, m, names);
+    await saveFeeExcludedCloud(yr, m, names);
+  }
+
+  async function onToggleFeeInstructor(name, checked) {
+    const yr = getSelectedYear();
+    const m = getSelectedMonth();
+    const set = new Set(getFeeExcluded(yr, m));
+    if (checked) set.delete(name); else set.add(name);
+    saveFeeExcludedLocal(yr, m, [...set]);
+    await applySources(yr, m, { force: true });
+    saveFeeExcludedCloud(yr, m, [...set]);
+  }
+
+  async function onFeeSelectAll(selectAll) {
+    const yr = getSelectedYear();
+    const m = getSelectedMonth();
+    const names = (sourceInfo.fee && sourceInfo.fee.list) ? sourceInfo.fee.list.map(x => x.name) : [];
+    const next = selectAll ? [] : names;
+    saveFeeExcludedLocal(yr, m, next);
+    await applySources(yr, m, { force: true });
+    saveFeeExcludedCloud(yr, m, next);
+  }
+
   function monthSignature(yr, m) {
     return JSON.stringify(allRows
       .filter(r => String(r.rocYear) === yr && Number(r.month) === m && isRowActive(r))
@@ -1044,7 +1118,8 @@
 
         const existing = new Map(monthRows().filter(isAutoFee).map(r => [String(r.id), r]));
         const keep = new Set();
-        fee.list.forEach(({ name, amount }) => {
+        const excludedNames = getFeeExcluded(yr, m);
+        fee.list.filter(x => !excludedNames.includes(x.name)).forEach(({ name, amount }) => {
           const id = `auto_fee_${yr}_${m}_${name}`;
           keep.add(id);
           let row = existing.get(id);
@@ -1064,26 +1139,32 @@
     }
   }
 
+  async function applySources(yr, m, opts = {}) {
+    if (yr !== getSelectedYear() || m !== getSelectedMonth()) return false;
+    const before = monthSignature(yr, m);
+    mergeSources(yr, m, sourceInfo.food, sourceInfo.fee, opts);
+    ensureMonthSlots(yr, m, 12);
+    const changed = before !== monthSignature(yr, m);
+    if (changed || opts.force) {
+      saveLocal();
+      renderSheet();
+      if (changed) await syncMonthToCloud(yr, m);
+    }
+    renderSourcePanel();
+    return changed;
+  }
+
   async function syncSources(opts = {}) {
     if (sourceSyncing) return;
     sourceSyncing = true;
     const yr = getSelectedYear();
     const m = getSelectedMonth();
     try {
-      const [food, fee] = await Promise.all([fetchFoodSource(yr, m), fetchFeeSource(yr, m)]);
+      const [food, fee] = await Promise.all([fetchFoodSource(yr, m), fetchFeeSource(yr, m), loadFeeExcludedFromCloud(yr, m)]);
       if (yr !== getSelectedYear() || m !== getSelectedMonth()) return; // 讀取期間已切換月份
       sourceInfo = { food, fee };
-      const before = monthSignature(yr, m);
-      mergeSources(yr, m, food, fee, opts);
-      ensureMonthSlots(yr, m, 12);
-      const changed = before !== monthSignature(yr, m);
+      const changed = await applySources(yr, m, opts);
       lastSourceSync = Date.now();
-      if (changed || opts.force) {
-        saveLocal();
-        renderSheet();
-        if (changed) await syncMonthToCloud(yr, m);
-      }
-      renderSourcePanel();
       if (opts.force) {
         setSyncBanner(changed ? `✅ 已重新帶入 ${yr} 年 ${m} 月來源資料` : `✅ 來源資料與明細表一致（${yr} 年 ${m} 月）`);
       }
@@ -1127,27 +1208,50 @@
     const replaceFoodBtn = (food && manualFood > 0 && sheetFood === 0 && food.days.length > 0)
       ? '<button type="button" class="btn btn-amber btn-sm" style="background:#d97706;color:#fff;" onclick="confirmReplace(\'food\')">改用連動資料（取代手動列）</button>' : '';
 
-    // 講師費
+    // 講師費（可勾選當月要核銷的講師）
     let gBody = '<div class="src-line">讀取來源中...</div>';
+    let selList = [];
+    let selTotal = 0;
     if (fee) {
+      const excluded = getFeeExcluded(yr, m);
+      selList = fee.ok ? fee.list.filter(x => !excluded.includes(x.name)) : [];
+      selTotal = selList.reduce((acc, x) => acc + x.amount, 0);
       let state = '';
       if (!fee.ok) {
         state = `<div class="src-state src-err">讀取失敗：${escHtml(fee.error)}</div>`;
       } else if (fee.list.length === 0) {
         state = `<div class="src-state src-warn">依「講師鐘點費核銷」的費率與行事曆天數，${yr} 年 ${m} 月沒有算出長照講師費（行事曆沒有對應的長照授課，或費率未設定）</div>`;
+      } else if (selList.length === 0) {
+        state = '<div class="src-state src-warn">本月沒有勾選任何講師，明細表不會列出講師費</div>';
       } else if (manualFee > 0 && sheetFee === 0) {
         state = `<div class="src-state src-warn">本月已有 ${manualFee} 列手動輸入的講師費，為避免重複沒有自動覆蓋</div>`;
-      } else if (sheetFee === fee.total) {
-        state = '<div class="src-state src-ok">已連動，金額與來源一致</div>';
+      } else if (sheetFee === selTotal) {
+        state = '<div class="src-state src-ok">已連動，金額與勾選的來源一致</div>';
       } else {
-        state = `<div class="src-state src-err">明細表講師費 ${fmt(sheetFee)} 與來源 ${fmt(fee.total)} 不一致，請按「重新讀取來源資料」</div>`;
+        state = `<div class="src-state src-err">明細表講師費 ${fmt(sheetFee)} 與勾選來源 ${fmt(selTotal)} 不一致，請按「重新讀取來源資料」</div>`;
       }
+      const picks = fee.ok && fee.list.length ? `
+        <div class="fee-pick-list">
+          ${fee.list.map(x => {
+            const on = !excluded.includes(x.name);
+            return `<label class="fee-pick ${on ? 'is-on' : ''}">
+              <input type="checkbox" ${on ? 'checked' : ''} onchange="onToggleFeeInstructor('${escAttr(x.name)}', this.checked)">
+              <strong>${escHtml(x.name)}</strong>
+              <span class="fp-sub">${fmt(x.unit)} × ${x.days} 天 = ${fmt(x.amount)}${x.manual ? '（手動天數）' : ''}</span>
+            </label>`;
+          }).join('')}
+        </div>
+        <div class="src-actions" style="margin-top:6px;">
+          <button type="button" class="btn btn-outline btn-sm" style="background:#fff;border:1px solid #cbd5e1;" onclick="onFeeSelectAll(true)">全選</button>
+          <button type="button" class="btn btn-outline btn-sm" style="background:#fff;border:1px solid #cbd5e1;" onclick="onFeeSelectAll(false)">全不選</button>
+          <span class="src-detail">勾選本月要核銷的講師，沒勾選的不會帶入下方明細表</span>
+        </div>` : '';
       gBody = `
-        <div class="src-line">來源：講師鐘點費核銷（長照）${fee.list.length} 位，合計 <strong>${fmt(fee.total)}</strong> 元（費用 × 時數 × 課堂天數）</div>
-        ${fee.list.length ? `<div class="src-detail">${fee.list.map(x => `${escHtml(x.name)}：${fmt(x.unit)} × ${x.days} 天 = ${fmt(x.amount)}${x.manual ? '（手動天數）' : ''}`).join('｜')}</div>` : ''}
+        <div class="src-line">來源：講師鐘點費核銷（長照）可核銷 ${fee.list.length} 位，已勾選 ${selList.length} 位，合計 <strong>${fmt(selTotal)}</strong> 元（費用 × 時數 × 課堂天數）</div>
+        ${picks}
         ${state}`;
     }
-    const replaceFeeBtn = (fee && fee.ok && manualFee > 0 && sheetFee === 0 && fee.list.length > 0)
+    const replaceFeeBtn = (fee && fee.ok && manualFee > 0 && sheetFee === 0 && selList.length > 0)
       ? '<button type="button" class="btn btn-amber btn-sm" style="background:#d97706;color:#fff;" onclick="confirmReplace(\'fee\')">改用連動資料（取代手動列）</button>' : '';
 
     el.innerHTML = `
