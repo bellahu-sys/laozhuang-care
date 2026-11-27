@@ -307,10 +307,9 @@
   <span class="section-subnav-label">長照與延緩核銷快速切換：</span>
   <a href="長照與延緩核銷統計.html">1. 長照與延緩經費收支</a>
   <a href="長照核銷食材費.html">長照核銷食材費</a>
-  <a href="延緩核銷材料費.html">延緩核銷材料費</a>
   <a href="講師鐘點費核銷.html" class="active">2. 講師鐘點費核銷</a>
   <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
-  <a href="延緩核銷統計.html">3. 延緩核銷統計</a>
+  <a href="長照與延緩核銷統計.html?plan=delay">3. 延緩核銷統計</a>
 </div>
 
 
@@ -1476,12 +1475,9 @@
               </div>
               <div class="cell-amt-line">
                 <strong>${escapeHtml(amtStr)}</strong>
-                <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${copyAmtArg}', '${escapeAttr(instName + ' ' + colKey + ' 金額')}')" title="複製數字金額">複製</button>
               </div>
               <div class="cell-upper-line">
                 <span>${escapeHtml(upperStr)}</span>
-                <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${copyUpperArg}', '${escapeAttr(instName + ' ' + colKey + ' 大寫')}')" title="複製大寫金額">複大寫</button>
-                <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${copyBothArg}', '${escapeAttr(instName + ' ' + colKey + ' 大寫+金額')}')" title="複製大寫金額與數字">全</button>
               </div>
             </div>`;
         return `<td style="min-width:185px;">${inner}</td>`;
@@ -1496,13 +1492,11 @@
           <td class="num-col" style="font-weight:bold;">
             <div class="cell-amt-line">
               <span>${fmtNum(rowTotal)}</span>
-              <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(String(rowTotal))}', '${escapeAttr(instName + ' 合計')}')" title="複製合計金額">複製</button>
             </div>
           </td>
           <td class="center-col" style="font-weight:bold; color:#881337; background:#fffafa; white-space:nowrap;">
             <div style="display:inline-flex; align-items:center; gap:5px;">
               <span>${escapeHtml(upperChinese)}</span>
-              <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(upperChinese)}', '${escapeAttr(instName + ' 合計大寫')}')" title="複製合計大寫金額">複製</button>
             </div>
           </td>
         </tr>
@@ -1517,11 +1511,9 @@
           <div style="display:flex; flex-direction:column; gap:3px; align-items:flex-end;">
             <div style="display:inline-flex; align-items:center; gap:4px;">
               <span>${fmtNum(sumAmt)}</span>
-              <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(String(sumAmt))}', '${escapeAttr(c + ' 總計')}')" title="複製${escapeAttr(c)}總計">複製</button>
             </div>
             <div style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem;">
               <span>${escapeHtml(sumUpper)}</span>
-              <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(sumUpper)}', '${escapeAttr(c + ' 總計大寫')}')" title="複製${escapeAttr(c)}總計大寫">複大寫</button>
             </div>
           </div>
         </td>
@@ -1559,13 +1551,11 @@
                 <td class="num-col">
                   <div style="display:inline-flex; align-items:center; gap:4px;">
                     <span>${fmtNum(periodGrandTotal)}</span>
-                    <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(String(periodGrandTotal))}', '總計金額')" title="複製總計金額">複製</button>
                   </div>
                 </td>
                 <td class="center-col">
                   <div style="display:inline-flex; align-items:center; gap:4px;">
                     <span>${escapeHtml(grandUpperChinese)}</span>
-                    <button type="button" class="mini-copy-btn no-print" onclick="copySingleValue('${escapeAttr(grandUpperChinese)}', '總計大寫金額')" title="複製總計大寫金額">複製</button>
                   </div>
                 </td>
               </tr>
