@@ -612,7 +612,6 @@
           .select('course_date, plan_type, course_name, instructor_name')
           .gte('course_date', `${adYear}-01-01`)
           .lte('course_date', `${adYear}-12-31`)
-          .like('plan_type', '%長照%')
           .order('course_date', { ascending: true })
           .order('id', { ascending: true })
           .range(from, from + step - 1);
@@ -624,9 +623,16 @@
       const masterNames = masterInstructors.map(m => m.name);
       const sets = {};
       const unmatched = new Set();
-      let withInst = 0;
+      let matchedRows = 0;
       all.forEach(r => {
         if (!r.course_date) return;
+        const pType = String(r.plan_type || '').trim();
+        if (pType === '提醒') return;
+
+        const isLtcPlan = pType.includes('長照');
+        const isCarePlan = pType === '關懷';
+        if (!isLtcPlan && !isCarePlan) return;
+
         const month = parseInt(String(r.course_date).split('-')[1], 10);
         const names = [];
         const raw = String(r.instructor_name || '').trim();
@@ -640,8 +646,14 @@
           const hit = masterNames.find(n => cn.includes(n));
           if (hit) names.push(hit);
         }
-        if (names.length) withInst++;
+
         names.forEach(nm => {
+          if (isCarePlan && !isLtcPlan) {
+            const scopeKey = `M${String(month).padStart(2, '0')}`;
+            const rule = getRateRule(currentYear, scopeKey, nm, '長照課程');
+            if (calcSingleSessionAmount(rule) <= 0) return;
+          }
+          matchedRows++;
           if (!sets[nm]) sets[nm] = {};
           if (!sets[nm][month]) sets[nm][month] = new Set();
           sets[nm][month].add(r.course_date);
@@ -652,10 +664,9 @@
         Object.keys(sets[nm]).forEach(m => { calendarDays[nm][m] = sets[nm][m].size; });
       });
       calendarLoaded = true;
-      let diag = `行事曆 ${currentYear} 年度長照排課共 ${all.length} 筆，可對應到講師 ${withInst} 筆`;
+      let diag = `行事曆 ${currentYear} 年度已對應到長照核銷排課（含關懷計畫課程）共 ${matchedRows} 筆`;
       if (unmatched.size) diag += `；名字對不上講師名單：${[...unmatched].join('、')}`;
-      if (all.length === 0) diag = `行事曆 ${currentYear} 年度找不到「長照」排課（plan_type 需含「長照」），天數全部為 0，請手動輸入`;
-      else if (withInst === 0) diag += '（排課沒有填授課講師，所以天數為 0，請到行事曆補上講師或在此手動輸入）';
+      if (matchedRows === 0) diag = `行事曆 ${currentYear} 年度找不到可對應的長照／關懷授課紀錄，天數全部為 0，請手動輸入`;
       updateCalDiag(diag);
       if (showMsg) setStatus(diag);
     } catch (e) {
