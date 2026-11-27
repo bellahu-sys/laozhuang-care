@@ -267,6 +267,76 @@
       margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1;
     }
 
+
+    /* 如圖雙欄對照檢核總表（可先印好影本 vs 結束才能列印） */
+    .excel-mirror-card {
+      border-top: 5px solid var(--delay-main);
+    }
+    .mirror-table-wrap {
+      overflow-x: auto;
+      border: 1.5px solid #64748b;
+      border-radius: 8px;
+      background: #fff;
+    }
+    table.mirror-chk-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 680px;
+      font-size: 0.94rem;
+    }
+    table.mirror-chk-table th {
+      background: #d9d9d9;
+      color: #0f172a;
+      font-weight: bold;
+      border: 1px solid #475569;
+      padding: 9px 10px;
+      text-align: center;
+      font-size: 0.98rem;
+    }
+    table.mirror-chk-table td {
+      border: 1px solid #64748b;
+      padding: 7px 10px;
+      vertical-align: middle;
+    }
+    table.mirror-chk-table td.chk-cell {
+      width: 48px;
+      text-align: center;
+    }
+    table.mirror-chk-table td.chk-cell input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--delay-main);
+      cursor: pointer;
+    }
+    table.mirror-chk-table td.item-cell {
+      width: calc(50% - 48px);
+      line-height: 1.45;
+      color: #0f172a;
+    }
+    table.mirror-chk-table td.item-cell.is-done {
+      background: #f0fdf4;
+      color: #166534;
+      text-decoration: line-through;
+      font-weight: bold;
+    }
+    table.mirror-chk-table td.item-cell.muted-hint {
+      color: #64748b;
+    }
+    table.mirror-chk-table td.blank-span {
+      background: #ffffff;
+    }
+    table.mirror-chk-table td.gray-corner {
+      background: #d9d9d9;
+    }
+    .mirror-inline-inp {
+      width: 100%;
+      border: 1px dashed #94a3b8;
+      border-radius: 4px;
+      padding: 3px 7px;
+      font-size: 0.88rem;
+      background: #fffef7;
+    }
+
     #syncStatus { font-size: 0.86rem; font-weight: bold; color: #0f766e; }
 
     @media print {
@@ -420,6 +490,17 @@
 
   <!-- 本期完成度統計 -->
   <div class="progress-grid" id="progressGrid"></div>
+
+  <!-- 依圖雙欄對照檢核總表（可先印好影本 vs 結束才能列印，即時寫入雲端資料庫） -->
+  <div class="card excel-mirror-card">
+    <h2>
+      <span id="mirrorTableHeading">一、115 年 延緩第 1 期 — 送件文件快速檢核總表（勾選即自動存檔至雲端）</span>
+      <span style="font-size:0.82rem; color:#475569; font-weight:normal;">已完成項目請直接打勾，切換期別或重新整理皆會保留進度</span>
+    </h2>
+    <div class="mirror-table-wrap">
+      <table class="mirror-chk-table" id="mirrorChecklistTable"></table>
+    </div>
+  </div>
 
   <!-- 主檢核區：雙欄配置 -->
   <div class="main-layout">
@@ -601,9 +682,18 @@
         note: ''
       },
       {
-        id: 'pre_4',
+        id: 'pre_extra',
         stage: 'pre_copy',
         seq: '預4',
+        title: '',
+        sub: '可自行填寫其他事前影印備存文件名稱',
+        checked: false,
+        note: ''
+      },
+      {
+        id: 'pre_4',
+        stage: 'pre_copy',
+        seq: '預5',
         title: '郵寄標籤 ＋ 信封',
         sub: '事先印好寄送縣府核銷文件之郵寄標籤與信封',
         checked: false,
@@ -612,7 +702,7 @@
       {
         id: 'pre_5',
         stage: 'pre_copy',
-        seq: '預5',
+        seq: '預6',
         title: '裝訂封面（共 3 份）',
         sub: '縣府 1 份（正本）、社區自留 1 份、淑貞 1 份',
         checked: false,
@@ -1035,11 +1125,116 @@
     `;
   }
 
+
+  function ensureMirrorItemsExist() {
+    const defaults = buildDefaultItems();
+    defaults.forEach(defItem => {
+      if (!checklistItems.some(x => x.id === defItem.id)) {
+        checklistItems.push(defItem);
+      }
+    });
+  }
+
+  function onItemTitleChange(itemId, newTitle) {
+    const it = checklistItems.find(x => x.id === itemId);
+    if (!it) return;
+    it.title = String(newTitle ?? '');
+    renderStageList('pre_copy', 'list_pre_copy');
+    scheduleAutoSave();
+  }
+
+  function renderMirrorChecklistTable() {
+    const tbl = document.getElementById('mirrorChecklistTable');
+    if (!tbl) return;
+    ensureMirrorItemsExist();
+
+    const heading = document.getElementById('mirrorTableHeading');
+    if (heading) {
+      heading.textContent = `一、${currentYear} 年 延緩第 ${currentTerm} 期 — 送件文件快速檢核總表（勾選即自動存檔至雲端）`;
+    }
+
+    const getIt = (id) => checklistItems.find(x => x.id === id) || { id, title: '', checked: false };
+
+    const leftRows = [
+      { id: 'pre_1', label: '核定函' },
+      { id: 'pre_2', label: '6.1 材料費影本' },
+      { id: 'pre_3', label: '6.2 領款收據-講師影本' },
+      { id: 'pre_extra', editable: true },
+      { id: 'pre_4', label: '郵寄標籤+信封' },
+      { id: 'pre_5', label: '裝訂封面' }
+    ];
+
+    const rightRows = [
+      { id: 'ord_0', html: '1.檢查表(群組另外給, 不用附)', muted: true },
+      { id: 'ord_1', html: '1. 核銷公文' },
+      { id: 'ord_2', html: '2. 領款收據' },
+      { id: 'ord_3', html: '3. 經費支出憑證簿' },
+      { id: 'ord_4', html: '4. 經費收支明細表' },
+      { id: 'ord_5', html: '5. 支出憑證明細表' },
+      { id: 'ord_6', html: '6. 支出憑證黏貼存單正本憑證<br>-6.1 課程材料費收據<br>-6.2 講師領據' },
+      { id: 'ord_7', html: '7. 特約單位服務量表-師資名冊' },
+      { id: 'ord_8', html: '8. 個案出席記錄表' },
+      { id: 'ord_9', html: '9. 據點開班資料滙出報表' },
+      { id: 'ord_10', html: '10.核定函及核定表 (影本)' },
+      { id: 'ord_11', html: '講師所得稅記錄' }
+    ];
+
+    let bodyHtml = '';
+    for (let i = 0; i < rightRows.length; i++) {
+      const rSpec = rightRows[i];
+      const rItem = getIt(rSpec.id);
+      const rDoneCls = rItem.checked ? 'is-done' : (rSpec.muted ? 'muted-hint' : '');
+
+      let leftCellsHtml = '';
+      if (i < leftRows.length) {
+        const lSpec = leftRows[i];
+        const lItem = getIt(lSpec.id);
+        const lDoneCls = lItem.checked ? 'is-done' : '';
+        const lContent = lSpec.editable
+          ? `<input type="text" class="mirror-inline-inp" value="${escAttr(lItem.title || '')}" placeholder="（預留欄位，可自由輸入其他影本項目）" onchange="onItemTitleChange('${lSpec.id}', this.value)">`
+          : escHtml(lSpec.label);
+        leftCellsHtml = `
+          <td class="chk-cell">
+            <input type="checkbox" ${lItem.checked ? 'checked' : ''} onchange="onToggleCheck('${lSpec.id}', this.checked)">
+          </td>
+          <td class="item-cell ${lDoneCls}">${lContent}</td>
+        `;
+      } else if (i === 6) {
+        leftCellsHtml = `<td colspan="2" rowspan="5" class="blank-span"></td>`;
+      } else if (i === 11) {
+        leftCellsHtml = `<td class="gray-corner"></td><td class="blank-span"></td>`;
+      }
+
+      bodyHtml += `
+        <tr>
+          ${leftCellsHtml}
+          <td class="chk-cell">
+            <input type="checkbox" ${rItem.checked ? 'checked' : ''} onchange="onToggleCheck('${rSpec.id}', this.checked)">
+          </td>
+          <td class="item-cell ${rDoneCls}">${rSpec.html}</td>
+        </tr>
+      `;
+    }
+
+    tbl.innerHTML = `
+      <thead>
+        <tr>
+          <th colspan="2">可先印好影本(暫存於資料夾)</th>
+          <th colspan="2">結束才能列印(金額可提前算好)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${bodyHtml}
+      </tbody>
+    `;
+  }
+
   function renderAll() {
     document.getElementById('officialStageTitle').textContent =
       `三、${currentYear} 年 延緩第 ${currentTerm} 期 — 政府規定核銷文件排列順序`;
 
     renderProgressSummary();
+    renderMirrorChecklistTable();
     renderStageList('pre_copy', 'list_pre_copy');
     renderStageList('class_time', 'list_class_time');
     renderStageList('official_order', 'list_official_order');
