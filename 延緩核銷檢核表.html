@@ -293,6 +293,10 @@
     .mirror-add-box { display: flex; gap: 6px; }
     .mirror-add-box input { flex: 1; min-width: 120px; padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
     td.item-cell.drag-over { outline: 2px dashed #2563eb; outline-offset: -2px; }
+    .note-ed { outline: none; border-radius: 4px; border: 1px solid transparent; padding: 1px 3px; margin: -1px -3px; min-height: 1.2em; }
+    .note-ed:hover { border-color: #fecdd3; background: #fff; }
+    .note-ed:focus { border-color: #2563eb; background: #fff; }
+    .note-del { border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; border-radius: 5px; font-size: 0.74rem; padding: 2px 8px; cursor: pointer; }
     .done-date { font-size: 0.74rem; color: #0f766e; font-weight: normal; margin-top: 2px; }
     table.mirror-chk-table {
       width: 100%;
@@ -506,9 +510,6 @@
         <button type="button" class="btn btn-primary" onclick="window.print()">列印檢核表</button>
       </div>
 
-      <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-outline" onclick="restoreDefaultItems()">恢復預設項目</button>
-      </div>
     </div>
   </div>
 
@@ -530,10 +531,15 @@
     <h2>
       <span>四、延緩核銷重要事項與金額計算說明區</span>
       <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btn-outline" onclick="restoreDefaultImportantNotes()">恢復預設 Excel 說明範本</button>
         <button type="button" class="btn btn-delay" onclick="saveNotesToCloud(false)">立即儲存說明內容</button>
       </div>
     </h2>
+
+    <div class="notes-grid" id="noteCardsGrid"></div>
+    <div class="no-print" style="margin:-4px 0 12px 0;">
+      <button type="button" class="btn btn-outline" onclick="addNoteCard()">＋ 新增說明卡片</button>
+      <span style="font-size:0.8rem; color:#64748b; margin-left:8px;">卡片標題與內容可直接點進去修改（Ctrl+B 可加粗），離開輸入處即自動存檔</span>
+    </div>
 
     <div style="font-size:0.84rem; color:#9f1239; font-weight:bold; margin-bottom:6px;">
       可直接在下方文字區手動輸入或增修本期核銷注意事項、累積金額紀錄與備忘：
@@ -1289,9 +1295,97 @@
     tbl.querySelectorAll('.mirror-ta').forEach(autoGrow);
   }
 
+  // ===== 重點金額速查卡片（內容保留，可手動修改／新增／刪除）=====
+  const DEFAULT_NOTE_CARDS = [
+    { title: '1. 每期核定額度與分配上限',
+      body: '全年度核定 <strong>108,000 元 ÷ 3 期 ＝ 每期 36,000 元</strong>。<br>僅核定「講師費」與「材料費」（無協助員時材料費最高 <strong>7,200 元</strong>；協助員不得超過 28,800 元）。' },
+    { title: '2. 講師鐘點費基準（12 堂 × 2H ＝ 24H）',
+      body: '• <strong>外聘講師</strong>：1,200 元 × 2H × 12 堂 ＝ <strong>28,800 元</strong>（貳萬捌仟捌佰元整）<br>• <strong>內聘講師</strong>：1,000 元／時' },
+    { title: '3. 憑證日期與份數規定',
+      body: '• <strong>核銷公文日期／講師領據／支出憑證明細表</strong>：一律填寫<strong>課程最後一天</strong>。<br>• <strong>裝訂份數共 3 份</strong>：縣府 1 份（正本）、社區自留 1 份、淑貞 1 份。' },
+    { title: '4. 長照＋延緩共用核定額度對照',
+      body: '• 業務費（長照）<strong>480,000 元</strong> ＋ 延緩 <strong>108,000 元</strong> ＝ <strong>588,000 元</strong>（伍拾捌萬捌仟元整）。<br>• 據點核銷金額＝據點支出總金額（領據大寫：貳萬捌仟捌佰元整）。' }
+  ];
+
+  function migrateNoteCards() {
+    if (checklistItems.some(x => x.stage === 'note_card' || x.id === 'note_cards_init')) return false;
+    DEFAULT_NOTE_CARDS.forEach((c, i) => {
+      checklistItems.push({ id: `note_card_${i + 1}`, stage: 'note_card', title: c.title, bodyHtml: c.body, checked: false, note: '' });
+    });
+    checklistItems.push({ id: 'note_cards_init', stage: 'meta', title: '', checked: false, note: '' });
+    return true;
+  }
+
+  function sanitizeNoteHtml(html) {
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html;
+    const out = [];
+    const walk = (node) => {
+      node.childNodes.forEach(ch => {
+        if (ch.nodeType === 3) {
+          out.push(escHtml(ch.nodeValue));
+        } else if (ch.nodeType === 1) {
+          const tag = ch.tagName;
+          if (tag === 'BR') out.push('<br>');
+          else if (tag === 'STRONG' || tag === 'B') { out.push('<strong>'); walk(ch); out.push('</strong>'); }
+          else if (tag === 'DIV' || tag === 'P') { if (out.length && out[out.length - 1] !== '<br>') out.push('<br>'); walk(ch); }
+          else walk(ch);
+        }
+      });
+    };
+    walk(tpl.content);
+    return out.join('').replace(/(<br>)+$/, '');
+  }
+
+  function renderNoteCards() {
+    const grid = document.getElementById('noteCardsGrid');
+    if (!grid) return;
+    const ae = document.activeElement;
+    if (ae && grid.contains(ae) && ae.classList && ae.classList.contains('note-ed')) return;
+    const cards = checklistItems.filter(x => x.stage === 'note_card');
+    grid.innerHTML = cards.map(c => {
+      const id = escAttr(c.id);
+      return `
+        <div class="rule-pill-card">
+          <div class="rule-pill-title note-ed" contenteditable="true" data-id="${id}" data-f="title" onblur="onNoteCardEdit(this)">${escHtml(c.title || '')}</div>
+          <div class="rule-pill-body note-ed" contenteditable="true" data-id="${id}" data-f="body" onblur="onNoteCardEdit(this)">${c.bodyHtml || ''}</div>
+          <div class="no-print" style="text-align:right; margin-top:6px;"><button type="button" class="note-del" onclick="deleteNoteCard('${id}')">刪除此卡片</button></div>
+        </div>`;
+    }).join('');
+  }
+
+  function onNoteCardEdit(el) {
+    const it = checklistItems.find(x => x.id === el.dataset.id);
+    if (!it) return;
+    if (el.dataset.f === 'title') {
+      it.title = el.innerText.replace(/\n/g, ' ').trim();
+    } else {
+      it.bodyHtml = sanitizeNoteHtml(el.innerHTML);
+    }
+    scheduleAutoSave();
+  }
+
+  function addNoteCard() {
+    const n = checklistItems.filter(x => x.stage === 'note_card').length + 1;
+    checklistItems.push({ id: `note_card_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`, stage: 'note_card', title: `${n}. 新卡片標題`, bodyHtml: '請在此輸入內容', checked: false, note: '' });
+    renderNoteCards();
+    scheduleAutoSave();
+  }
+
+  function deleteNoteCard(id) {
+    const it = checklistItems.find(x => x.id === id);
+    if (!it) return;
+    if (!confirm(`確定要刪除卡片「${it.title || ''}」嗎？`)) return;
+    checklistItems = checklistItems.filter(x => x.id !== id);
+    renderNoteCards();
+    scheduleAutoSave();
+  }
+
   function renderAll() {
+    if (migrateNoteCards()) scheduleAutoSave();
     renderProgressSummary();
     renderMirrorChecklistTable();
+    renderNoteCards();
 
     const ta = document.getElementById('importantNotesTextarea');
     if (ta && document.activeElement !== ta) {
