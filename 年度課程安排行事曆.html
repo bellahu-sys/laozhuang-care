@@ -444,6 +444,23 @@
       color: #334155; cursor: pointer; margin-left: 3px;
     }
     .chip-copy-btn:hover { background: #2c5e4f; color: #fff; border-color: #2c5e4f; }
+    .course-chip.is-copied { outline: 2px dashed #d97706; outline-offset: 1px; }
+    #pasteCtxMenu {
+      position: fixed; z-index: 10000; display: none; min-width: 230px; max-width: 340px;
+      background: #fff; border: 1px solid #94a3b8; border-radius: 8px;
+      box-shadow: 0 10px 26px rgba(0,0,0,0.25); padding: 5px 0; font-size: 0.9rem;
+    }
+    #pasteCtxMenu .ctx-item { padding: 9px 14px; cursor: pointer; font-weight: bold; color: #1e293b; }
+    #pasteCtxMenu .ctx-item:hover { background: #ecfdf5; color: #166534; }
+    #pasteCtxMenu .ctx-item.ctx-muted { font-weight: normal; color: #64748b; border-top: 1px solid #e2e8f0; }
+    #pasteBar {
+      position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 9000;
+      display: none; align-items: center; gap: 12px; max-width: 92vw;
+      background: #92400e; color: #fff; padding: 10px 16px; border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3); font-size: 0.9rem;
+    }
+    #pasteBar button { background: #fff; color: #92400e; border: none; border-radius: 6px; padding: 4px 10px; font-weight: bold; cursor: pointer; }
+    @media print { #pasteBar, #pasteCtxMenu { display: none !important; } }
     .chip-topic {
       font-weight: bold; color: #1e293b; margin-top: 2px;
     }
@@ -1594,16 +1611,97 @@
     ev.dataTransfer.setData('text/plain', 'cal_course_' + courseId);
   }
 
-  function duplicateCourseToNextWeek(ev, courseId) {
-    ev.stopPropagation();
+  // ===== 複製課程 → 到任意日期按右鍵貼上 =====
+  let courseClipboard = null;
+
+  function courseLabel(c) {
+    return String(c.course_name || '').replace('｜', ' - ') + (c.instructor_name ? `（${c.instructor_name}）` : '');
+  }
+
+  function ensurePasteUi() {
+    if (!document.getElementById('pasteCtxMenu')) {
+      const m = document.createElement('div');
+      m.id = 'pasteCtxMenu';
+      m.onclick = (e) => e.stopPropagation();
+      document.body.appendChild(m);
+    }
+    if (!document.getElementById('pasteBar')) {
+      const bar = document.createElement('div');
+      bar.id = 'pasteBar';
+      bar.className = 'no-print';
+      document.body.appendChild(bar);
+    }
+  }
+
+  function renderPasteBar() {
+    ensurePasteUi();
+    const bar = document.getElementById('pasteBar');
+    if (!courseClipboard) { bar.style.display = 'none'; return; }
+    bar.innerHTML = `<span>已複製：<strong>${escapeHtml(courseLabel(courseClipboard))}</strong>｜到想要的日期格按<strong>滑鼠右鍵</strong>即可貼上（可連續貼多天）</span><button type="button" onclick="clearCourseClipboard()">取消複製</button>`;
+    bar.style.display = 'flex';
+  }
+
+  function hidePasteMenu() {
+    const m = document.getElementById('pasteCtxMenu');
+    if (m) m.style.display = 'none';
+  }
+
+  function copyCourseToClipboard(ev, courseId) {
+    if (ev) ev.stopPropagation();
     const c = yearCourses.find(item => item.id === courseId);
     if (!c) return;
-    const parts = c.course_date.split('-').map(Number);
-    const nextDt = new Date(parts[0], parts[1] - 1, parts[2] + 7);
-    const nextIso = `${nextDt.getFullYear()}-${pad2(nextDt.getMonth() + 1)}-${pad2(nextDt.getDate())}`;
-    if (!confirm(`要將此堂「${c.course_name.replace('｜', ' - ')}」複製到下週（${nextIso}）嗎？\n（提示：您也可以直接按住課程卡片拖曳到任意日期複製！）`)) return;
-    copySingleCourseToDate(c, nextIso);
+    courseClipboard = { ...c };
+    hidePasteMenu();
+    renderPasteBar();
+    renderCalendarSafe();
+    setStatus(`已複製「${courseLabel(c)}」，請到想要的日期按右鍵貼上`);
   }
+
+  function clearCourseClipboard() {
+    courseClipboard = null;
+    hidePasteMenu();
+    renderPasteBar();
+    renderCalendarSafe();
+    setStatus('已取消複製');
+  }
+
+  function renderCalendarSafe() {
+    try {
+      if (typeof renderMonthCalendar === 'function') renderMonthCalendar();
+      else if (typeof renderCalendar === 'function') renderCalendar();
+    } catch (e) {}
+  }
+
+  function onCellContextMenu(ev, isoDate) {
+    if (!courseClipboard) return; // 尚未複製課程時維持瀏覽器原本的右鍵選單
+    ev.preventDefault();
+    ev.stopPropagation();
+    ensurePasteUi();
+    const m = document.getElementById('pasteCtxMenu');
+    m.innerHTML = `
+      <div class="ctx-item" onclick="pasteCourseToDate('${isoDate}')">貼上「${escapeHtml(courseLabel(courseClipboard))}」到 ${isoDate}</div>
+      <div class="ctx-item ctx-muted" onclick="clearCourseClipboard()">取消複製</div>`;
+    m.style.display = 'block';
+    const w = m.offsetWidth, h = m.offsetHeight;
+    m.style.left = Math.max(4, Math.min(ev.clientX, window.innerWidth - w - 8)) + 'px';
+    m.style.top = Math.max(4, Math.min(ev.clientY, window.innerHeight - h - 8)) + 'px';
+  }
+
+  async function pasteCourseToDate(isoDate) {
+    hidePasteMenu();
+    if (!courseClipboard) return;
+    await copySingleCourseToDate(courseClipboard, isoDate);
+  }
+
+  document.addEventListener('click', hidePasteMenu);
+  document.addEventListener('scroll', hidePasteMenu, true);
+  window.addEventListener('resize', hidePasteMenu);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hidePasteMenu();
+      if (courseClipboard) clearCourseClipboard();
+    }
+  });
 
   async function copySingleCourseToDate(srcCourse, targetIsoDate) {
     const replaceCare = document.getElementById('replaceCareCheckbox')?.checked;
@@ -1767,13 +1865,13 @@
           }
           const nameParts = parseCourseNameParts(c.course_name);
           return `
-            <div class="course-chip type-${pType}"
+            <div class="course-chip type-${pType}${courseClipboard && courseClipboard.id === c.id ? ' is-copied' : ''}"
                  draggable="true"
                  ondragstart="onCalendarCourseDragStart(event, ${c.id})"
                  style="border-left-color:${escapeHtml(getPlanColor(pType))}; background:${hexToRgbaBg(getPlanColor(pType), 0.1)};"
                  onclick="openEditModal(${c.id}); event.stopPropagation();"
                  title="點擊編輯，或直接按住拖曳到其他日期格子複製">
-              <button type="button" class="chip-copy-btn no-print" onclick="duplicateCourseToNextWeek(event, ${c.id})" title="複製到下週同日（或直接按住卡片拖曳到目標日期）">複製</button>
+              <button type="button" class="chip-copy-btn no-print" onclick="copyCourseToClipboard(event, ${c.id})" title="複製此課程，再到想要的日期按右鍵貼上（也可直接按住卡片拖曳到目標日期）">複製</button>
               <div><span class="chip-plan-badge">${escapeHtml(pType)}</span><span class="chip-title">${escapeHtml(nameParts.category)}</span></div>
               ${nameParts.topic ? `<div class="chip-topic">${escapeHtml(nameParts.topic)}</div>` : ''}
               ${c.time_slot ? `<div class="chip-reimburse-time">${escapeHtml(c.time_slot)}</div>` : ''}
@@ -1788,6 +1886,7 @@
               ondragover="onCellDragOver(event)"
               ondragleave="onCellDragLeave(event)"
               ondrop="onCellDrop(event, '${isoDate}')"
+              oncontextmenu="onCellContextMenu(event, '${isoDate}')"
               onclick="openNewModal('${isoDate}')">
             <div class="day-top">
               <div>
