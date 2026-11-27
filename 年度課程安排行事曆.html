@@ -445,6 +445,43 @@
     }
     .chip-copy-btn:hover { background: #2c5e4f; color: #fff; border-color: #2c5e4f; }
     .course-chip.is-copied { outline: 2px dashed #d97706; outline-offset: 1px; }
+    .course-chip.no-instructor {
+      background: #fee2e2 !important; border-left-color: #dc2626 !important;
+      outline: 2px dashed #f87171; outline-offset: 0;
+    }
+    .chip-no-instructor {
+      margin-top: 3px; display: inline-block; font-size: 0.74rem; font-weight: bold;
+      background: #dc2626; color: #fff; border-radius: 4px; padding: 1px 6px;
+    }
+    .month-tab .tab-warn {
+      display: inline-block; margin-left: 4px; font-size: 0.7rem; font-weight: bold;
+      background: #dc2626; color: #fff; border-radius: 9px; padding: 0 6px; line-height: 1.5;
+    }
+    #noInstBanner { margin: 8px 0; }
+    #noInstBanner .ni-box {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+      border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; font-weight: bold;
+    }
+    #noInstBanner .ni-box.ni-ok { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
+    #noInstBanner .ni-opt { font-weight: normal; font-size: 0.82rem; color: #475569; display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+    #assignOverlay {
+      position: fixed; inset: 0; z-index: 10001; background: rgba(15,23,42,0.5);
+      display: none; align-items: center; justify-content: center; padding: 16px;
+    }
+    #assignOverlay .as-card {
+      background: #fff; border-radius: 12px; width: min(720px, 100%); max-height: 88vh;
+      display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+    #assignOverlay .as-head { padding: 14px 18px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-size: 1.05rem; }
+    #assignOverlay .as-body { padding: 12px 18px; overflow-y: auto; flex: 1; }
+    #assignOverlay .as-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; font-size: 0.9rem; }
+    #assignOverlay .as-list { border: 1px solid #e2e8f0; border-radius: 8px; max-height: 340px; overflow-y: auto; }
+    #assignOverlay .as-item { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid #f1f5f9; font-size: 0.88rem; cursor: pointer; }
+    #assignOverlay .as-item:hover { background: #f8fafc; }
+    #assignOverlay .as-foot { padding: 12px 18px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+    #assignOverlay input[type="text"], #assignOverlay select { padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; }
+    @media print { #noInstBanner, #assignOverlay { display: none !important; } }
     #pasteCtxMenu {
       position: fixed; z-index: 10000; display: none; min-width: 230px; max-width: 340px;
       background: #fff; border: 1px solid #94a3b8; border-radius: 8px;
@@ -805,6 +842,8 @@
       </div>
       <div class="month-tabs" id="monthTabs"></div>
     </div>
+
+    <div id="noInstBanner" class="no-print"></div>
 
     <!-- 關懷固定課預設與清除重排工具列 -->
     <div class="batch-bar">
@@ -1696,8 +1735,10 @@
     let html = '';
     if (courseClipboard) {
       html += `<div class="ctx-item" onclick="pasteCourseToDate('${isoDate}')">貼上「${escapeHtml(courseLabel(courseClipboard))}」到 ${isoDate}</div>`;
+      html += `<div class="ctx-item" onclick="pasteCourseToDate('${isoDate}', true)">貼上到 ${isoDate}（講師留空，待指派）</div>`;
     }
     if (course && !isReminder) {
+      html += `<div class="ctx-item" onclick="openAssignModal(${course.id})">${course.instructor_name ? '更換講師…' : '指派講師…'}</div>`;
       html += `<div class="ctx-item" onclick="copyCourseToClipboard(null, ${course.id})">複製此課程</div>`;
     }
     if (course) {
@@ -1712,6 +1753,202 @@
     const w = m.offsetWidth, h = m.offsetHeight;
     m.style.left = Math.max(4, Math.min(ev.clientX, window.innerWidth - w - 8)) + 'px';
     m.style.top = Math.max(4, Math.min(ev.clientY, window.innerHeight - h - 8)) + 'px';
+  }
+
+  // ===== 未指派講師提醒與批次指派 =====
+  let flagFixedCare = (localStorage.getItem('lz_flag_care_fixed') === '1');
+
+  function needsInstructor(c) {
+    if (!c || c.plan_type === '提醒') return false;
+    if (String(c.instructor_name || '').trim()) return false;
+    if (!flagFixedCare && c.plan_type === '關懷' && String(c.course_name || '').startsWith('關懷常態活動')) return false;
+    return true;
+  }
+
+  function onToggleFlagFixedCare(checked) {
+    flagFixedCare = !!checked;
+    localStorage.setItem('lz_flag_care_fixed', flagFixedCare ? '1' : '0');
+    renderMonthTabs();
+    renderCalendar();
+  }
+
+  function renderNoInstBanner() {
+    const el = document.getElementById('noInstBanner');
+    if (!el) return;
+    const adYear = currentRocYear + 1911;
+    const mPrefix = `${adYear}-${pad2(currentMonth)}-`;
+    const all = yearCourses.filter(needsInstructor);
+    const inMonth = all.filter(c => c.course_date.startsWith(mPrefix));
+    const opt = `<label class="ni-opt"><input type="checkbox" ${flagFixedCare ? 'checked' : ''} onchange="onToggleFlagFixedCare(this.checked)">連「關懷常態活動」固定課也標示</label>`;
+    if (all.length === 0) {
+      el.innerHTML = `<div class="ni-box ni-ok"><span>所有課程都已指派講師</span>${opt}</div>`;
+      return;
+    }
+    el.innerHTML = `<div class="ni-box">
+      <span>本月有 ${inMonth.length} 堂課尚未指派講師（全年度共 ${all.length} 堂，月份分頁上的紅色數字為各月待指派堂數）</span>
+      <button type="button" class="btn btn-primary" style="padding:5px 12px; font-size:0.85rem;" onclick="openAssignModal()">批次指派講師</button>
+      ${opt}
+    </div>`;
+  }
+
+  const assignState = { mode: 'batch', singleId: null, selected: new Set(), scope: 'month', days: [true, true, true, true, true, true, true] };
+  const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
+
+  function ensureAssignUi() {
+    if (document.getElementById('assignOverlay')) return;
+    const ov = document.createElement('div');
+    ov.id = 'assignOverlay';
+    ov.onclick = (e) => { if (e.target === ov) closeAssignModal(); };
+    ov.innerHTML = `
+      <div class="as-card">
+        <div class="as-head" id="asTitle">批次指派講師</div>
+        <div class="as-body">
+          <div class="as-row">
+            <strong>新講師：</strong>
+            <input type="text" id="asInstructor" list="instructorDatalist" placeholder="輸入或選擇講師姓名" style="width:200px;">
+          </div>
+          <div class="as-row" id="asFilterRow">
+            <strong>範圍：</strong>
+            <select id="asScope" onchange="onAssignFilterChange()">
+              <option value="month">目前顯示的月份</option>
+              <option value="all">全年度</option>
+            </select>
+            <strong style="margin-left:8px;">星期：</strong>
+            <span id="asDays"></span>
+            <button type="button" class="btn btn-outline" style="padding:3px 10px; font-size:0.82rem;" onclick="assignSelectAll(true)">全選</button>
+            <button type="button" class="btn btn-outline" style="padding:3px 10px; font-size:0.82rem;" onclick="assignSelectAll(false)">全不選</button>
+          </div>
+          <div class="as-list" id="asList"></div>
+        </div>
+        <div class="as-foot">
+          <span id="asCount" style="margin-right:auto; color:#475569; font-size:0.88rem;"></span>
+          <button type="button" class="btn btn-outline" onclick="closeAssignModal()">取消</button>
+          <button type="button" class="btn btn-primary" id="asApplyBtn" onclick="applyAssignInstructor()">套用</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+  }
+
+  function assignCandidates() {
+    const adYear = currentRocYear + 1911;
+    if (assignState.mode === 'single') {
+      const c = yearCourses.find(x => x.id === assignState.singleId);
+      return c ? [c] : [];
+    }
+    const mPrefix = `${adYear}-${pad2(currentMonth)}-`;
+    return yearCourses.filter(c => {
+      if (!needsInstructor(c)) return false;
+      if (assignState.scope === 'month' && !c.course_date.startsWith(mPrefix)) return false;
+      const p = c.course_date.split('-').map(Number);
+      const dow = new Date(p[0], p[1] - 1, p[2]).getDay();
+      return assignState.days[dow];
+    });
+  }
+
+  function renderAssignList() {
+    const list = assignCandidates();
+    const listEl = document.getElementById('asList');
+    const daysEl = document.getElementById('asDays');
+    if (daysEl) {
+      daysEl.innerHTML = [1, 2, 3, 4, 5, 6, 0].map(d => `<label style="margin-right:6px; cursor:pointer;"><input type="checkbox" ${assignState.days[d] ? 'checked' : ''} onchange="onAssignDayToggle(${d}, this.checked)">${WEEK_LABELS[d]}</label>`).join('');
+    }
+    if (list.length === 0) {
+      listEl.innerHTML = '<div style="padding:16px; text-align:center; color:#64748b;">沒有符合條件、尚未指派講師的課程</div>';
+    } else {
+      listEl.innerHTML = list.map(c => {
+        const p = c.course_date.split('-').map(Number);
+        const dow = new Date(p[0], p[1] - 1, p[2]).getDay();
+        return `<label class="as-item">
+          <input type="checkbox" ${assignState.selected.has(c.id) ? 'checked' : ''} onchange="onAssignItemToggle(${c.id}, this.checked)">
+          <span style="min-width:92px; font-weight:bold;">${p[1]}/${p[2]}（${WEEK_LABELS[dow]}）</span>
+          <span style="color:#475569;">${escapeHtml(c.plan_type || '')}</span>
+          <span>${escapeHtml(String(c.course_name || '').replace('｜', ' - '))}</span>
+          <span style="color:#64748b;">${escapeHtml(c.time_slot || '')}</span>
+          ${c.instructor_name ? `<span style="margin-left:auto; color:#64748b;">目前：${escapeHtml(c.instructor_name)}</span>` : ''}
+        </label>`;
+      }).join('');
+    }
+    updateAssignCount();
+  }
+
+  function updateAssignCount() {
+    const ids = assignCandidates().map(c => c.id).filter(id => assignState.selected.has(id));
+    const cnt = document.getElementById('asCount');
+    if (cnt) cnt.textContent = `已勾選 ${ids.length} 堂`;
+    const btn = document.getElementById('asApplyBtn');
+    if (btn) btn.textContent = ids.length ? `套用到 ${ids.length} 堂課` : '套用';
+  }
+
+  function openAssignModal(singleId) {
+    hidePasteMenu();
+    ensureAssignUi();
+    assignState.selected = new Set();
+    assignState.days = [true, true, true, true, true, true, true];
+    assignState.scope = 'month';
+    if (singleId) {
+      assignState.mode = 'single';
+      assignState.singleId = singleId;
+      assignState.selected.add(singleId);
+      const c = yearCourses.find(x => x.id === singleId);
+      document.getElementById('asTitle').textContent = `指派講師（${c ? c.course_date : ''} ${c ? courseLabel({ course_name: c.course_name, instructor_name: '' }) : ''}）`;
+      document.getElementById('asFilterRow').style.display = 'none';
+      document.getElementById('asInstructor').value = '';
+    } else {
+      assignState.mode = 'batch';
+      assignState.singleId = null;
+      document.getElementById('asTitle').textContent = '批次指派講師（僅列出尚未指派講師的課程）';
+      document.getElementById('asFilterRow').style.display = 'flex';
+      document.getElementById('asScope').value = 'month';
+      document.getElementById('asInstructor').value = '';
+      assignCandidates().forEach(c => assignState.selected.add(c.id));
+    }
+    document.getElementById('assignOverlay').style.display = 'flex';
+    renderAssignList();
+    setTimeout(() => document.getElementById('asInstructor').focus(), 50);
+  }
+
+  function closeAssignModal() {
+    const ov = document.getElementById('assignOverlay');
+    if (ov) ov.style.display = 'none';
+  }
+
+  function onAssignFilterChange() {
+    assignState.scope = document.getElementById('asScope').value;
+    assignState.selected = new Set(assignCandidates().map(c => c.id));
+    renderAssignList();
+  }
+
+  function onAssignDayToggle(d, checked) {
+    assignState.days[d] = !!checked;
+    assignState.selected = new Set(assignCandidates().map(c => c.id));
+    renderAssignList();
+  }
+
+  function onAssignItemToggle(id, checked) {
+    if (checked) assignState.selected.add(id); else assignState.selected.delete(id);
+    updateAssignCount();
+  }
+
+  function assignSelectAll(sel) {
+    assignState.selected = sel ? new Set(assignCandidates().map(c => c.id)) : new Set();
+    renderAssignList();
+  }
+
+  async function applyAssignInstructor() {
+    const name = (document.getElementById('asInstructor').value || '').trim();
+    const ids = assignCandidates().map(c => c.id).filter(id => assignState.selected.has(id));
+    if (!name) { setStatus('請先輸入新講師姓名', true); document.getElementById('asInstructor').focus(); return; }
+    if (ids.length === 0) { setStatus('請至少勾選一堂課', true); return; }
+    setStatus(`正在指派「${name}」到 ${ids.length} 堂課...`);
+    const { error } = await supabaseClient.from('course_schedules').update({ instructor_name: name }).in('id', ids);
+    if (error) {
+      alert('指派失敗：' + error.message);
+      setStatus('指派失敗：' + error.message, true);
+      return;
+    }
+    closeAssignModal();
+    await loadYearCourses();
+    setStatus(`已將「${name}」指派到 ${ids.length} 堂課`);
   }
 
   async function deleteCourseById(courseId) {
@@ -1736,10 +1973,11 @@
     setStatus(`已刪除 ${c.course_date}「${label}」`);
   }
 
-  async function pasteCourseToDate(isoDate) {
+  async function pasteCourseToDate(isoDate, blankInstructor) {
     hidePasteMenu();
     if (!courseClipboard) return;
-    await copySingleCourseToDate(courseClipboard, isoDate);
+    await copySingleCourseToDate(courseClipboard, isoDate, { blankInstructor: !!blankInstructor });
+    if (blankInstructor) setStatus(`已貼上到 ${isoDate}，講師留空（紅色「待指派講師」），請再指派新講師`);
   }
 
   document.addEventListener('click', hidePasteMenu);
@@ -1752,7 +1990,7 @@
     }
   });
 
-  async function copySingleCourseToDate(srcCourse, targetIsoDate) {
+  async function copySingleCourseToDate(srcCourse, targetIsoDate, opts) {
     const replaceCare = document.getElementById('replaceCareCheckbox')?.checked;
     setStatus(`正在複製課程至 ${targetIsoDate}...`);
     if (replaceCare && srcCourse.plan_type && srcCourse.plan_type !== '關懷' && srcCourse.plan_type !== '提醒') {
@@ -1768,7 +2006,7 @@
       course_name: srcCourse.course_name,
       time_slot: srcCourse.time_slot || null,
       actual_time_slot: srcCourse.actual_time_slot || null,
-      instructor_name: srcCourse.instructor_name || null
+      instructor_name: (opts && opts.blankInstructor) ? null : (srcCourse.instructor_name || null)
     }]);
     if (error) {
       alert('複製課程失敗：' + error.message);
@@ -1841,7 +2079,7 @@
       const activeCls = (m === currentMonth) ? 'active' : '';
       html += `
         <button type="button" class="month-tab ${activeCls}" onclick="switchMonth(${m})">
-          ${m} 月
+          ${m} 月${(() => { const n = yearCourses.filter(c => c.course_date.startsWith(prefix) && needsInstructor(c)).length; return n ? `<span class="tab-warn" title="尚有 ${n} 堂課未指派講師">${n}</span>` : ''; })()}
         </button>
       `;
     }
@@ -1915,7 +2153,7 @@
           }
           const nameParts = parseCourseNameParts(c.course_name);
           return `
-            <div class="course-chip type-${pType}${courseClipboard && courseClipboard.id === c.id ? ' is-copied' : ''}"
+            <div class="course-chip type-${pType}${courseClipboard && courseClipboard.id === c.id ? ' is-copied' : ''}${needsInstructor(c) ? ' no-instructor' : ''}"
                  draggable="true"
                  ondragstart="onCalendarCourseDragStart(event, ${c.id})"
                  style="border-left-color:${escapeHtml(getPlanColor(pType))}; background:${hexToRgbaBg(getPlanColor(pType), 0.1)};"
@@ -1927,7 +2165,7 @@
               ${nameParts.topic ? `<div class="chip-topic">${escapeHtml(nameParts.topic)}</div>` : ''}
               ${c.time_slot ? `<div class="chip-reimburse-time">${escapeHtml(c.time_slot)}</div>` : ''}
               ${c.actual_time_slot ? `<div class="chip-actual-time">實際：${escapeHtml(c.actual_time_slot)}</div>` : ''}
-              ${c.instructor_name ? `<div class="chip-instructor">${escapeHtml(c.instructor_name)}</div>` : ''}
+              ${c.instructor_name ? `<div class="chip-instructor">${escapeHtml(c.instructor_name)}</div>` : (needsInstructor(c) ? `<div class="chip-no-instructor">待指派講師</div>` : '')}
             </div>
           `;
         }).join('');
@@ -1954,6 +2192,7 @@
       if (idx % 7 === 6) rowsHtml += '</tr>';
     }
     document.getElementById('calendarBody').innerHTML = rowsHtml;
+    renderNoInstBanner();
   }
 
   function escapeHtml(str) {
