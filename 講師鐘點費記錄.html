@@ -1811,4 +1811,708 @@
     const mode = (raw.mode === 'per_session' || raw.mode === 'none') ? raw.mode : 'per_hour';
     return {
       mode,
-      rate: (raw.rate !== null && raw.rate !==
+      rate: (raw.rate !== null && raw.rate !== undefined && String(raw.rate).trim() !== '') ? Number(raw.rate) : '',
+      hours: (raw.hours !== null && raw.hours !== undefined && String(raw.hours).trim() !== '') ? Number(raw.hours) : 1
+    };
+  }
+
+  function cfgGetRule(mapObj, instName, planName) {
+    return cfgNormalizeRuleObj((mapObj[instName] || {})[planName]);
+  }
+
+  function cfgAddPlanColumn() {
+    const inp = document.getElementById('cfgNewPlanNameInput');
+    const val = (inp.value || '').trim();
+    if (!val) return;
+    cfgSyncDomInputsToMemory();
+    if (!feeCourseOptions.includes(val)) {
+      feeCourseOptions.push(val);
+      saveFeeCourseOptions();
+      renderFeeCourseSelect();
+    }
+    inp.value = '';
+    cfgRenderBothTables();
+  }
+
+  function cfgOnModeChange(selEl) {
+    const td = selEl.closest('td');
+    if (!td) return;
+    const isNone = selEl.value === 'none';
+    const amtInp = td.querySelector('.cfg-amt');
+    const hrsInp = td.querySelector('.cfg-hrs');
+    if (amtInp) {
+      amtInp.disabled = isNone;
+      if (isNone) amtInp.value = '';
+    }
+    if (hrsInp) {
+      hrsInp.disabled = isNone;
+      if (isNone) hrsInp.value = '';
+    }
+  }
+
+  function cfgBuildSalaryTableHtml() {
+    const selectedInstObjs = salSelectedTeachers.map(name => {
+      return masterInstructors.find(m => m.name === name) || { name, status: '服務中' };
+    });
+
+    if (selectedInstObjs.length === 0) {
+      return `<tbody><tr><td class="center-col" style="padding:18px; color:#64748b;">請點選上方「勾選顯示講師 ▾」選擇要設定的講師</td></tr></tbody>`;
+    }
+
+    const headCells = feeCourseOptions.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+    const bodyRows = selectedInstObjs.map(inst => {
+      const instName = inst.name;
+      const tds = feeCourseOptions.map(plan => {
+        const rule = cfgGetRule(instructorPlanRates, instName, plan);
+        const isNone = rule.mode === 'none';
+        return `
+          <td style="min-width:165px;">
+            <select class="sal-mode" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" onchange="cfgOnModeChange(this)" style="width:100%; margin-bottom:4px;">
+              <option value="per_hour" ${rule.mode === 'per_hour' ? 'selected' : ''}>費用/1H</option>
+              <option value="per_session" ${rule.mode === 'per_session' ? 'selected' : ''}>費用/1堂</option>
+              <option value="none" ${rule.mode === 'none' ? 'selected' : ''}>無</option>
+            </select>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <input type="text" inputmode="decimal" class="num-input cfg-amt sal-amt" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${isNone ? '' : rule.rate}" placeholder="金額" ${isNone ? 'disabled' : ''} style="width:76px;">
+              <span style="font-size:0.76rem; color:#475569;">時數</span>
+              <input type="text" inputmode="decimal" class="num-input cfg-hrs sal-hrs" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${isNone ? '' : rule.hours}" placeholder="1" ${isNone ? 'disabled' : ''} style="width:42px;">
+            </div>
+          </td>
+        `;
+      }).join('');
+
+      return `
+        <tr>
+          <td class="center-col" style="font-weight:bold; background:#f8fafc;">
+            <div>${escapeHtml(instName)}</div>
+            <div style="font-size:0.74rem; color:#64748b; font-weight:normal;">(${escapeHtml(inst.status || '服務中')})</div>
+          </td>
+          ${tds}
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <thead>
+        <tr>
+          <th style="width:115px;">講師 \\ 計畫</th>
+          ${headCells}
+        </tr>
+      </thead>
+      <tbody>${bodyRows}</tbody>
+    `;
+  }
+
+  function cfgBuildReimburseTableHtml() {
+    const selectedInstObjs = rebSelectedTeachers.map(name => {
+      return masterInstructors.find(m => m.name === name) || { name, status: '服務中' };
+    });
+
+    if (selectedInstObjs.length === 0) {
+      return `<tbody><tr><td class="center-col" style="padding:18px; color:#64748b;">請點選上方「勾選顯示講師 ▾」選擇要設定的講師</td></tr></tbody>`;
+    }
+
+    const headCells = feeCourseOptions.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+    const bodyRows = selectedInstObjs.map(inst => {
+      const instName = inst.name;
+      const tds = feeCourseOptions.map(plan => {
+        const rule = cfgGetRule(cfgReimburseMap, instName, plan);
+        const rateDisp = (rule.mode === 'none') ? '' : rule.rate;
+        const hrsDisp = (rule.mode === 'none') ? 1 : (rule.hours !== '' ? rule.hours : 1);
+        return `
+          <td style="min-width:165px;">
+            <div style="display:flex; gap:4px; align-items:center; justify-content:center;">
+              <input type="text" inputmode="decimal" class="num-input reb-amt" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${rateDisp}" placeholder="費用" style="width:76px;">
+              <span style="font-size:0.76rem; color:#475569;">時數</span>
+              <input type="text" inputmode="decimal" class="num-input reb-hrs" data-inst="${escapeAttr(instName)}" data-plan="${escapeAttr(plan)}" value="${hrsDisp}" placeholder="1" style="width:42px;">
+            </div>
+          </td>
+        `;
+      }).join('');
+
+      return `
+        <tr>
+          <td class="center-col" style="font-weight:bold; background:#f8fafc;">
+            <div>${escapeHtml(instName)}</div>
+            <div style="font-size:0.74rem; color:#64748b; font-weight:normal;">(${escapeHtml(inst.status || '服務中')})</div>
+          </td>
+          ${tds}
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <thead>
+        <tr>
+          <th style="width:115px;">講師 \\ 計畫</th>
+          ${headCells}
+        </tr>
+      </thead>
+      <tbody>${bodyRows}</tbody>
+    `;
+  }
+
+  function cfgRenderBothTables() {
+    const salTbl = document.getElementById('salaryRateTable');
+    const rebTbl = document.getElementById('reimburseRateTable');
+    if (salTbl) salTbl.innerHTML = cfgBuildSalaryTableHtml();
+    if (rebTbl) rebTbl.innerHTML = cfgBuildReimburseTableHtml();
+  }
+
+  function cfgSyncDomInputsToMemory() {
+    const sal = cfgCollectSalaryTableData();
+    Object.keys(sal.resultMap).forEach(inst => {
+      instructorPlanRates[inst] = { ...(instructorPlanRates[inst] || {}), ...sal.resultMap[inst] };
+    });
+    const reb = cfgCollectReimburseTableData();
+    Object.keys(reb.resultMap).forEach(inst => {
+      cfgReimburseMap[inst] = { ...(cfgReimburseMap[inst] || {}), ...reb.resultMap[inst] };
+    });
+  }
+
+  function cfgCollectSalaryTableData() {
+    const modeMap = new Map();
+    const amtMap = new Map();
+    const hrsMap = new Map();
+
+    document.querySelectorAll('.sal-mode').forEach(el => {
+      modeMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value);
+    });
+    document.querySelectorAll('.sal-amt').forEach(el => {
+      amtMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, ''));
+    });
+    document.querySelectorAll('.sal-hrs').forEach(el => {
+      hrsMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, ''));
+    });
+
+    const resultMap = {};
+    const rowsToUpsert = [];
+
+    modeMap.forEach((mode, key) => {
+      const [inst, plan] = key.split('__');
+      const rawAmt = amtMap.get(key) || '';
+      const rawHrs = hrsMap.get(key) || '1';
+      if (!resultMap[inst]) resultMap[inst] = {};
+
+      if (mode === 'none') {
+        resultMap[inst][plan] = { mode: 'none', rate: '', hours: '' };
+        rowsToUpsert.push({
+          instructor_name: inst,
+          plan_name: plan,
+          pay_mode: 'none',
+          rate: null,
+          hours: null,
+          updated_at: new Date().toISOString()
+        });
+      } else if (rawAmt !== '' && Number.isFinite(Number(rawAmt))) {
+        const hrsNum = (rawHrs !== '' && Number.isFinite(Number(rawHrs))) ? Number(rawHrs) : 1;
+        resultMap[inst][plan] = { mode, rate: Number(rawAmt), hours: hrsNum };
+        rowsToUpsert.push({
+          instructor_name: inst,
+          plan_name: plan,
+          pay_mode: mode,
+          rate: Number(rawAmt),
+          hours: hrsNum,
+          updated_at: new Date().toISOString()
+        });
+      }
+    });
+
+    return { resultMap, rowsToUpsert };
+  }
+
+  function cfgCollectReimburseTableData() {
+    const amtMap = new Map();
+    const hrsMap = new Map();
+
+    document.querySelectorAll('.reb-amt').forEach(el => {
+      amtMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, ''));
+    });
+    document.querySelectorAll('.reb-hrs').forEach(el => {
+      hrsMap.set(`${el.dataset.inst}__${el.dataset.plan}`, el.value.trim().replace(/,/g, ''));
+    });
+
+    const resultMap = {};
+    const rowsToUpsert = [];
+
+    amtMap.forEach((rawAmt, key) => {
+      const [inst, plan] = key.split('__');
+      const rawHrs = hrsMap.get(key) || '1';
+      if (!resultMap[inst]) resultMap[inst] = {};
+
+      if (rawAmt !== '' && Number.isFinite(Number(rawAmt))) {
+        const hrsNum = (rawHrs !== '' && Number.isFinite(Number(rawHrs))) ? Number(rawHrs) : 1;
+        resultMap[inst][plan] = { mode: 'per_hour', rate: Number(rawAmt), hours: hrsNum };
+        rowsToUpsert.push({
+          instructor_name: inst,
+          plan_name: plan,
+          pay_mode: 'per_hour',
+          rate: Number(rawAmt),
+          hours: hrsNum,
+          updated_at: new Date().toISOString()
+        });
+      } else {
+        resultMap[inst][plan] = { mode: 'per_hour', rate: '', hours: 1 };
+      }
+    });
+
+    return { resultMap, rowsToUpsert };
+  }
+
+  function cfgApplySalaryRatesToCalculation() {
+    const applyToCalList = (instName, list) => {
+      list.forEach(r => {
+        const rule = getConfiguredPlanRule(instName, r.course_name);
+        if (rule) {
+          r.pay_mode = rule.mode;
+          if (rule.mode === 'none') {
+            r.rate = '';
+            r.hours = '';
+          } else {
+            if (rule.rate !== '') r.rate = rule.rate;
+            if (rule.mode === 'per_hour' && rule.hours > 0) r.hours = rule.hours;
+            if (rule.mode === 'per_session') r.hours = '';
+          }
+          r.amount = calcRowTotalByRule(r, instName);
+        }
+      });
+      persistModeLocal('calendar', instName);
+    };
+
+    if (showAllCheckedInstructorsInFee) {
+      feeCheckedInstructors.forEach(inst => applyToCalList(inst, calendarFeeMap[inst] || []));
+    } else if (currentFeeInstructor) {
+      applyToCalList(currentFeeInstructor, singleCalendarRows);
+    }
+  }
+
+  async function cfgSaveSalarySettingsToDatabase() {
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+    const { resultMap, rowsToUpsert } = cfgCollectSalaryTableData();
+    Object.keys(resultMap).forEach(inst => {
+      instructorPlanRates[inst] = { ...(instructorPlanRates[inst] || {}), ...resultMap[inst] };
+    });
+    localStorage.setItem('lz_instructor_plan_rates_v2', JSON.stringify(instructorPlanRates));
+
+    if (rowsToUpsert.length === 0) {
+      setStatus('目前無已填寫金額的「鐘點費-薪資」資料可儲存');
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from('instructor_plan_rate_configs')
+      .upsert(rowsToUpsert, { onConflict: 'instructor_name,plan_name' });
+
+    if (error) {
+      setStatus('儲存「鐘點費-薪資」至資料庫失敗：' + error.message, true);
+      alert('儲存「鐘點費-薪資」至資料庫失敗：' + error.message);
+      return;
+    }
+
+    cfgApplySalaryRatesToCalculation();
+    setStatus('已將「鐘點費-薪資」儲存至資料庫');
+    alert('已將「鐘點費-薪資」儲存至資料庫！');
+  }
+
+  async function cfgReloadFromDatabase() {
+    setStatus('正在從資料庫讀取設定...');
+    cfgReimburseMap = {};
+
+    if (supabaseClient) {
+      try {
+        const salRes = await supabaseClient
+          .from('instructor_plan_rate_configs')
+          .select('instructor_name, plan_name, pay_mode, rate, hours');
+        if (!salRes.error && Array.isArray(salRes.data)) {
+          instructorPlanRates = {};
+          salRes.data.forEach(row => {
+            const inst = (row.instructor_name || '').trim();
+            const plan = (row.plan_name || '').trim();
+            if (!inst || !plan) return;
+            if (!feeCourseOptions.includes(plan)) feeCourseOptions.push(plan);
+            if (!instructorPlanRates[inst]) instructorPlanRates[inst] = {};
+            instructorPlanRates[inst][plan] = {
+              mode: row.pay_mode || 'per_hour',
+              rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
+              hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
+            };
+          });
+          localStorage.setItem('lz_instructor_plan_rates_v2', JSON.stringify(instructorPlanRates));
+        }
+      } catch (e) {}
+    }
+
+    cfgInitSelectedTeacherLists();
+    cfgRenderTeacherPickers();
+    cfgRenderBothTables();
+    setStatus('已同步資料庫最新設定');
+  }
+
+  // ==================== 長照核銷（分季／單月） ====================
+  let ltcSelectedTeachers = [];
+  let ltcSavedClaimsCache = {};
+
+  const LTC_PERIOD_DEFS = {
+    Q1: { periodKey: 'Q1', title: '第1季（1–3月）', cols: ['1月', '2月', '3月'] },
+    Q2: { periodKey: 'Q2', title: '第2季（4–6月）', cols: ['4月', '5月', '6月'] },
+    Q3: { periodKey: 'Q3', title: '第3季（7–9月）', cols: ['7月', '8月', '9月'] },
+    Q4: { periodKey: 'Q4', title: '第4季（10–12月）', cols: ['10月', '11月', '12月'] },
+    M01: { periodKey: 'Q1', title: '1月（單月）', cols: ['1月'] },
+    M02: { periodKey: 'Q1', title: '2月（單月）', cols: ['2月'] },
+    M03: { periodKey: 'Q1', title: '3月（單月）', cols: ['3月'] },
+    M04: { periodKey: 'Q2', title: '4月（單月）', cols: ['4月'] },
+    M05: { periodKey: 'Q2', title: '5月（單月）', cols: ['5月'] },
+    M06: { periodKey: 'Q2', title: '6月（單月）', cols: ['6月'] },
+    M07: { periodKey: 'Q3', title: '7月（單月）', cols: ['7月'] },
+    M08: { periodKey: 'Q3', title: '8月（單月）', cols: ['8月'] },
+    M09: { periodKey: 'Q3', title: '9月（單月）', cols: ['9月'] },
+    M10: { periodKey: 'Q4', title: '10月（單月）', cols: ['10月'] },
+    M11: { periodKey: 'Q4', title: '11月（單月）', cols: ['11月'] },
+    M12: { periodKey: 'Q4', title: '12月（單月）', cols: ['12月'] }
+  };
+
+  function getLtcTeacherStorageKey() {
+    return `lz_ltc_reimburse_teachers_${currentYear}`;
+  }
+
+  function initLtcSelectedTeachers() {
+    const orderMap = new Map(masterInstructors.map((m, idx) => [m.name, idx]));
+    const saved = localStorage.getItem(getLtcTeacherStorageKey());
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          ltcSelectedTeachers = [...new Set(parsed)].sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
+          return;
+        }
+      } catch (e) {}
+    }
+    const defaultFive = masterInstructors.filter(i => i.status === '服務中').slice(0, 5).map(i => i.name);
+    if (defaultFive.length > 0) {
+      ltcSelectedTeachers = defaultFive;
+    } else {
+      ltcSelectedTeachers = masterInstructors.slice(0, 5).map(i => i.name);
+    }
+    localStorage.setItem(getLtcTeacherStorageKey(), JSON.stringify(ltcSelectedTeachers));
+  }
+
+  function toggleLtcTeacherPicker(ev) {
+    if (ev) ev.stopPropagation();
+    const panel = document.getElementById('ltcTeacherPickerPanel');
+    const willOpen = panel && !panel.classList.contains('open');
+    document.querySelectorAll('.picker-panel').forEach(p => {
+      p.classList.remove('open');
+      p.style.display = 'none';
+    });
+    if (panel && willOpen) {
+      panel.style.display = 'block';
+      panel.classList.add('open');
+    } else if (panel) {
+      panel.classList.remove('open');
+      panel.style.display = 'none';
+    }
+  }
+
+  document.addEventListener('click', (ev) => {
+    if (!ev.target.closest('.picker-dropdown-wrap')) {
+      const p = document.getElementById('ltcTeacherPickerPanel');
+      if (p) {
+        p.classList.remove('open');
+        p.style.display = 'none';
+      }
+    }
+  });
+
+  function onLtcTeacherCheckChange(instName, checked) {
+    const orderMap = new Map(masterInstructors.map((m, idx) => [m.name, idx]));
+    if (checked) {
+      if (!ltcSelectedTeachers.includes(instName)) ltcSelectedTeachers.push(instName);
+    } else {
+      ltcSelectedTeachers = ltcSelectedTeachers.filter(n => n !== instName);
+    }
+    ltcSelectedTeachers = [...new Set(ltcSelectedTeachers)].sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
+    localStorage.setItem(getLtcTeacherStorageKey(), JSON.stringify(ltcSelectedTeachers));
+    renderLtcTeacherPicker();
+    renderLtcReimburseTable();
+  }
+
+  function setLtcTeacherPreset(mode) {
+    const orderMap = new Map(masterInstructors.map((m, idx) => [m.name, idx]));
+    if (mode === 'week5') {
+      const active = masterInstructors.filter(i => i.status === '服務中').slice(0, 5).map(i => i.name);
+      ltcSelectedTeachers = active.length > 0 ? active : masterInstructors.slice(0, 5).map(i => i.name);
+    } else if (mode === 'all') {
+      ltcSelectedTeachers = [...masterInstructors.map(m => m.name)].sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
+    } else if (mode === 'none') {
+      ltcSelectedTeachers = [];
+    }
+    localStorage.setItem(getLtcTeacherStorageKey(), JSON.stringify(ltcSelectedTeachers));
+    renderLtcTeacherPicker();
+    renderLtcReimburseTable();
+  }
+
+  function renderLtcTeacherPicker() {
+    const panel = document.getElementById('ltcTeacherPickerPanel');
+    const btn = document.getElementById('ltcTeacherPickerBtn');
+    if (panel) {
+      const quickHtml = `
+        <div style="display:flex; gap:4px; padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary btn-sm" style="flex:1; justify-content:center;" onclick="setLtcTeacherPreset('week5')">週一至週五(5人)</button>
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="setLtcTeacherPreset('all')">全選</button>
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="setLtcTeacherPreset('none')">全不選</button>
+        </div>
+      `;
+      const itemsHtml = masterInstructors.map(m => {
+        const chk = ltcSelectedTeachers.includes(m.name);
+        return `
+          <label class="picker-item">
+            <input type="checkbox" ${chk ? 'checked' : ''} onchange="onLtcTeacherCheckChange('${escapeAttr(m.name)}', this.checked)">
+            <span>${escapeHtml(m.name)}</span>
+            <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(${escapeHtml(m.status || '服務中')})</span>
+          </label>
+        `;
+      }).join('');
+      panel.innerHTML = quickHtml + itemsHtml;
+    }
+    if (btn) {
+      btn.textContent = `勾選講師 (${ltcSelectedTeachers.length}) ▾`;
+    }
+  }
+
+  function getLtcCourseRuleForTeacher(instName) {
+    const rule = getConfiguredPlanRule(instName, '長照課程') || getConfiguredPlanRule(instName, '關懷課程');
+    if (!rule || rule.mode === 'none') {
+      return { unitAmt: 0, hasCourse: false };
+    }
+    const rateVal = Number(rule.rate || 0);
+    const hrsVal = (rule.mode === 'per_session') ? 1 : ((Number(rule.hours) > 0) ? Number(rule.hours) : 1);
+    const unitAmt = Math.round(rateVal * hrsVal);
+    return { unitAmt, hasCourse: unitAmt > 0 };
+  }
+
+  function getLtcCellDisplayData(periodKey, colKey, instName) {
+    const ruleInfo = getLtcCourseRuleForTeacher(instName);
+    const cacheKey = `${currentYear}__${periodKey}__${colKey}__${instName}`;
+    const saved = ltcSavedClaimsCache[cacheKey];
+    let sessions = 0;
+    let amount = 0;
+
+    if (saved && saved.sessions !== undefined && saved.sessions !== null && Number(saved.sessions) > 0) {
+      sessions = Number(saved.sessions);
+      amount = ruleInfo.unitAmt > 0 ? Math.round(ruleInfo.unitAmt * sessions) : Number(saved.amount || 0);
+    } else if (saved && Number(saved.amount || 0) > 0 && ruleInfo.unitAmt > 0) {
+      amount = Number(saved.amount);
+      sessions = Math.round((amount / ruleInfo.unitAmt) * 10) / 10;
+    } else if (ruleInfo.hasCourse) {
+      sessions = 1;
+      amount = ruleInfo.unitAmt;
+    }
+
+    return {
+      planLabel: '長照課程',
+      sessions,
+      amount
+    };
+  }
+
+  function numberToChineseUpper(num) {
+    const nRaw = Math.round(Number(num || 0));
+    if (!Number.isFinite(nRaw) || nRaw === 0) return '零元整';
+    const digits = ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'];
+    const units = ['', '拾', '佰', '仟'];
+    const bigUnits = ['', '萬', '億', '兆'];
+    const neg = nRaw < 0 ? '負' : '';
+    let s = String(Math.abs(nRaw));
+    const groups = [];
+    while (s.length > 0) {
+      groups.push(s.slice(-4));
+      s = s.slice(0, -4);
+    }
+    const parts = [];
+    for (let g = 0; g < groups.length; g++) {
+      const grp = groups[g];
+      let grpStr = '';
+      let zeroPending = false;
+      for (let i = 0; i < grp.length; i++) {
+        const d = parseInt(grp[i], 10);
+        const pos = grp.length - 1 - i;
+        if (d === 0) {
+          zeroPending = true;
+        } else {
+          if (zeroPending) {
+            grpStr += '零';
+            zeroPending = false;
+          }
+          grpStr += digits[d] + units[pos];
+        }
+      }
+      if (grpStr !== '') {
+        parts.push(grpStr + bigUnits[g]);
+      } else if (parts.length > 0 && !parts[parts.length - 1].startsWith('零')) {
+        parts.push('零');
+      }
+    }
+    let out = parts.reverse().join('');
+    out = out.replace(/零+/g, '零').replace(/零([萬億兆])/g, '$1').replace(/零+$/, '');
+    return `${neg}${out || '零'}元整`;
+  }
+
+  function renderLtcReimburseTable() {
+    const wrap = document.getElementById('ltcReimburseSheetContainer');
+    if (!wrap) return;
+
+    const pKey = document.getElementById('ltcPeriodSelect')?.value || 'Q4';
+    const blk = LTC_PERIOD_DEFS[pKey] || LTC_PERIOD_DEFS.Q4;
+
+    if (ltcSelectedTeachers.length === 0) {
+      wrap.innerHTML = '<div style="text-align:center; padding:16px; color:#64748b; border:1px solid #fecdd3; border-radius:8px; background:#fffafa;">請點選上方「勾選講師 ▾」選擇要顯示的講師</div>';
+      return;
+    }
+
+    const colTotals = {};
+    blk.cols.forEach(c => { colTotals[c] = 0; });
+    let periodGrandTotal = 0;
+
+    const rowsHtml = ltcSelectedTeachers.map(instName => {
+      let rowTotal = 0;
+      const colCells = blk.cols.map(colKey => {
+        const cell = getLtcCellDisplayData(blk.periodKey, colKey, instName);
+        rowTotal += cell.amount;
+        colTotals[colKey] += cell.amount;
+        return `
+          <td class="num-col" style="min-width:120px; font-weight:bold; color:#1e293b;">
+            ${fmtNum(cell.amount)} 元
+          </td>
+        `;
+      }).join('');
+
+      periodGrandTotal += rowTotal;
+      return `
+        <tr>
+          <td style="font-weight:bold;">${escapeHtml(instName)}</td>
+          ${colCells}
+          <td class="num-col" style="font-weight:bold;">${fmtNum(rowTotal)}</td>
+          <td class="center-col" style="font-weight:bold; color:#881337; background:#fffafa; white-space:nowrap;">${escapeHtml(numberToChineseUpper(rowTotal))}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const footCells = blk.cols.map(c => `<td class="num-col">${fmtNum(colTotals[c])}</td>`).join('');
+
+    wrap.innerHTML = `
+      <div style="border:1px solid #cbd5e1; border-radius:8px; padding:12px 14px; background:#fff;">
+        <div style="font-weight:bold; font-size:1rem; color:#0f172a; margin-bottom:8px;">
+          長照核銷 — ${currentYear}年度 ${escapeHtml(blk.title)}（已勾選 ${ltcSelectedTeachers.length} 位講師）
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="excel-table">
+            <thead>
+              <tr>
+                <th style="width:110px; background:#ffe4e6; color:#881337;">講師</th>
+                ${blk.cols.map(c => `<th style="background:#ffe4e6; color:#881337;">${escapeHtml(c)}</th>`).join('')}
+                <th style="width:110px; background:#ffe4e6; color:#881337;">合計</th>
+                <th style="width:175px; background:#ffe4e6; color:#881337;">大寫金額</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+              <tr class="total-row" style="background:#fecdd3; color:#881337;">
+                <td class="center-col">總計</td>
+                ${footCells}
+                <td class="num-col">${fmtNum(periodGrandTotal)}</td>
+                <td class="center-col">${escapeHtml(numberToChineseUpper(periodGrandTotal))}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function copyLtcReimburseToClipboard() {
+    const pKey = document.getElementById('ltcPeriodSelect')?.value || 'Q4';
+    const blk = LTC_PERIOD_DEFS[pKey] || LTC_PERIOD_DEFS.Q4;
+    const lines = [`長照核銷 ${currentYear}年度 ${blk.title}\t講師\t${blk.cols.join('\t')}\t合計\t大寫金額`];
+    ltcSelectedTeachers.forEach(instName => {
+      let rowSum = 0;
+      const vals = blk.cols.map(colKey => {
+        const cell = getLtcCellDisplayData(blk.periodKey, colKey, instName);
+        rowSum += cell.amount;
+        return `${cell.amount}元`;
+      });
+      lines.push(`${instName}\t${vals.join('\t')}\t${rowSum}\t${numberToChineseUpper(rowSum)}`);
+    });
+    const toastEl = document.getElementById('ltcReimburseToast');
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
+      if (toastEl) { toastEl.textContent = '已複製長照表格數值'; setTimeout(() => { toastEl.textContent = ''; }, 2400); }
+    }).catch(() => {
+      if (toastEl) { toastEl.textContent = '已準備長照表格數值'; setTimeout(() => { toastEl.textContent = ''; }, 2400); }
+    });
+  }
+
+  async function saveLtcReimburseToCloud() {
+    if (!supabaseClient) {
+      alert('尚未連線至 Supabase 資料庫，請確認 config.js 設定。');
+      return;
+    }
+    try {
+      const quarters = [LTC_PERIOD_DEFS.Q1, LTC_PERIOD_DEFS.Q2, LTC_PERIOD_DEFS.Q3, LTC_PERIOD_DEFS.Q4];
+      const payload = [];
+      quarters.forEach(blk => {
+        blk.cols.forEach(colKey => {
+          ltcSelectedTeachers.forEach(instName => {
+            const cell = getLtcCellDisplayData(blk.periodKey, colKey, instName);
+            if (cell.amount > 0) {
+              payload.push({
+                roc_year: currentYear,
+                program_type: 'LTC',
+                period_key: blk.periodKey,
+                col_key: `${colKey}講師`,
+                instructor_name: instName,
+                amount: cell.amount,
+                updated_at: new Date().toISOString()
+              });
+            }
+          });
+        });
+      });
+
+      await supabaseClient
+        .from('instructor_reimburse_claims')
+        .delete()
+        .eq('roc_year', currentYear)
+        .eq('program_type', 'LTC');
+
+      if (payload.length > 0) {
+        const { error } = await supabaseClient.from('instructor_reimburse_claims').insert(payload);
+        if (error) throw error;
+      }
+
+      setStatus(`已儲存 ${currentYear} 年度長照核銷資料至資料庫`);
+      alert(`已儲存 ${currentYear} 年度長照核銷資料至資料庫！`);
+    } catch (e) {
+      setStatus('儲存長照核銷失敗：' + (e.message || e), true);
+      alert('儲存長照核銷失敗：' + (e.message || e));
+    }
+  }
+
+  (async function init() {
+    await loadInstructorsFromHr();
+    await syncPlanRatesFromCloud();
+    initCalPeriodControls();
+    initLtcSelectedTeachers();
+    renderLtcTeacherPicker();
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'settings') {
+      switchTab('settings');
+    } else {
+      await onFeeContextChange();
+    }
+  })();
+</script>
+
+</body>
+</html>
