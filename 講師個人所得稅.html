@@ -758,8 +758,7 @@
     lines.push(`累計上課堂數	${teachers.map(n => sessions[n]).join('	')}`);
     lines.push(`合計	${teachers.map(n => totals[n]).join('	')}`);
 
-    navigator.clipboard?.writeText(lines.join('
-')).then(() => {
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
       showToast('summaryCopyToast', '已複製所得稅彙總數值');
     }).catch(() => {
       showToast('summaryCopyToast', '已準備所得稅彙總數值');
