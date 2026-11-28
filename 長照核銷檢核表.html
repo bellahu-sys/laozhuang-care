@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>長照核銷檢核表 ｜ 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #2c5e4f;
+      --primary-dark: #1e4237;
+      --delay-main: #be123c;
+      --delay-dark: #9f1239;
+      --delay-bg: #fff1f2;
+      --delay-border: #fecdd3;
+      --rose-main: #be123c;
+      --rose-dark: #9f1239;
+      --rose-bg: #fff1f2;
+      --rose-border: #fecdd3;
+      --bg: #f1f5f9;
+      --border: #cbd5e1;
+      --text: #1e293b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: var(--primary); color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .section-subnav {
+      background: #eff6ff;
+      border-bottom: 1px solid #93c5fd;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(29, 78, 216, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: var(--delay-dark);
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid #93c5fd;
+      background: #ffffff;
+      color: var(--delay-dark);
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #dbeafe;
+      border-color: var(--delay-main);
+    }
+    .section-subnav a.active {
+      background: var(--delay-main);
+      color: #ffffff;
+      border-color: var(--delay-main);
+      box-shadow: 0 2px 6px rgba(29, 78, 216, 0.22);
+    }
+
+    .container { max-width: 1260px; margin: 22px auto 60px auto; padding: 0 16px; }
+    .card {
+      background: #fff; border-radius: 12px; padding: 20px 24px;
+      border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    .hero-card {
+      border-left: 6px solid var(--delay-main);
+    }
+    h1 { margin: 0 0 6px 0; font-size: 1.42rem; color: var(--delay-dark); }
+    .sub-note { font-size: 0.9rem; color: #475569; margin: 0; line-height: 1.5; }
+    h2 {
+      margin: 0 0 14px 0; font-size: 1.12rem; color: var(--delay-dark);
+      border-bottom: 2px solid var(--delay-main); padding-bottom: 7px;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+
+    .toolbar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      background: #f8fafc; padding: 12px 15px; border-radius: 8px; border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    select, input[type="text"], textarea {
+      padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.93rem; background: #fff; color: var(--text);
+    }
+    select:focus, input[type="text"]:focus, textarea:focus {
+      outline: 2px solid #93c5fd; border-color: var(--delay-main);
+    }
+
+    button.btn {
+      padding: 7px 13px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;
+      transition: background 0.14s;
+    }
+    .btn-delay { background: var(--delay-main); color: #fff; }
+    .btn-delay:hover { background: var(--delay-dark); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-amber { background: #d97706; color: #fff; }
+    .btn-amber:hover { background: #b45309; }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #e2e8f0; }
+    .btn-danger { background: #dc2626; color: #fff; padding: 4px 9px; font-size: 0.8rem; }
+    .btn-danger:hover { background: #b91c1c; }
+
+    /* 期別分頁按鈕 */
+    .term-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    }
+    .term-tab {
+      padding: 8px 16px; border-radius: 8px; border: 1.5px solid #cbd5e1;
+      background: #fff; color: #334155; font-weight: bold; cursor: pointer; font-size: 0.94rem;
+    }
+    .term-tab:hover { background: var(--delay-bg); border-color: var(--delay-main); color: var(--delay-dark); }
+    .term-tab.active {
+      background: var(--delay-main); color: #fff; border-color: var(--delay-main);
+      box-shadow: 0 2px 6px rgba(29, 78, 216, 0.22);
+    }
+
+    /* 進度總覽列 */
+    .progress-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px; margin-bottom: 16px;
+    }
+    .stat-box {
+      border-radius: 9px; padding: 12px 15px; border: 1px solid #cbd5e1; background: #fff;
+    }
+    .stat-box.blue { background: #eff6ff; border-color: #93c5fd; }
+    .stat-box.teal { background: #f0fdfa; border-color: #99f6e4; }
+    .stat-box.amber { background: #fffbeb; border-color: #fde68a; }
+    .stat-box.green { background: #f0fdf4; border-color: #86efac; }
+    .stat-lbl { font-size: 0.82rem; color: #475569; font-weight: bold; }
+    .stat-val { font-size: 1.25rem; font-weight: bold; color: #0f172a; margin-top: 3px; }
+    .stat-sub { font-size: 0.78rem; color: #64748b; margin-top: 2px; }
+
+    /* 雙欄布局：左側（事前影印＋課前課後），右側（政府送件排列順序主表） */
+    .main-layout {
+      display: grid; grid-template-columns: 1fr 1.35fr; gap: 18px; align-items: start;
+    }
+    @media (max-width: 960px) {
+      .main-layout { grid-template-columns: 1fr; }
+    }
+
+    .stage-card {
+      background: #fff; border: 1px solid #cbd5e1; border-radius: 11px;
+      padding: 16px 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 18px;
+    }
+    .stage-card.pre-copy { border-top: 5px solid #0d9488; }
+    .stage-card.class-time { border-top: 5px solid #d97706; }
+    .stage-card.official-order { border-top: 5px solid var(--delay-main); }
+
+    .stage-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 10px; flex-wrap: wrap; margin-bottom: 10px; padding-bottom: 8px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .stage-title { font-size: 1.04rem; font-weight: bold; color: #0f172a; }
+    .stage-badge {
+      font-size: 0.78rem; font-weight: bold; padding: 3px 9px; border-radius: 999px;
+      white-space: nowrap;
+    }
+    .badge-teal { background: #ccfbf1; color: #0f766e; }
+    .badge-amber { background: #fef3c7; color: #92400e; }
+    .badge-blue { background: #dbeafe; color: #1e3a8a; }
+    .stage-desc { font-size: 0.84rem; color: #475569; margin-bottom: 12px; line-height: 1.45; }
+
+    /* 檢核項目列 */
+    .chk-list { display: flex; flex-direction: column; gap: 8px; }
+    .chk-row {
+      display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start;
+      padding: 9px 11px; border: 1px solid #e2e8f0; border-radius: 8px;
+      background: #f8fafc; transition: background 0.14s, border-color 0.14s;
+    }
+    .chk-row:hover { border-color: #93c5fd; background: #f0f7ff; }
+    .chk-row.done {
+      background: #f0fdf4; border-color: #86efac;
+    }
+    .chk-row.done .chk-title {
+      color: #166534; text-decoration: line-through;
+    }
+    .chk-box-wrap { padding-top: 2px; }
+    .chk-box-wrap input[type="checkbox"] {
+      width: 19px; height: 19px; accent-color: var(--delay-main); cursor: pointer;
+    }
+    .chk-body { display: flex; flex-direction: column; gap: 4px; }
+    .chk-title-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .seq-pill {
+      display: inline-block; min-width: 26px; text-align: center;
+      font-size: 0.78rem; font-weight: bold; padding: 1px 7px; border-radius: 5px;
+      background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd;
+    }
+    .seq-pill.ref {
+      background: #f1f5f9; color: #475569; border-color: #cbd5e1;
+    }
+    .chk-title { font-weight: bold; font-size: 0.94rem; color: #0f172a; }
+    .chk-sub { font-size: 0.82rem; color: #475569; line-height: 1.45; white-space: pre-line; }
+    .chk-note-inp {
+      width: 100%; padding: 4px 8px; font-size: 0.83rem; border: 1px solid #cbd5e1;
+      border-radius: 5px; background: #fff; margin-top: 2px;
+    }
+    .chk-actions { display: flex; align-items: center; gap: 4px; }
+
+    /* 核銷重要事項說明區（可手動編輯＋雲端儲存） */
+    .notes-card {
+      border-top: 5px solid var(--rose-main);
+      background: #fffdfd;
+    }
+    .notes-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px; margin-bottom: 14px;
+    }
+    .rule-pill-card {
+      background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 11px 13px;
+    }
+    .rule-pill-title { font-size: 0.84rem; font-weight: bold; color: #9f1239; margin-bottom: 4px; }
+    .rule-pill-body { font-size: 0.85rem; color: #1e293b; line-height: 1.5; }
+    .notes-editor {
+      width: 100%; min-height: 210px; line-height: 1.65; font-size: 0.93rem;
+      padding: 12px 14px; border: 1.5px solid #fda4af; border-radius: 8px;
+      background: #fff; color: #0f172a; resize: vertical;
+    }
+    .notes-editor:focus {
+      outline: 2px solid #fda4af; border-color: var(--rose-main);
+    }
+
+    .add-item-bar {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1;
+    }
+
+
+    /* 如圖雙欄對照檢核總表（可先印好影本 vs 結束才能列印） */
+    .excel-mirror-card {
+      border-top: 5px solid var(--delay-main);
+    }
+    .mirror-table-wrap {
+      overflow-x: auto;
+      border: 1.5px solid #64748b;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .mirror-cell-flex { display: flex; align-items: flex-start; gap: 8px; }
+    .mirror-ta { flex: 1; width: 100%; min-height: 28px; border: 1px solid transparent; background: transparent; font: inherit; color: inherit; resize: none; overflow: hidden; padding: 4px 6px; border-radius: 4px; line-height: 1.45; }
+    .mirror-ta:hover { border-color: #cbd5e1; background: #fff; }
+    .mirror-ta:focus { outline: none; border-color: #2563eb; background: #fff; color: #0f172a; text-decoration: none; }
+    td.item-cell.is-done .mirror-ta { text-decoration: line-through; }
+    td.item-cell.is-done .done-date { text-decoration: none; }
+    .mv-tools { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+    .mv-tools button { border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; border-radius: 5px; font-size: 0.74rem; padding: 3px 6px; cursor: pointer; font-weight: normal; text-decoration: none; }
+    .mv-tools button:hover { background: #e2e8f0; }
+    .mv-tools button.mv-del { color: #b91c1c; border-color: #fecaca; background: #fef2f2; }
+    .mv-drag { font-size: 0.74rem; color: #64748b; border: 1px dashed #94a3b8; border-radius: 5px; padding: 3px 6px; cursor: grab; user-select: none; }
+    tr.mirror-add-row td { background: #f8fafc; }
+    .mirror-add-box { display: flex; gap: 6px; }
+    .mirror-add-box input { flex: 1; min-width: 120px; padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+    td.item-cell.drag-over { outline: 2px dashed #2563eb; outline-offset: -2px; }
+    .note-ed { outline: none; border-radius: 4px; border: 1px solid transparent; padding: 1px 3px; margin: -1px -3px; min-height: 1.2em; }
+    .note-ed:hover { border-color: #fecdd3; background: #fff; }
+    .note-ed:focus { border-color: #2563eb; background: #fff; }
+    .note-del { border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; border-radius: 5px; font-size: 0.74rem; padding: 2px 8px; cursor: pointer; }
+    .done-date { font-size: 0.74rem; color: #0f766e; font-weight: normal; margin-top: 2px; }
+    table.mirror-chk-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 680px;
+      font-size: 0.94rem;
+    }
+    table.mirror-chk-table th {
+      background: #d9d9d9;
+      color: #0f172a;
+      font-weight: bold;
+      border: 1px solid #475569;
+      padding: 9px 10px;
+      text-align: center;
+      font-size: 0.98rem;
+    }
+    table.mirror-chk-table td {
+      border: 1px solid #64748b;
+      padding: 7px 10px;
+      vertical-align: middle;
+    }
+    table.mirror-chk-table td.chk-cell {
+      width: 48px;
+      text-align: center;
+    }
+    table.mirror-chk-table td.chk-cell input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--delay-main);
+      cursor: pointer;
+    }
+    table.mirror-chk-table td.item-cell {
+      width: calc(50% - 48px);
+      line-height: 1.45;
+      color: #0f172a;
+    }
+    table.mirror-chk-table td.item-cell.is-done {
+      background: #f0fdf4;
+      color: #166534;
+      text-decoration: line-through;
+      font-weight: bold;
+    }
+    table.mirror-chk-table td.item-cell.muted-hint {
+      color: #64748b;
+    }
+    table.mirror-chk-table td.blank-span {
+      background: #ffffff;
+    }
+    table.mirror-chk-table td.gray-corner {
+      background: #d9d9d9;
+    }
+    .mirror-inline-inp {
+      width: 100%;
+      border: 1px dashed #94a3b8;
+      border-radius: 4px;
+      padding: 3px 7px;
+      font-size: 0.88rem;
+      background: #fffef7;
+    }
+
+    #syncStatus { font-size: 0.86rem; font-weight: bold; color: #0f766e; }
+
+    @media print {
+      @page { size: A4 portrait; margin: 12mm; }
+      nav.topbar, .section-subnav, .no-print, .hero-card, .progress-grid, .notes-card { display: none !important; }
+      body { background: #fff !important; margin: 0; padding: 0; }
+      .container { max-width: 100%; margin: 0; padding: 0; }
+      .card.excel-mirror-card {
+        display: block !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .mirror-table-wrap { border: 1.5px solid #000 !important; border-radius: 0 !important; }
+      table.mirror-chk-table th, table.mirror-chk-table td { border: 1px solid #000 !important; }
+      .mirror-ta {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        resize: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar no-print">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">人事資料管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="志工資料管理.html">志工資料管理</a>
+        <div class="dropdown-divider">人事記錄</div>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="每日工作檢核表.html">每日工作檢核表</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+        <a href="資料庫臨時記錄.html">資料庫臨時記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="課程活動表.html">課程活動表</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="關懷核銷食材費.html">關懷核銷食材費</a>
+        <a href="每月業務費記錄.html">每月業務費</a>
+        <a href="專職人員薪資記錄.html">專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">關懷核銷統計</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">長照與延緩經費收支</a>
+        <a href="長照核銷食材費.html">長照核銷食材費</a>
+        <a href="講師鐘點費核銷.html">講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">長照核銷統計</a>
+        <a href="延緩核銷材料費.html">延緩核銷材料費</a>
+        <a href="延緩核銷統計.html">延緩核銷統計</a>
+        <a href="延緩核銷檢核表.html">延緩核銷檢核表</a>
+        <div class="dropdown-divider">其他計畫核銷</div>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="section-subnav no-print" aria-label="長照與延緩核銷快速切換：">
+  <span class="section-subnav-label">長照與延緩核銷快速切換：</span>
+  <a href="長照與延緩核銷統計.html">長照與延緩經費收支</a>
+  <a href="長照核銷食材費.html">長照核銷食材費</a>
+  <a href="講師鐘點費核銷.html">講師鐘點費核銷</a>
+  <a href="長照講師核銷記錄.html">長照核銷統計</a>
+  <a href="長照核銷檢核表.html" class="active">長照核銷檢核表</a>
+</div>
+
+<div class="container">
+  <!-- 頁首與控制列 -->
+  <div class="card hero-card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+      <div>
+        <h1>長照核銷檢核表（長照服務發展基金獎助經費）</h1>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+        <div id="syncStatus">雲端連線準備中...</div>
+        <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+      </div>
+    </div>
+
+    <div class="toolbar no-print" style="margin-bottom:0;">
+      <label style="font-weight:bold;">
+        會計年度（民國年）：
+        <select id="rocYearSelect" onchange="onYearOrTermChange()">
+          <option value="115">115 年</option>
+          <option value="116">116 年</option>
+          <option value="117">117 年</option>
+        </select>
+      </label>
+
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span style="font-weight:bold;">選擇核銷期別：</span>
+        <div class="term-tabs" id="termTabs">
+          <button type="button" class="term-tab active" data-term="1" onclick="selectTerm(1)">第 1 季（1–3月）</button>
+          <button type="button" class="term-tab" data-term="2" onclick="selectTerm(2)">第 2 季（4–6月）</button>
+          <button type="button" class="term-tab" data-term="3" onclick="selectTerm(3)">第 3 季（7–9月）</button>
+          <button type="button" class="term-tab" data-term="4" onclick="selectTerm(4)">第 4 季（10–12月）</button>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="window.print()">列印檢核表</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 本期完成度統計 -->
+  <div class="progress-grid" id="progressGrid"></div>
+
+  <!-- 依圖雙欄對照檢核總表（可先印好影本 vs 結束才能列印，即時寫入雲端資料庫） -->
+  <div class="card excel-mirror-card">
+    <h2>
+      <span id="mirrorTableHeading">115 年 長照第 1 季（1–3月） — 送件文件檢核表</span>
+    </h2>
+    <div class="mirror-table-wrap">
+      <table class="mirror-chk-table" id="mirrorChecklistTable"></table>
+    </div>
+  </div>
+
+  <!-- 核銷重要事項說明區（可手動輸入編輯＋即時存入資料庫） -->
+  <div class="card notes-card">
+    <h2>
+      <span>四、長照核銷重要事項與金額計算說明區</span>
+      <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-delay" onclick="saveNotesToCloud(false)">立即儲存說明內容</button>
+      </div>
+    </h2>
+
+    <div class="notes-grid" id="noteCardsGrid"></div>
+    <div class="no-print" style="margin:-4px 0 12px 0;">
+      <button type="button" class="btn btn-outline" onclick="addNoteCard()">＋ 新增說明卡片</button>
+      <span style="font-size:0.8rem; color:#64748b; margin-left:8px;">卡片標題與內容可直接點進去修改（Ctrl+B 可加粗），離開輸入處即自動存檔</span>
+    </div>
+
+    <div style="font-size:0.84rem; color:#9f1239; font-weight:bold; margin-bottom:6px;">
+      可直接在下方文字區手動輸入或增修本期核銷注意事項、累積金額紀錄與備忘：
+    </div>
+    <textarea id="importantNotesTextarea" class="notes-editor" onchange="onNotesChange()" placeholder="請在此輸入延緩核銷重要注意事項、最低金額規定或期別備忘..."></textarea>
+  </div>
+</div>
+
+<script>
+  let supabaseClient = null;
+  let supabaseInitError = '';
+  function ensureSupabaseClient() {
+    if (supabaseClient) return supabaseClient;
+    if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined' || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      supabaseInitError = '缺少 config.js 或 SUPABASE_URL／SUPABASE_ANON_KEY 設定';
+      return null;
+    }
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      supabaseInitError = 'Supabase 程式庫尚未載入或被網路阻擋';
+      return null;
+    }
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabaseInitError = '';
+      return supabaseClient;
+    } catch (e) {
+      supabaseInitError = 'Supabase 初始化失敗：' + (e.message || e);
+      return null;
+    }
+  }
+
+  let currentYear = 115;
+  const PROGRAM_KEY = "ltc";
+  const PROGRAM_SHORT = "長照";
+  const TERM_LABELS = {"1": "第 1 季（1–3月）", "2": "第 2 季（4–6月）", "3": "第 3 季（7–9月）", "4": "第 4 季（10–12月）"};
+  let currentTerm = 1;
+  let checklistItems = [];
+  let importantNotesText = '';
+  let autoSaveTimer = null;
+
+  const DEFAULT_IMPORTANT_NOTES = `【長照核銷重要事項與金額計算規則（整理自長照核銷檢核表）】
+
+一、基本規定與送件份數
+• 只核銷「食材費」及「講師費」（每月補助上限 40,000 元，1 季 120,000 元；核定業務費 480,000 元 ÷ 12 月 ＝ 40,000 元）。
+• 共準備 3 份：縣府 1 份（正本）、社區自留 1 份、淑貞 1 份。
+• 補助計畫編號：11500K0201。
+• 核銷公文日期、講師領據（支出憑據明細表）：統一寫在「課程最後一天」。
+• 7b 各月黏存單排列方式：4 月黏存單後放食材費領據，接著放講師費領據 ➡️ 接續 5 月的資料 ➡️ 再接續 6 月的資料。
+
+二、核銷相關金額核對與上限警告
+1. 核定金額（補助經費）：
+   • 業務費 480,000 元 ＋ 延緩 108,000 元 ＝ 588,000 元（國字大寫：伍拾捌萬捌仟元整）
+   • 長照單季領據金額（固定）：120,000 元（國字大寫：壹拾貳萬元整）
+2. 食材費計算原則：
+   • 以食材費為優先，食材費應補齊金額 ＝（4 萬 × 3 月 ＝ 12 萬 － 講師費）。
+   • 長照食材計算參考：每月約 1 萬 6 ～ 1 萬 7 仟 5；每月關懷＋長照食材預算金額 AI 設定最少要有 3 萬 8 仟元，最高不可超過 4 萬 2 仟元。
+   • 【重要警告】注意每個月食材費＋講師費收據最多不可以超過 48,000 元，否則要重做！
+3. 講師人數與鐘點費基準：
+   • 健康促進講師費（關懷）：通常核 4 個講師；注意講師只能核 3 個人時（如延緩、樂齡拓點-活躍老化）。
+   • 外聘講師費：最高 2,000 元 / 1H；內聘講師費：最高 1,000 元 / 1H。
+   • 講師參考費率：
+     - 林熙鈴老師：1,000 元 * 1H（延緩未核銷）
+     - 張國堂老師：1,000 元 * 2H
+     - 鄧美續老師：1,000 元 * 2H（活躍老化不核銷，盡量給 800 就好）
+     - 蔡牡連老師：800 元 * 1H
+     - 吳佩珊老師：1,500 元 * 1H
+
+三、長照＋延緩目前核銷順序與累計金額參考
+• 1. 115/06/01：1-3月長照 120,000 元
+• 2. 4-6月長照 120,000 元
+• 3. 115/07/30：7-9月長照 120,000 元（長照累計 360,000 元）
+• 延緩 1 期（115/09/15）：28,800 元`;
+
+  function buildDefaultItems() {
+    return [
+      { id: "ltc_pre_1", stage: 'pre_copy', label: "9. 核定函-影本15份", title: "9. 核定函-影本15份", checked: false, note: '' },
+      { id: "ltc_pre_2", stage: 'pre_copy', label: "7.1 食材費", title: "7.1 食材費", checked: false, note: '' },
+      { id: "ltc_pre_3", stage: 'pre_copy', label: "7.2 領款收據-各月、各講師\n只需要領據, 不需要簽到表", title: "7.2 領款收據-各月、各講師\n只需要領據, 不需要簽到表", checked: false, note: '' },
+      { id: "ltc_ord_1", stage: 'official_order', label: "1 核銷公文", title: "1 核銷公文", checked: false, note: '' },
+      { id: "ltc_ord_2", stage: 'official_order', label: "2 領款收據", title: "2 領款收據", checked: false, note: '' },
+      { id: "ltc_ord_3", stage: 'official_order', label: "3 經費支出憑證簿", title: "3 經費支出憑證簿", checked: false, note: '' },
+      { id: "ltc_ord_4", stage: 'official_order', label: "4 經費收支明細表", title: "4 經費收支明細表", checked: false, note: '' },
+      { id: "ltc_ord_5", stage: 'official_order', label: "5 C單位辦理期程表\n預防延緩核銷無須檢附", title: "5 C單位辦理期程表\n預防延緩核銷無須檢附", checked: false, note: '', muted: true },
+      { id: "ltc_ord_6", stage: 'official_order', label: "6. 支出憑證明細表\n_各月業務費總計共3張", title: "6. 支出憑證明細表\n_各月業務費總計共3張", checked: false, note: '' },
+      { id: "ltc_ord_7", stage: 'official_order', label: "7. 支出憑證黏貼存單正本憑證\n-7.1 季食材費\n-7.2 季講師費\n7b 各月黏存單\n4月黏存單後 放食材費領據 接著放講師費領據\n➡️接續 5月的資料➡️再接續 6月的資料", title: "7. 支出憑證黏貼存單正本憑證\n-7.1 季食材費\n-7.2 季講師費\n7b 各月黏存單\n4月黏存單後 放食材費領據 接著放講師費領據\n➡️接續 5月的資料➡️再接續 6月的資料", checked: false, note: '' },
+      { id: "ltc_ord_8", stage: 'official_order', label: "8. 據點課程活動表", title: "8. 據點課程活動表", checked: false, note: '' },
+      { id: "ltc_ord_9", stage: 'official_order', label: "9.核定函及核定表 (影本)", title: "9.核定函及核定表 (影本)", checked: false, note: '' },
+      { id: "ltc_ord_10", stage: 'official_order', label: "講師所得稅記錄", title: "講師所得稅記錄", checked: false, note: '' }
+    ];
+  }
+
+  function escHtml(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function escAttr(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    el.style.color = isErr ? '#dc2626' : '#0f766e';
+    el.textContent = msg;
+  }
+
+  (function initYear() {
+    const today = new Date();
+    const rocY = String(today.getFullYear() - 1911);
+    const sel = document.getElementById('rocYearSelect');
+    if ([...sel.options].some(o => o.value === rocY)) {
+      sel.value = rocY;
+    }
+    currentYear = parseInt(sel.value, 10) || 115;
+  })();
+
+  async function selectTerm(termNum) {
+    currentTerm = termNum;
+    document.querySelectorAll('.term-tab').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.term, 10) === termNum);
+    });
+    await loadTermFromCloud(false);
+  }
+
+  async function onYearOrTermChange() {
+    currentYear = parseInt(document.getElementById('rocYearSelect').value, 10) || 115;
+    await loadTermFromCloud(false);
+  }
+
+  async function loadTermFromCloud(showAlert = false) {
+    const tLabel = TERM_LABELS[String(currentTerm)] || `第 ${currentTerm} 期`;
+    const client = ensureSupabaseClient();
+    if (!client) {
+      setStatus('尚未連線至雲端資料庫（' + (supabaseInitError || '請確認 config.js') + '）', true);
+      checklistItems = buildDefaultItems();
+      importantNotesText = DEFAULT_IMPORTANT_NOTES;
+      renderAll();
+      return;
+    }
+
+    setStatus(`正在從雲端資料庫讀取 ${currentYear} 年 ${PROGRAM_SHORT}${tLabel} 檢核表...`);
+    try {
+      const { data, error } = await client
+        .from('program_reimburse_checklists')
+        .select('*')
+        .eq('program_key', PROGRAM_KEY)
+        .eq('roc_year', currentYear)
+        .eq('term', currentTerm)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data && Array.isArray(data.items) && data.items.length > 0) {
+        checklistItems = data.items;
+        importantNotesText = (data.important_notes !== null && data.important_notes !== undefined && String(data.important_notes).trim() !== '')
+          ? String(data.important_notes)
+          : DEFAULT_IMPORTANT_NOTES;
+        renderAll();
+        setStatus(`已載入 ${currentYear} 年 ${PROGRAM_SHORT}${tLabel} 檢核表（雲端同步）`);
+      } else {
+        checklistItems = buildDefaultItems();
+        importantNotesText = DEFAULT_IMPORTANT_NOTES;
+        renderAll();
+        await saveTermToCloud(true);
+      }
+    } catch (e) {
+      checklistItems = buildDefaultItems();
+      importantNotesText = DEFAULT_IMPORTANT_NOTES;
+      renderAll();
+      setStatus('讀取雲端資料表失敗（請確認已執行 program_reimburse_checklists 建表 SQL）：' + (e.message || e), true);
+      if (showAlert) alert('讀取資料庫失敗：' + (e.message || e));
+    }
+  }
+
+  async function saveTermToCloud(silent = true) {
+    const tLabel = TERM_LABELS[String(currentTerm)] || `第 ${currentTerm} 期`;
+    const client = ensureSupabaseClient();
+    if (!client) {
+      setStatus('尚未連線至雲端資料庫（' + (supabaseInitError || '請確認 config.js') + '）', true);
+      if (!silent) alert('尚未連線至雲端資料庫：' + (supabaseInitError || '請確認 config.js'));
+      return;
+    }
+    setStatus('正在即時寫入雲端資料庫...');
+    try {
+      const payload = {
+        program_key: PROGRAM_KEY,
+        roc_year: currentYear,
+        term: currentTerm,
+        items: checklistItems,
+        important_notes: importantNotesText,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await client
+        .from('program_reimburse_checklists')
+        .upsert(payload, { onConflict: 'program_key,roc_year,term' });
+
+      if (error) throw error;
+
+      const now = new Date();
+      const tStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+      setStatus(`已即時存入資料庫（${currentYear} 年 ${PROGRAM_SHORT}${tLabel}，${tStr}）`);
+      if (!silent) alert(`已將 ${currentYear} 年 ${PROGRAM_SHORT}${tLabel} 檢核表與說明內容存入資料庫！`);
+    } catch (e) {
+      setStatus('寫入雲端資料庫失敗：' + (e.message || e), true);
+      if (!silent) alert('寫入雲端資料庫失敗：' + (e.message || e));
+    }
+  }
+
+  function scheduleAutoSave() {
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      saveTermToCloud(true);
+    }, 300);
+  }
+
+  function onToggleCheck(itemId, isChecked) {
+    const it = checklistItems.find(x => x.id === itemId);
+    if (!it) return;
+    it.checked = Boolean(isChecked);
+    if (it.checked) {
+      const d = new Date();
+      it.doneAt = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    } else {
+      delete it.doneAt;
+    }
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function onItemNoteChange(itemId, val) {
+    const it = checklistItems.find(x => x.id === itemId);
+    if (!it) return;
+    it.note = String(val ?? '');
+    scheduleAutoSave();
+  }
+
+  function addCustomItem(stageKey) {
+    const inp = document.getElementById(`newInput_${stageKey}`);
+    const titleVal = (inp?.value || '').trim();
+    if (!titleVal) {
+      alert('請先輸入項目名稱！');
+      return;
+    }
+    let seqVal = '';
+    if (stageKey === 'official_order') {
+      const seqInp = document.getElementById('newSeq_official_order');
+      seqVal = (seqInp?.value || '').trim() || String(checklistItems.filter(x => x.stage === 'official_order').length + 1);
+      if (seqInp) seqInp.value = '';
+    } else if (stageKey === 'pre_copy') {
+      seqVal = '預' + (checklistItems.filter(x => x.stage === 'pre_copy').length + 1);
+    } else {
+      seqVal = '即時' + (checklistItems.filter(x => x.stage === 'class_time').length + 1);
+    }
+
+    checklistItems.push({
+      id: `custom_${stageKey}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+      stage: stageKey,
+      seq: seqVal,
+      isCustom: true,
+      title: titleVal,
+      sub: '自訂新增檢核項目',
+      checked: false,
+      note: ''
+    });
+    inp.value = '';
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function deleteCustomItem(itemId) {
+    if (!confirm('確定要刪除此自訂檢核項目嗎？')) return;
+    checklistItems = checklistItems.filter(x => x.id !== itemId);
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function resetCurrentTermChecks() {
+    if (!confirm(`確定要將 ${currentYear} 年延緩第 ${currentTerm} 期的所有勾選恢復為未完成嗎？（項目與說明文字會保留）`)) return;
+    checklistItems.forEach(x => { x.checked = false; delete x.doneAt; });
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function onNotesChange() {
+    const ta = document.getElementById('importantNotesTextarea');
+    importantNotesText = ta ? ta.value : '';
+    scheduleAutoSave();
+  }
+
+  async function saveNotesToCloud(silent = false) {
+    const ta = document.getElementById('importantNotesTextarea');
+    importantNotesText = ta ? ta.value : '';
+    await saveTermToCloud(silent);
+  }
+
+  function restoreDefaultImportantNotes() {
+    if (!confirm('確定要將下方說明區恢復為預設的 Excel 核銷規則內容嗎？')) return;
+    importantNotesText = DEFAULT_IMPORTANT_NOTES;
+    const ta = document.getElementById('importantNotesTextarea');
+    if (ta) ta.value = importantNotesText;
+    scheduleAutoSave();
+  }
+
+  function renderStageList(stageKey, containerId) {
+    const wrap = document.getElementById(containerId);
+    if (!wrap) return;
+    const list = checklistItems.filter(x => x.stage === stageKey);
+
+    wrap.innerHTML = list.map(it => {
+      const doneClass = it.checked ? 'done' : '';
+      const seqClass = it.isRef ? 'seq-pill ref' : 'seq-pill';
+      const delBtn = it.isCustom
+        ? `<button type="button" class="btn btn-danger no-print" onclick="deleteCustomItem('${escAttr(it.id)}')">刪除</button>`
+        : '';
+
+      return `
+        <div class="chk-row ${doneClass}">
+          <div class="chk-box-wrap">
+            <input type="checkbox" ${it.checked ? 'checked' : ''} onchange="onToggleCheck('${escAttr(it.id)}', this.checked)">
+          </div>
+          <div class="chk-body">
+            <div class="chk-title-line">
+              ${it.seq ? `<span class="${seqClass}">${escHtml(it.seq)}</span>` : ''}
+              <span class="chk-title">${escHtml(it.title)}</span>
+            </div>
+            ${it.sub ? `<div class="chk-sub">${escHtml(it.sub)}</div>` : ''}
+            <input type="text" class="chk-note-inp no-print" value="${escAttr(it.note || '')}" placeholder="填寫備註、日期或影印狀態..." onchange="onItemNoteChange('${escAttr(it.id)}', this.value)">
+          </div>
+          <div class="chk-actions">${delBtn}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderProgressSummary() {
+    const grid = document.getElementById('progressGrid');
+    if (!grid) return;
+    const c = mirrorCounts();
+    const doneAll = c.leftDone + c.rightDone;
+    const totalAll = c.leftTotal + c.rightTotal;
+    const pct = totalAll > 0 ? Math.round((doneAll / totalAll) * 100) : 0;
+    const tLabel = TERM_LABELS[String(currentTerm)] || `第 ${currentTerm} 期`;
+    grid.innerHTML = `
+      <div class="stat-box blue">
+        <div class="stat-lbl">目前檢核期別</div>
+        <div class="stat-val">${currentYear} 年 ${PROGRAM_SHORT}${tLabel}</div>
+        <div class="stat-sub">共 3 份：縣府正本 1、社區 1、淑貞 1</div>
+      </div>
+      <div class="stat-box teal">
+        <div class="stat-lbl">每月可先印好影本(暫存於資料夾)</div>
+        <div class="stat-val">${c.leftDone} / ${c.leftTotal} 項</div>
+        <div class="stat-sub">核定函、食材費、講師領款收據影本</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-lbl">結束才能列印</div>
+        <div class="stat-val">${c.rightDone} / ${c.rightTotal} 項（總計 ${pct}%）</div>
+        <div class="stat-sub">依 1～9 號規定順序裝訂送件</div>
+      </div>
+    `;
+  }
+
+
+  // ===== 檢核表項目（可自由修改、新增、刪除、排序）=====
+  const MIRROR_DEFAULT_LABELS = {
+    pre_1: '核定函',
+    pre_2: '6.1 材料費影本',
+    pre_3: '6.2 領款收據-講師影本',
+    pre_4: '郵寄標籤+信封',
+    pre_5: '裝訂封面',
+    ord_0: '1.檢查表(群組另外給, 不用附)',
+    ord_1: '1. 核銷公文',
+    ord_2: '2. 領款收據',
+    ord_3: '3. 經費支出憑證簿',
+    ord_4: '4. 經費收支明細表',
+    ord_5: '5. 支出憑證明細表',
+    ord_6: '6. 支出憑證黏貼存單正本憑證\n-6.1 課程材料費收據\n-6.2 講師領據',
+    ord_7: '7. 特約單位服務量表-師資名冊',
+    ord_8: '8. 個案出席記錄表',
+    ord_9: '9. 據點開班資料滙出報表',
+    ord_10: '10.核定函及核定表 (影本)',
+    ord_11: '講師所得稅記錄'
+  };
+  const MIRROR_LEFT_STAGE = 'pre_copy';
+  const MIRROR_RIGHT_STAGE = 'official_order';
+
+  // 舊資料沒有 label 欄位時，帶入圖 3 的檢核表文字（只做一次，不會覆蓋你修改過的內容）
+  function migrateMirrorLabels() {
+    checklistItems.forEach(it => {
+      if (it.label !== undefined) return;
+      if (it.id === 'pre_extra') { it.label = String(it.title || ''); return; }
+      if (MIRROR_DEFAULT_LABELS[it.id] !== undefined) {
+        it.label = MIRROR_DEFAULT_LABELS[it.id];
+        if (it.id === 'ord_0') it.muted = true;
+      }
+    });
+  }
+
+  function itemLabel(it) {
+    return it.label !== undefined ? String(it.label) : String(it.title || '');
+  }
+
+  function visibleItems(stage) {
+    return checklistItems.filter(x => {
+      if (x.stage !== stage) return false;
+      if (x.id === 'pre_extra' && !itemLabel(x).trim()) return false;
+      if (x.label === undefined && MIRROR_DEFAULT_LABELS[x.id] === undefined && !x.isCustom && x.id !== 'pre_extra') return false;
+      return true;
+    });
+  }
+
+  function onLabelChange(itemId, val) {
+    const it = checklistItems.find(x => x.id === itemId);
+    if (!it) return;
+    it.label = String(val ?? '');
+    it.title = it.label;
+    scheduleAutoSave();
+  }
+
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight + 2) + 'px';
+  }
+
+  function addMirrorItem(stage) {
+    const inp = document.getElementById(`mirrorNew_${stage}`);
+    const text = (inp?.value || '').trim();
+    if (!text) { setStatus('請先輸入項目名稱', true); inp?.focus(); return; }
+    checklistItems.push({
+      id: `custom_${stage}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+      stage, isCustom: true, label: text, title: text, sub: '', checked: false, note: ''
+    });
+    if (inp) inp.value = '';
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function deleteMirrorItem(itemId) {
+    const it = checklistItems.find(x => x.id === itemId);
+    if (!it) return;
+    if (!confirm(`確定要刪除檢核項目「${itemLabel(it).split('\n')[0]}」嗎？`)) return;
+    checklistItems = checklistItems.filter(x => x.id !== itemId);
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function moveMirrorItem(itemId, dir) {
+    const it = checklistItems.find(x => x.id === itemId);
+    if (!it) return;
+    const list = visibleItems(it.stage);
+    const idx = list.findIndex(x => x.id === itemId);
+    const other = list[idx + dir];
+    if (!other) return;
+    const i1 = checklistItems.indexOf(it);
+    const i2 = checklistItems.indexOf(other);
+    [checklistItems[i1], checklistItems[i2]] = [checklistItems[i2], checklistItems[i1]];
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  let dragItemId = null;
+  function onMirrorDragStart(ev, itemId) {
+    dragItemId = itemId;
+    try { ev.dataTransfer.setData('text/plain', itemId); ev.dataTransfer.effectAllowed = 'move'; } catch (e) {}
+  }
+  function onMirrorDragOver(ev, targetId) {
+    const src = checklistItems.find(x => x.id === dragItemId);
+    const tgt = checklistItems.find(x => x.id === targetId);
+    if (!src || !tgt || src.stage !== tgt.stage) return;
+    ev.preventDefault();
+  }
+  function onMirrorDrop(ev, targetId) {
+    ev.preventDefault();
+    const src = checklistItems.find(x => x.id === dragItemId);
+    const tgt = checklistItems.find(x => x.id === targetId);
+    dragItemId = null;
+    if (!src || !tgt || src === tgt || src.stage !== tgt.stage) return;
+    checklistItems = checklistItems.filter(x => x !== src);
+    const ti = checklistItems.indexOf(tgt);
+    checklistItems.splice(ti, 0, src);
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  function restoreDefaultItems() {
+    if (!confirm(`確定要把 ${currentYear} 年延緩第 ${currentTerm} 期的檢核項目恢復成預設內容嗎？（你修改、新增的項目與勾選都會清除）`)) return;
+    checklistItems = buildDefaultItems();
+    renderAll();
+    scheduleAutoSave();
+  }
+
+  async function applyItemsToAllTerms() {
+    const client = ensureSupabaseClient();
+    if (!client) { setStatus('尚未連線至雲端資料庫，無法套用到其他期別', true); return; }
+    if (!confirm(`確定要把目前這份檢核項目套用到 ${currentYear} 年全部 3 期嗎？（其他期別的項目會被取代並清空勾選，說明區內容保留）`)) return;
+    const copy = checklistItems.map(it => { const c = { ...it, checked: false }; delete c.doneAt; return c; });
+    try {
+      for (const t of [1, 2, 3]) {
+        if (t === currentTerm) continue;
+        const { data } = await client.from('delay_reimburse_checklists').select('*').eq('roc_year', currentYear).eq('term', t).maybeSingle();
+        const notes = (data && data.important_notes) ? data.important_notes : importantNotesText;
+        const { error } = await client.from('delay_reimburse_checklists').upsert({
+          roc_year: currentYear, term: t, items: copy, important_notes: notes, updated_at: new Date().toISOString()
+        }, { onConflict: 'roc_year,term' });
+        if (error) throw error;
+      }
+      await saveTermToCloud(true);
+      setStatus(`已將目前檢核項目套用到 ${currentYear} 年全部 3 期`);
+    } catch (e) {
+      setStatus('套用失敗：' + (e.message || e), true);
+    }
+  }
+
+  function mirrorCounts() {
+    const L = visibleItems(MIRROR_LEFT_STAGE);
+    const R = visibleItems(MIRROR_RIGHT_STAGE);
+    return {
+      leftDone: L.filter(x => x.checked).length, leftTotal: L.length,
+      rightDone: R.filter(x => x.checked).length, rightTotal: R.length
+    };
+  }
+
+  function buildItemCells(it, side) {
+    const label = itemLabel(it);
+    const doneCls = it.checked ? 'is-done' : (it.muted ? 'muted-hint' : '');
+    const dateHtml = (it.checked && it.doneAt) ? `<div class="done-date">完成於 ${escHtml(it.doneAt)}</div>` : '';
+    const id = escAttr(it.id);
+    return `
+      <td class="chk-cell">
+        <input type="checkbox" ${it.checked ? 'checked' : ''} onchange="onToggleCheck('${id}', this.checked)">
+      </td>
+      <td class="item-cell ${doneCls}" ondragover="onMirrorDragOver(event, '${id}')" ondrop="onMirrorDrop(event, '${id}')">
+        <div class="mirror-cell-flex">
+          <textarea class="mirror-ta" rows="1" placeholder="輸入項目名稱" oninput="autoGrow(this)" onchange="onLabelChange('${id}', this.value)">${escHtml(label)}</textarea>
+          <div class="mv-tools no-print">
+            <button type="button" title="上移" onclick="moveMirrorItem('${id}', -1)">上移</button>
+            <button type="button" title="下移" onclick="moveMirrorItem('${id}', 1)">下移</button>
+            <span class="mv-drag" draggable="true" ondragstart="onMirrorDragStart(event, '${id}')" title="按住拖曳到想要的位置（同一欄內）">拖曳</span>
+            <button type="button" class="mv-del" onclick="deleteMirrorItem('${id}')">刪除</button>
+          </div>
+        </div>
+        ${dateHtml}
+      </td>`;
+  }
+
+  function renderMirrorChecklistTable() {
+    const tbl = document.getElementById('mirrorChecklistTable');
+    if (!tbl) return;
+    migrateMirrorLabels();
+
+    const heading = document.getElementById('mirrorTableHeading');
+    if (heading) {
+      const tLabel = TERM_LABELS[String(currentTerm)] || `第 ${currentTerm} 期`;
+      heading.textContent = `${currentYear} 年 ${PROGRAM_SHORT}${tLabel} — 送件文件檢核表`;
+    }
+
+    const L = visibleItems(MIRROR_LEFT_STAGE);
+    const R = visibleItems(MIRROR_RIGHT_STAGE);
+    const n = Math.max(L.length, R.length);
+    let bodyHtml = '';
+    for (let i = 0; i < n; i++) {
+      const left = L[i] ? buildItemCells(L[i]) : '<td colspan="2" class="blank-span"></td>';
+      const right = R[i] ? buildItemCells(R[i]) : '<td colspan="2" class="blank-span"></td>';
+      bodyHtml += `<tr>${left}${right}</tr>`;
+    }
+    if (n === 0) bodyHtml = '<tr><td colspan="4" style="text-align:center; color:#64748b; padding:16px;">尚無檢核項目，請在下方新增</td></tr>';
+
+    const addBox = (stage, ph) => `
+      <div class="mirror-add-box">
+        <input type="text" id="mirrorNew_${stage}" placeholder="${ph}" onkeydown="if(event.key==='Enter'){addMirrorItem('${stage}');}">
+        <button type="button" class="btn btn-primary" onclick="addMirrorItem('${stage}')">＋ 新增</button>
+      </div>`;
+
+    tbl.innerHTML = `
+      <thead>
+        <tr>
+          <th colspan="2">每月可先印好影本(暫存於資料夾)</th>
+          <th colspan="2">結束才能列印</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${bodyHtml}
+        <tr class="mirror-add-row no-print">
+          <td colspan="2">${addBox(MIRROR_LEFT_STAGE, '新增影本項目...')}</td>
+          <td colspan="2">${addBox(MIRROR_RIGHT_STAGE, '新增核銷文件項目...')}</td>
+        </tr>
+      </tbody>
+    `;
+    tbl.querySelectorAll('.mirror-ta').forEach(autoGrow);
+  }
+
+  // ===== 重點金額速查卡片（內容保留，可手動修改／新增／刪除）=====
+  const DEFAULT_NOTE_CARDS = [
+    { title: "1. 每月／每季補助上限與份數規定",
+      body: "只核銷<strong>食材費</strong>及<strong>講師費</strong>（每月補助上限 <strong>40,000 元</strong>，1 季 <strong>120,000 元</strong>；年度業務費 480,000 元 ÷ 12 月 ＝ 40,000 元）。<br>共準備 <strong>3 份</strong>：縣府 1 份（正本）、社區自留 1 份、淑貞 1 份。" },
+    { title: "2. 食材費預算與 48,000 元上限警示",
+      body: "• 以<strong>食材費</strong>為優先；每月關懷＋長照食材預算 AI 設定最少要有 <strong>3 萬 8 仟元</strong>，最高不可超過 <strong>4 萬 2 仟元</strong>（長照單月食材約 1 萬 6–1 萬 7 仟 5）。<br>• <strong>注意：每個月食材費＋講師費收據最多不可以超過 48,000 元，否則要重做！</strong>" },
+    { title: "3. 講師人數限制與鐘點費標準",
+      body: "• 健康促進講師費（關懷）通常核 4 個講師；注意講師只能核 3 個人時（如延緩、樂齡拓點-活躍老化）。<br>• <strong>外聘講師費</strong>最高 2,000 元/1H；<strong>內聘講師費</strong>最高 1,000 元/1H。" },
+    { title: "4. 計畫編號、日期與共用核定額度",
+      body: "• 補助計畫編號：<strong>11500K0201</strong>；核銷公文日期、講師領據（支出憑據明細表）統一寫<strong>課程最後一天</strong>。<br>• 業務費 480,000 ＋ 延緩 108,000 ＝ <strong>588,000 元</strong>（伍拾捌萬捌仟元整）；長照領據（固定）大寫：<strong>壹拾貳萬元整</strong>。" }
+  ];
+
+  function migrateNoteCards() {
+    if (checklistItems.some(x => x.stage === 'note_card' || x.id === 'note_cards_init')) return false;
+    DEFAULT_NOTE_CARDS.forEach((c, i) => {
+      checklistItems.push({ id: `note_card_${i + 1}`, stage: 'note_card', title: c.title, bodyHtml: c.body, checked: false, note: '' });
+    });
+    checklistItems.push({ id: 'note_cards_init', stage: 'meta', title: '', checked: false, note: '' });
+    return true;
+  }
+
+  function sanitizeNoteHtml(html) {
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html;
+    const out = [];
+    const walk = (node) => {
+      node.childNodes.forEach(ch => {
+        if (ch.nodeType === 3) {
+          out.push(escHtml(ch.nodeValue));
+        } else if (ch.nodeType === 1) {
+          const tag = ch.tagName;
+          if (tag === 'BR') out.push('<br>');
+          else if (tag === 'STRONG' || tag === 'B') { out.push('<strong>'); walk(ch); out.push('</strong>'); }
+          else if (tag === 'DIV' || tag === 'P') { if (out.length && out[out.length - 1] !== '<br>') out.push('<br>'); walk(ch); }
+          else walk(ch);
+        }
+      });
+    };
+    walk(tpl.content);
+    return out.join('').replace(/(<br>)+$/, '');
+  }
+
+  function renderNoteCards() {
+    const grid = document.getElementById('noteCardsGrid');
+    if (!grid) return;
+    const ae = document.activeElement;
+    if (ae && grid.contains(ae) && ae.classList && ae.classList.contains('note-ed')) return;
+    const cards = checklistItems.filter(x => x.stage === 'note_card');
+    grid.innerHTML = cards.map(c => {
+      const id = escAttr(c.id);
+      return `
+        <div class="rule-pill-card">
+          <div class="rule-pill-title note-ed" contenteditable="true" data-id="${id}" data-f="title" onblur="onNoteCardEdit(this)">${escHtml(c.title || '')}</div>
+          <div class="rule-pill-body note-ed" contenteditable="true" data-id="${id}" data-f="body" onblur="onNoteCardEdit(this)">${c.bodyHtml || ''}</div>
+          <div class="no-print" style="text-align:right; margin-top:6px;"><button type="button" class="note-del" onclick="deleteNoteCard('${id}')">刪除此卡片</button></div>
+        </div>`;
+    }).join('');
+  }
+
+  function onNoteCardEdit(el) {
+    const it = checklistItems.find(x => x.id === el.dataset.id);
+    if (!it) return;
+    if (el.dataset.f === 'title') {
+      it.title = el.innerText.replace(/\n/g, ' ').trim();
+    } else {
+      it.bodyHtml = sanitizeNoteHtml(el.innerHTML);
+    }
+    scheduleAutoSave();
+  }
+
+  function addNoteCard() {
+    const n = checklistItems.filter(x => x.stage === 'note_card').length + 1;
+    checklistItems.push({ id: `note_card_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`, stage: 'note_card', title: `${n}. 新卡片標題`, bodyHtml: '請在此輸入內容', checked: false, note: '' });
+    renderNoteCards();
+    scheduleAutoSave();
+  }
+
+  function deleteNoteCard(id) {
+    const it = checklistItems.find(x => x.id === id);
+    if (!it) return;
+    if (!confirm(`確定要刪除卡片「${it.title || ''}」嗎？`)) return;
+    checklistItems = checklistItems.filter(x => x.id !== id);
+    renderNoteCards();
+    scheduleAutoSave();
+  }
+
+  function renderAll() {
+    if (migrateNoteCards()) scheduleAutoSave();
+    renderProgressSummary();
+    renderMirrorChecklistTable();
+    renderNoteCards();
+
+    const ta = document.getElementById('importantNotesTextarea');
+    if (ta && document.activeElement !== ta) {
+      ta.value = importantNotesText;
+    }
+  }
+
+  function copyChecklistSummary() {
+    const lines = [`【${currentYear}年 延緩第${currentTerm}期 核銷檢核表】`, '', '可先印好影本（暫存於資料夾）'];
+    const fmtItem = (it) => `${it.checked ? '[✓]' : '[ ]'} ${itemLabel(it).replace(/\n/g, ' ')}${it.checked && it.doneAt ? `（${it.doneAt} 完成）` : ''}`;
+    visibleItems(MIRROR_LEFT_STAGE).forEach(it => lines.push(fmtItem(it)));
+    lines.push('', '結束才能列印（金額可提前算好）');
+    visibleItems(MIRROR_RIGHT_STAGE).forEach(it => lines.push(fmtItem(it)));
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
+      alert('已複製本期延緩核銷檢核進度！');
+    });
+  }
+
+
+  function copyChecklistTableSql() {
+    const sql = `CREATE TABLE IF NOT EXISTS delay_reimburse_checklists (
+  id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  roc_year INTEGER NOT NULL,
+  term INTEGER NOT NULL DEFAULT 1,
+  items JSONB NOT NULL DEFAULT '[]'::JSONB,
+  important_notes TEXT NOT NULL DEFAULT '',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (roc_year, term)
+);
+
+CREATE INDEX IF NOT EXISTS idx_delay_reimburse_checklists_year_term
+  ON delay_reimburse_checklists (roc_year, term);
+
+ALTER TABLE delay_reimburse_checklists DISABLE ROW LEVEL SECURITY;
+
+NOTIFY pgrst, 'reload schema';`;
+    navigator.clipboard?.writeText(sql).then(() => {
+      alert('已複製 delay_reimburse_checklists 建表 SQL！請至 Supabase SQL Editor 貼上執行。');
+    }).catch(() => {
+      prompt('請複製以下 SQL 至 Supabase SQL Editor 執行：', sql);
+    });
+  }
+
+  (async function init() {
+    await loadTermFromCloud(false);
+  })();
+</script>
+</body>
+</html>
