@@ -1202,8 +1202,7 @@
     });
     lines.push(`核銷金額	${tempStaff.map(n => tTotals[n]).join('	')}`);
 
-    navigator.clipboard?.writeText(lines.join('
-')).then(() => {
+    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
       showToast('summaryCopyToast', '已複製完整個人所得稅彙總');
     }).catch(() => {
       showToast('summaryCopyToast', '已準備完整個人所得稅彙總');
