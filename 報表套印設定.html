@@ -354,6 +354,92 @@ const DEFAULT_ALIASES = {
 };
 const SEED_TABLES = ['instructors', 'course_schedules', 'instructor_reimburse_claims', 'instructor_reimburse_rate_configs', 'ltc_voucher_details', 'food_receipt_items', 'delay_reimburse_checklists', 'ltc_delay_funding_records'];
 
+const TABLE_ZH_MAP = {
+  instructors: '講師資料',
+  course_schedules: '年度排課行事曆',
+  instructor_reimburse_claims: '講師鐘點費核銷明細',
+  instructor_reimburse_rate_configs: '講師鐘點費基準設定',
+  ltc_voucher_details: '長照支出憑證明細',
+  food_receipt_items: '食材費收據明細',
+  delay_reimburse_checklists: '延緩核銷檢核表',
+  program_reimburse_checklists: '各計畫核銷檢核表',
+  ltc_delay_funding_records: '長照與延緩經費收支',
+  instructor_fee_records: '講師鐘點費記錄',
+  instructor_plan_rate_configs: '講師計畫鐘點費設定',
+  delay_material_items: '延緩核銷材料費',
+  cases: '個案基本資料',
+  volunteers: '志工資料',
+  temp_staff: '臨時人員資料',
+  petty_cash: '零用金清點記錄',
+  daily_menus: '每日菜單記錄',
+  official_docs: '公文編號記錄'
+};
+
+const COL_ZH_MAP = {
+  id: '編號',
+  roc_year: '民國年度',
+  month: '月份',
+  day: '日',
+  term: '期別',
+  program_key: '計畫類別',
+  program_type: '計畫類型',
+  period_key: '季別／期別',
+  col_key: '欄位鍵值',
+  instructor_name: '講師姓名',
+  course_name: '課程名稱',
+  course_date: '上課日期',
+  time_slot: '上課時段',
+  plan_type: '計畫別',
+  plan_name: '計畫名稱',
+  staff_number: '員工編號',
+  name: '姓名',
+  gender: '性別',
+  birthday: '出生日期',
+  phone: '聯絡電話',
+  address: '居住地址',
+  id_number: '身分證字號',
+  status: '服務狀態',
+  hire_type: '聘用類別',
+  pay_mode: '計費方式',
+  rate: '鐘點單價',
+  hours: '時數',
+  days: '天數',
+  sessions: '堂數',
+  amount: '金額',
+  total_amt: '合計金額',
+  self_amt: '自籌金額',
+  grant_amt: '補助金額',
+  total_price: '總價',
+  unit_price: '單價',
+  qty: '數量',
+  unit: '單位',
+  receipt_date: '收據日期',
+  item_name: '品名',
+  summary: '摘要',
+  voucher_no: '支出憑證編號',
+  category: '類別',
+  remark: '備註',
+  note: '備註',
+  important_notes: '重要事項說明',
+  items: '項目明細',
+  payload: '資料內容',
+  sort_order: '排序',
+  created_at: '建立時間',
+  updated_at: '更新時間'
+};
+
+function tableZh(name) {
+  return TABLE_ZH_MAP[name] || '';
+}
+function tableDisplayName(name) {
+  const zh = tableZh(name);
+  return zh ? `${zh}（${name}）` : name;
+}
+function colZh(col) {
+  return COL_ZH_MAP[String(col || '').toLowerCase()] || '';
+}
+
+
 let supabaseClient = null;
 let templates = [];
 let cloudOk = false;
@@ -469,7 +555,7 @@ function tableCols(name) { const t = schema.tables.find(x => x.name === name); r
 function aliasOf(table, col) {
   const k = `${table}.${col}`;
   if (settings.aliases[k] !== undefined && settings.aliases[k] !== '') return settings.aliases[k];
-  return DEFAULT_ALIASES[col.toLowerCase()] || '';
+  return DEFAULT_ALIASES[col.toLowerCase()] || COL_ZH_MAP[String(col || '').toLowerCase()] || '';
 }
 function aliasList(table, col) { return aliasOf(table, col).split(/[,，、]/).map(s => s.trim()).filter(Boolean); }
 function fieldLabel(table, col) {
@@ -481,7 +567,7 @@ function fieldOptionsHtml(table, selected) {
   let found = false;
   if (table) {
     const cols = tableCols(table);
-    html += `<optgroup label="資料表：${esc(table)}">` + cols.map(c => {
+    html += `<optgroup label="資料表：${esc(tableDisplayName(table))}">` + cols.map(c => {
       const v = `${table}.${c.name}`;
       if (v === selected) found = true;
       return `<option value="${esc(v)}" ${v === selected ? 'selected' : ''}>${esc(fieldLabel(table, c.name))}</option>`;
@@ -567,7 +653,7 @@ function renderSections() {
           <div class="tpl-name">${esc(t.name)}</div>
           <div class="tpl-meta">
             <span class="tpl-badge">${t.file_type === 'xlsx' ? 'Excel' : 'Word'}</span>
-            <span class="tpl-badge">${table ? '資料表：' + esc(table) : '不使用資料表'}</span><br>
+            <span class="tpl-badge">${table ? '資料表：' + esc(tableDisplayName(table)) : '不使用資料表'}</span><br>
             來源檔：${esc(t.file_name || '')}<br>
             已加入 ${nVars} 個變數${t.updated_at ? '｜更新：' + esc(String(t.updated_at).slice(0, 10)) : ''}
           </div>
@@ -974,7 +1060,11 @@ const KIND_LABEL = { right: '填在右側空白格', below: '填在下方空白�
 
 function wizTableOptions(selected) {
   return '<option value="">（不使用資料表，只用系統變數）</option>' +
-    schema.tables.map(t => `<option value="${esc(t.name)}" ${t.name === selected ? 'selected' : ''}>${esc(t.name)}（${t.columns.length} 欄）</option>`).join('');
+    schema.tables.map(t => {
+      const zh = tableZh(t.name);
+      const label = zh ? `${zh}（${t.name}・${t.columns.length} 欄）` : `${t.name}（${t.columns.length} 欄）`;
+      return `<option value="${esc(t.name)}" ${t.name === selected ? 'selected' : ''}>${esc(label)}</option>`;
+    }).join('');
 }
 function openWizardUi(title) {
   document.getElementById('wizTitle').textContent = title;
@@ -1170,7 +1260,7 @@ async function openRun(id) {
     document.getElementById('runCount').textContent = '';
     return;
   }
-  document.getElementById('runInfo').textContent = `資料來源：${table}。勾選要套印的資料列。`;
+  document.getElementById('runInfo').textContent = `資料來源：${tableDisplayName(table)}。勾選要套印的資料列。`;
   document.getElementById('runBody').innerHTML = '<tr><td class="empty-hint">讀取資料中...</td></tr>';
   const client = ensureClient();
   if (!client) { document.getElementById('runBody').innerHTML = '<tr><td class="empty-hint">尚未連線資料庫</td></tr>'; return; }
@@ -1258,7 +1348,7 @@ function renderSettings() {
   if (!schema.tables.length) { box.innerHTML = '<div class="empty-hint">目前沒有偵測到資料表，請先在上方手動加入。</div>'; return; }
   box.innerHTML = schema.tables.map(t => `
     <details class="tbl-box">
-      <summary>${esc(t.name)}（${t.columns.length} 欄）${setDraft.manualTables.some(x => x.name === t.name) ? ' <span class="tpl-badge" style="background:#fef3c7;color:#92400e;">手動加入</span>' : ''}</summary>
+      <summary>${esc(tableDisplayName(t.name))}（${t.columns.length} 欄）${setDraft.manualTables.some(x => x.name === t.name) ? ' <span class="tpl-badge" style="background:#fef3c7;color:#92400e;">手動加入</span>' : ''}</summary>
       <div class="tbl-inner">
         ${t.columns.length ? `<table class="alias-table">${t.columns.map(c => `<tr><td style="width:34%;">${esc(c.name)}</td><td><input type="text" data-alias="${esc(t.name + '.' + c.name)}" value="${esc((setDraft.aliases[t.name + '.' + c.name] ?? '') || DEFAULT_ALIASES[c.name.toLowerCase()] || '')}" placeholder="中文別名，例如：姓名"></td></tr>`).join('')}</table>` : '<div class="tip">這個資料表目前沒有資料，偵測不到欄位。請在上方「新增資料表」填入欄位名稱。</div>'}
         ${setDraft.manualTables.some(x => x.name === t.name) ? `<div style="margin-top:6px;"><button type="button" class="btn btn-danger btn-sm" onclick="removeManualTable('${esc(t.name)}')">移除這個手動加入的資料表</button></div>` : ''}
