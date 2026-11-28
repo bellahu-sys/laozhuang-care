@@ -180,7 +180,42 @@
       background: var(--sec2-badge-bg);
     }
 
-    /* 區塊三：課程安排與報表套印（靛紫藍） */
+    /* 區塊四：報表套印（天青藍） */
+    .section-print {
+      border-color: #bae6fd;
+      border-left: 6px solid #0284c7;
+      background: #fafeff;
+    }
+    .section-print .section-title {
+      background: #f0f9ff;
+      color: #0369a1;
+      border-bottom: 1px solid #bae6fd;
+    }
+    .section-print .section-tag { color: #0284c7; }
+    .section-print .module-card {
+      border-color: #cbd5e1;
+      background: #ffffff;
+    }
+    .section-print .module-card:hover {
+      border-color: #0284c7;
+      background: #f0f9ff;
+    }
+    .section-print .module-card.highlight-fee {
+      background: #f0f9ff;
+      border-color: #7dd3fc;
+    }
+    .section-print .module-name { color: #0369a1; }
+    .section-print .module-badge {
+      color: #0369a1;
+      background: #e0f2fe;
+    }
+    .jump-print {
+      background: #e0f2fe;
+      color: #0369a1;
+      border-color: #bae6fd;
+    }
+
+    /* 區塊三：課程安排（靛紫藍） */
     .section-3 {
       border-color: var(--sec3-border);
       border-left: 6px solid var(--sec3-main);
@@ -446,7 +481,7 @@
       <a href="#sec-personnel" class="jump-pill jump-1">一、人事資料</a>
       <a href="#sec-admin" class="jump-pill jump-2">二、行政與每日記錄</a>
       <a href="#sec-course" class="jump-pill jump-3">三、課程安排</a>
-      <a href="#sec-print" class="jump-pill jump-3">四、報表套印</a>
+      <a href="#sec-print" class="jump-pill jump-print">四、報表套印</a>
       <a href="#sec-reimburse" class="jump-pill jump-4">五、核銷管理</a>
     </div>
   </div>
@@ -604,40 +639,41 @@
     </div>
   </div>
 
-  <div id="sec-print" class="section-block section-3">
+  <div id="sec-print" class="section-block section-print">
     <h2 class="section-title">
       <span>四、報表套印</span>
-      <span class="section-tag">靛紫藍專區</span>
+      <span class="section-tag">天青藍專區</span>
     </h2>
     <div class="card-grid">
-        <a href="個案基本資料表套印.html" class="module-card">
-          <div>
-            <div class="module-name">個案基本資料表套印</div>
-            <div class="module-desc">依個案資料套印列印或匯出 Word / PDF。</div>
-          </div>
-          <span class="module-badge">報表套印</span>
-        </a>
-        <a href="健康管理表套印.html" class="module-card">
-          <div>
-            <div class="module-name">長輩健康管理表套印</div>
-            <div class="module-desc">批次套印服務中長輩健康管理表單。</div>
-          </div>
-          <span class="module-badge">報表套印</span>
-        </a>
-        <a href="月報表套印中心.html" class="module-card">
-          <div>
-            <div class="module-name">簽到表套印</div>
-            <div class="module-desc">設定上班日並套印 01 個案簽到表至 05 授課時數記錄表。</div>
-          </div>
-          <span class="module-badge">報表套印</span>
-        </a>
-        <a href="常來名冊報表.html" class="module-card highlight-fee">
-          <div>
-            <div class="module-name">常來個案名冊與報表</div>
-            <div class="module-desc">管理常來據點名單，一鍵產生常來健促點名表、常來生日名單（依月份統計）與常來關懷名冊。</div>
-          </div>
-          <span class="module-badge fee-badge">常來名單 ＋ 多格式列印</span>
-        </a>
+      <a href="個案基本資料表套印.html" class="module-card">
+        <div>
+          <div class="module-name">個案基本資料表套印</div>
+          <div class="module-desc">依個案資料套印列印或匯出 Word / PDF。</div>
+        </div>
+        <span class="module-badge">報表套印</span>
+      </a>
+      <a href="健康管理表套印.html" class="module-card">
+        <div>
+          <div class="module-name">長輩健康管理表套印</div>
+          <div class="module-desc">批次套印服務中長輩健康管理表單。</div>
+        </div>
+        <span class="module-badge">報表套印</span>
+      </a>
+      <a href="月報表套印中心.html" class="module-card">
+        <div>
+          <div class="module-name">簽到表套印</div>
+          <div class="module-desc">設定上班日並套印 01 個案簽到表至 05 授課時數記錄表。</div>
+        </div>
+        <span class="module-badge">報表套印</span>
+      </a>
+      <a href="常來名冊報表.html" class="module-card highlight-fee">
+        <div>
+          <div class="module-name">常來個案名冊與報表</div>
+          <div class="module-desc">管理常來據點名單，一鍵產生常來健促點名表、常來生日名單（依月份統計）與常來關懷名冊。</div>
+        </div>
+        <span class="module-badge fee-badge">常來名單 ＋ 多格式列印</span>
+      </a>
+    </div>
   </div>
 
   <div id="sec-reimburse" class="section-block section-4">
