@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>報表套印設定 ｜ 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root { --primary: #2c5e4f; --bg: #f1f5f9; --text: #1e293b; --border: #cbd5e1; }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar { background-color: var(--primary); color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); position: relative; z-index: 500; }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn { color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px; font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content { display: none; position: absolute; top: 100%; left: 0; min-width: 280px; background: #fff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18); border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600; }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a { display: block; padding: 9px 15px; color: #1e293b; text-decoration: none; font-size: 0.93rem; border-bottom: 1px solid #f1f5f9; }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: #f0fdfa; color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .container { max-width: 1220px; margin: 24px auto 60px auto; padding: 0 16px; }
+    .hero-card { background: #fff; border-radius: 12px; padding: 20px 24px; border: 1px solid var(--border); border-left: 6px solid #0284c7; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 18px; }
+    .hero-title { margin: 0; font-size: 1.35rem; color: #0369a1; }
+    .hero-sub { margin: 6px 0 12px 0; font-size: 0.92rem; color: #475569; line-height: 1.6; }
+    .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .status-line { font-size: 0.86rem; font-weight: bold; color: #0f766e; margin-top: 10px; min-height: 1.2em; }
+    .status-line.err { color: #dc2626; }
+    .warn-box { margin-top: 10px; background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; border-radius: 8px; padding: 9px 12px; font-size: 0.86rem; line-height: 1.6; display: none; }
+
+    .btn { padding: 8px 15px; border-radius: 6px; border: 1px solid transparent; font-weight: bold; font-size: 0.9rem; cursor: pointer; }
+    .btn-primary { background: #0284c7; color: #fff; }
+    .btn-primary:hover { background: #0369a1; }
+    .btn-outline { background: #fff; color: #334155; border-color: #cbd5e1; }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-danger { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+    .btn-sm { padding: 5px 11px; font-size: 0.82rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .quick-jump { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .jump-pill { text-decoration: none; font-size: 0.88rem; font-weight: bold; padding: 6px 12px; border-radius: 999px; border: 1px solid transparent; }
+
+    .section-block { border-radius: 12px; padding: 18px 20px 20px 20px; margin-bottom: 20px; border: 1px solid var(--s-border); background: var(--s-bg); border-left: 6px solid var(--s-main); }
+    .section-title { margin: 0 0 12px 0; font-size: 1.12rem; color: var(--s-dark); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .section-tag { font-size: 0.74rem; padding: 2px 9px; border-radius: 999px; background: #fff; border: 1px solid var(--s-border); color: var(--s-main); font-weight: bold; }
+    .sec-personnel { --s-main:#0d9488; --s-dark:#0f766e; --s-bg:#f0fdfa; --s-border:#99f6e4; }
+    .sec-admin { --s-main:#b45309; --s-dark:#92400e; --s-bg:#fffbeb; --s-border:#fde68a; }
+    .sec-course { --s-main:#4338ca; --s-dark:#3730a3; --s-bg:#eef2ff; --s-border:#c7d2fe; }
+    .sec-print { --s-main:#0284c7; --s-dark:#0369a1; --s-bg:#f0f9ff; --s-border:#bae6fd; }
+    .sec-reimburse { --s-main:#be123c; --s-dark:#9f1239; --s-bg:#fff1f2; --s-border:#fecdd3; }
+    .jump-personnel { background:#ccfbf1; color:#0f766e; border-color:#99f6e4; }
+    .jump-admin { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+    .jump-course { background:#e0e7ff; color:#3730a3; border-color:#c7d2fe; }
+    .jump-print { background:#e0f2fe; color:#0369a1; border-color:#bae6fd; }
+    .jump-reimburse { background:#ffe4e6; color:#9f1239; border-color:#fecdd3; }
+
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+    .tpl-card { background: #fff; border: 1px solid var(--s-border); border-radius: 10px; padding: 14px 15px; display: flex; flex-direction: column; gap: 6px; }
+    .tpl-name { font-weight: bold; font-size: 1.02rem; color: var(--s-dark); }
+    .tpl-meta { font-size: 0.8rem; color: #64748b; line-height: 1.6; word-break: break-all; }
+    .tpl-badge { display: inline-block; font-size: 0.72rem; padding: 1px 8px; border-radius: 999px; background: var(--s-bg); color: var(--s-dark); border: 1px solid var(--s-border); font-weight: bold; margin-right: 4px; }
+    .tpl-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .empty-hint { font-size: 0.88rem; color: #64748b; padding: 10px 2px; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.55); z-index: 2000; display: none; align-items: flex-start; justify-content: center; padding: 28px 14px; overflow-y: auto; }
+    .modal { background: #fff; border-radius: 12px; width: min(1020px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,0.35); }
+    .modal-head { padding: 14px 20px; border-bottom: 1px solid #e2e8f0; font-weight: bold; font-size: 1.08rem; display: flex; justify-content: space-between; align-items: center; }
+    .modal-body { padding: 16px 20px; }
+    .modal-foot { padding: 12px 20px; border-top: 1px solid #e2e8f0; display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 16px; margin-bottom: 14px; }
+    .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.86rem; font-weight: bold; color: #334155; }
+    input[type="text"], select, textarea { padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; background: #fff; }
+    .file-line { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 0.86rem; color: #475569; }
+    .sub-title { font-weight: bold; font-size: 0.95rem; margin: 14px 0 6px 0; color: #0369a1; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .map-wrap { max-height: 46vh; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+    table.map-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.map-table th { background: #f1f5f9; padding: 7px 8px; text-align: left; position: sticky; top: 0; z-index: 1; border-bottom: 1px solid #cbd5e1; }
+    table.map-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    table.map-table tr.mapped td { background: #f0fdf4; }
+    .ph-preview { font-family: Consolas, monospace; font-size: 0.8rem; color: #0f766e; word-break: break-all; }
+    .loc-note { font-size: 0.76rem; color: #94a3b8; }
+    .tip { font-size: 0.82rem; color: #64748b; line-height: 1.6; }
+
+    .rec-list { max-height: 46vh; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+    table.rec-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    table.rec-table th { background: #f1f5f9; padding: 7px 8px; text-align: left; position: sticky; top: 0; border-bottom: 1px solid #cbd5e1; }
+    table.rec-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+    table.rec-table tr:hover td { background: #f8fafc; }
+
+    .alias-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .alias-table td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; }
+    .alias-table input { width: 100%; }
+    .tbl-box { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px; }
+    .tbl-box > summary { padding: 9px 12px; cursor: pointer; font-weight: bold; background: #f8fafc; border-radius: 8px; }
+    .tbl-box[open] > summary { border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0; }
+    .tbl-inner { padding: 8px 12px; }
+    #toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 3000; background: #0f766e; color: #fff; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 6px 20px rgba(0,0,0,0.3); display: none; max-width: 90vw; }
+    #toast.err { background: #dc2626; }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">人事資料管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="志工資料管理.html">志工資料管理</a>
+        <div class="dropdown-divider">人事記錄</div>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="每日工作檢核表.html">每日工作檢核表</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+        <a href="資料庫臨時記錄.html">資料庫臨時記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="報表套印設定.html">報表套印設定</a>
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="課程活動表.html">課程活動表</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="月報表套印中心.html">前往簽到表套印</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="關懷核銷食材費.html">關懷核銷食材費</a>
+        <a href="每月業務費記錄.html">每月業務費</a>
+        <a href="專職人員薪資記錄.html">專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">關懷核銷統計</a>
+        <a href="關懷核銷檢核表.html">關懷核銷檢核表</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">長照與延緩經費收支</a>
+        <a href="長照核銷食材費.html">長照核銷食材費</a>
+        <a href="講師鐘點費核銷.html">講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">長照核銷統計</a>
+        <a href="長照核銷檢核表.html">長照核銷檢核表</a>
+        <a href="延緩核銷材料費.html">延緩核銷材料費</a>
+        <a href="延緩核銷統計.html">延緩核銷統計</a>
+        <a href="延緩核銷檢核表.html">延緩核銷檢核表</a>
+        <div class="dropdown-divider">其他計畫核銷</div>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="多元核銷檢核表.html">多元核銷檢核表</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
+        <a href="伯公核銷檢核表.html">伯公核銷檢核表</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="hero-card">
+    <h1 class="hero-title">報表套印設定</h1>
+    <p class="hero-sub">
+      上傳 Word（.docx）或 Excel（.xlsx）表格，選擇要使用的資料庫欄位，系統會自動把「套印變數」加入檔案，並把加好變數的檔案記為這個功能的來源檔，之後套印不必再選檔案。
+      表格改版時，在該功能按「重新上傳」，系統會依文字標籤自動帶回原本的欄位對應。功能依首頁分類分區管理。
+    </p>
+    <div class="hero-actions">
+      <button type="button" class="btn btn-outline" onclick="reloadSchema(true)">重新偵測資料表</button>
+      <button type="button" class="btn btn-outline" onclick="openSettings()">資料表與欄位別名設定</button>
+      <button type="button" class="btn btn-outline" onclick="copySql()">複製建表 SQL</button>
+    </div>
+    <div class="status-line" id="statusLine">準備中...</div>
+    <div class="warn-box" id="warnBox"></div>
+  </div>
+
+  <div class="quick-jump" id="quickJump"></div>
+  <div id="sections"></div>
+</div>
+
+<!-- 新增／編輯套印功能 -->
+<div class="overlay" id="wizOverlay">
+  <div class="modal">
+    <div class="modal-head"><span id="wizTitle">新增套印功能</span><button type="button" class="btn btn-outline btn-sm" onclick="closeWizard()">關閉</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label>所屬分類（首頁分區）
+          <select id="wizCategory"></select>
+        </label>
+        <label>功能名稱
+          <input type="text" id="wizName" placeholder="例如：個案基本資料表、簽到表 01">
+        </label>
+        <label>資料來源（資料庫資料表）
+          <select id="wizTable" onchange="onWizTableChange()"></select>
+        </label>
+      </div>
+      <div class="file-line">
+        <input type="file" id="wizFile" accept=".docx,.xlsx" onchange="onWizFile(this.files[0])">
+        <span id="wizFileInfo">尚未選擇檔案</span>
+      </div>
+      <div class="tip" style="margin-top:6px;">支援 .docx 與 .xlsx（舊版 .doc／.xls 請先在 Word／Excel 另存成新格式）。系統會找出文件裡的文字標籤（例如「姓名」「出生日期：」）和已有的 {{變數}}。</div>
+
+      <div class="sub-title">
+        <span>文件位置與資料庫欄位對應</span>
+        <span style="display:flex; gap:6px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="autoMatchAll()">自動比對欄位</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="clearAllMap()">全部清除對應</button>
+        </span>
+      </div>
+      <div class="map-wrap"><table class="map-table"><thead><tr>
+        <th style="width:26%;">文件中的文字（標籤）</th>
+        <th style="width:16%;">放置方式</th>
+        <th style="width:28%;">對應資料庫欄位</th>
+        <th style="width:14%;">格式</th>
+        <th>產生的變數</th>
+      </tr></thead><tbody id="mapBody"><tr><td colspan="5" class="empty-hint">請先上傳檔案</td></tr></tbody></table></div>
+      <div class="tip" style="margin-top:6px;">沒有選欄位的項目不會被改動。已加入過變數的位置會以「已有變數」顯示，可以改選其他欄位或選「不使用」移除。</div>
+    </div>
+    <div class="modal-foot">
+      <span class="tip" id="wizSummary"></span>
+      <button type="button" class="btn btn-outline" onclick="closeWizard()">取消</button>
+      <button type="button" class="btn btn-primary" id="wizSaveBtn" onclick="saveWizard()">儲存並設為來源檔</button>
+    </div>
+  </div>
+</div>
+
+<!-- 套印 -->
+<div class="overlay" id="runOverlay">
+  <div class="modal">
+    <div class="modal-head"><span id="runTitle">套印</span><button type="button" class="btn btn-outline btn-sm" onclick="closeRun()">關閉</button></div>
+    <div class="modal-body">
+      <div id="runInfo" class="tip" style="margin-bottom:8px;"></div>
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+        <input type="text" id="runSearch" placeholder="搜尋..." oninput="renderRunRows()" style="min-width:220px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="runSelectAll(true)">全選目前清單</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="runSelectAll(false)">全不選</button>
+        <span id="runCount" class="tip"></span>
+      </div>
+      <div class="rec-list"><table class="rec-table"><thead id="runHead"></thead><tbody id="runBody"></tbody></table></div>
+    </div>
+    <div class="modal-foot">
+      <span class="tip">選一筆會下載單一檔案；選多筆會把每筆各產生一個檔案，打包成 .zip 下載。</span>
+      <button type="button" class="btn btn-outline" onclick="closeRun()">取消</button>
+      <button type="button" class="btn btn-primary" id="runGoBtn" onclick="runGenerate()">產生並下載</button>
+    </div>
+  </div>
+</div>
+
+<!-- 資料表與別名設定 -->
+<div class="overlay" id="setOverlay">
+  <div class="modal">
+    <div class="modal-head"><span>資料表與欄位別名設定</span><button type="button" class="btn btn-outline btn-sm" onclick="closeSettings()">關閉</button></div>
+    <div class="modal-body">
+      <div class="tip" style="margin-bottom:10px;">
+        欄位別名是給「自動比對」用的中文名稱（例如欄位 <b>name</b> 的別名填「姓名」，多個別名用逗號分開）。別名只存在這台電腦的瀏覽器。
+      </div>
+      <div class="sub-title"><span>新增資料表（偵測不到時手動加入）</span></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        <input type="text" id="setNewTable" placeholder="資料表名稱，例如 cases" style="min-width:200px;">
+        <input type="text" id="setNewCols" placeholder="欄位（選填，逗號分開；資料表有資料時會自動偵測）" style="flex:1; min-width:260px;">
+        <button type="button" class="btn btn-primary btn-sm" onclick="addManualTable()">加入</button>
+      </div>
+      <div id="setTables"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-outline" onclick="closeSettings()">取消</button>
+      <button type="button" class="btn btn-primary" onclick="saveSettings()">儲存設定</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// =====================================================================
+// 基本設定
+// =====================================================================
+const CATEGORIES = [
+  { key: 'personnel', title: '一、人事資料', tag: '翡翠綠專區', cls: 'sec-personnel', jump: 'jump-personnel' },
+  { key: 'admin', title: '二、行政與每日記錄', tag: '琥珀橘專區', cls: 'sec-admin', jump: 'jump-admin' },
+  { key: 'course', title: '三、課程安排', tag: '靛紫藍專區', cls: 'sec-course', jump: 'jump-course' },
+  { key: 'print', title: '四、報表套印', tag: '天青藍專區', cls: 'sec-print', jump: 'jump-print' },
+  { key: 'reimburse', title: '五、核銷管理', tag: '玫瑰酒紅專區', cls: 'sec-reimburse', jump: 'jump-reimburse' }
+];
+const TEMPLATE_TABLE = 'print_templates';
+const LOCAL_TPL_KEY = 'laozhuang_print_templates_v1';
+const LOCAL_SET_KEY = 'laozhuang_print_settings_v1';
+const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const S_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+const XML_NS = 'http://www.w3.org/XML/1998/namespace';
+const XML_DECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+
+const SYS_FIELDS = [
+  { col: 'today_roc_cn', label: '今天日期（115年11月28日）' },
+  { col: 'today_roc_slash', label: '今天日期（115/11/28）' },
+  { col: 'roc_year', label: '民國年（115）' },
+  { col: 'month', label: '月份（11）' },
+  { col: 'day', label: '日（28）' },
+  { col: 'today_ad', label: '今天日期（2026-11-28）' }
+];
+const FORMATS = [
+  { v: 'raw', label: '原樣' },
+  { v: 'roc_slash', label: '民國日期 115/01/05' },
+  { v: 'roc_cn', label: '民國日期 115年1月5日' },
+  { v: 'roc_year', label: '只取民國年' },
+  { v: 'thousands', label: '千分位數字' }
+];
+const DEFAULT_ALIASES = {
+  name: '姓名', full_name: '姓名', case_name: '姓名', gender: '性別', sex: '性別',
+  birthday: '出生日期,生日,出生年月日', birth_date: '出生日期,生日,出生年月日', birth: '出生日期,生日',
+  phone: '電話,聯絡電話', tel: '電話,聯絡電話', mobile: '手機,行動電話', cell_phone: '手機,行動電話',
+  address: '地址,住址,居住地址', id_number: '身分證字號,身分證', id_no: '身分證字號,身分證', national_id: '身分證字號,身分證',
+  email: '電子信箱,Email,信箱', note: '備註', remark: '備註', remarks: '備註', title: '職稱', job_title: '職稱',
+  emergency_contact: '緊急聯絡人', emergency_phone: '緊急聯絡電話', education: '教育程度,學歷',
+  start_date: '開始日期,起始日期,到職日期', end_date: '結束日期', course_date: '日期,上課日期', course_name: '課程名稱,課程',
+  instructor_name: '講師,授課講師,講師姓名', time_slot: '時間,上課時間', staff_number: '編號,員工編號'
+};
+const SEED_TABLES = ['instructors', 'course_schedules', 'instructor_reimburse_claims', 'instructor_reimburse_rate_configs', 'ltc_voucher_details', 'food_receipt_items', 'delay_reimburse_checklists', 'ltc_delay_funding_records'];
+
+let supabaseClient = null;
+let templates = [];
+let cloudOk = false;
+let schema = { tables: [], source: 'none' };   // tables: [{name, columns:[{name,type}]}]
+let settings = { manualTables: [], aliases: {} };
+let wiz = null;      // 套印功能編輯狀態
+let runState = null; // 套印狀態
+
+// =====================================================================
+// 共用小工具
+// =====================================================================
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function setStatus(msg, isErr) {
+  const el = document.getElementById('statusLine');
+  if (el) { el.textContent = msg; el.classList.toggle('err', !!isErr); }
+}
+let toastTimer = null;
+function toast(msg, isErr) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.toggle('err', !!isErr); el.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.style.display = 'none'; }, isErr ? 9000 : 4000);
+  setStatus(msg, isErr);
+}
+function ensureClient() {
+  if (supabaseClient) return supabaseClient;
+  if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_ANON_KEY === 'undefined' || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') return null;
+  try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); } catch (e) { supabaseClient = null; }
+  return supabaseClient;
+}
+function uuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+}
+function loadSettings() {
+  try { const o = JSON.parse(localStorage.getItem(LOCAL_SET_KEY) || '{}'); settings = { manualTables: o.manualTables || [], aliases: o.aliases || {} }; } catch (e) {}
+}
+function persistSettings() { try { localStorage.setItem(LOCAL_SET_KEY, JSON.stringify(settings)); } catch (e) {} }
+
+// =====================================================================
+// 資料表／欄位偵測
+// =====================================================================
+async function reloadSchema(showMsg) {
+  setStatus('正在偵測資料庫資料表...');
+  const tables = new Map();
+  let source = 'none';
+  const client = ensureClient();
+  if (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/`, { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } });
+      if (r.ok) {
+        const j = await r.json();
+        const defs = j.definitions || (j.components && j.components.schemas) || null;
+        if (defs) {
+          Object.keys(defs).forEach(name => {
+            const props = defs[name].properties || {};
+            tables.set(name, Object.keys(props).map(c => ({ name: c, type: props[c].type || props[c].format || '' })));
+          });
+          if (tables.size) source = 'openapi';
+        }
+      }
+    } catch (e) {}
+  }
+  const wanted = new Set([...SEED_TABLES, ...settings.manualTables.map(t => t.name)]);
+  if (source === 'none') {
+    if (client) {
+      for (const name of wanted) {
+        try {
+          const { data, error } = await client.from(name).select('*').limit(1);
+          if (!error && Array.isArray(data)) tables.set(name, data.length ? Object.keys(data[0]).map(c => ({ name: c, type: '' })) : []);
+        } catch (e) {}
+      }
+      if (tables.size) source = 'sample';
+    }
+  } else if (client) {
+    // OpenAPI 取得的資料表欄位已完整；手動加入的資料表若不在其中則補抽樣
+    for (const t of settings.manualTables) {
+      if (!tables.has(t.name)) {
+        try {
+          const { data, error } = await client.from(t.name).select('*').limit(1);
+          if (!error && Array.isArray(data)) tables.set(t.name, data.length ? Object.keys(data[0]).map(c => ({ name: c, type: '' })) : []);
+        } catch (e) {}
+      }
+    }
+  }
+  // 手動欄位補充（資料表沒資料時）
+  settings.manualTables.forEach(t => {
+    const cols = (t.columns || []);
+    if (!tables.has(t.name)) tables.set(t.name, []);
+    const cur = tables.get(t.name);
+    cols.forEach(c => { if (c && !cur.some(x => x.name === c)) cur.push({ name: c, type: '' }); });
+  });
+  tables.delete(TEMPLATE_TABLE);
+  schema = {
+    source,
+    tables: [...tables.entries()].map(([name, columns]) => ({ name, columns })).sort((a, b) => a.name.localeCompare(b.name))
+  };
+  const warn = document.getElementById('warnBox');
+  if (schema.tables.length === 0) {
+    warn.style.display = 'block';
+    warn.innerHTML = '偵測不到任何資料表。請按「資料表與欄位別名設定」手動加入資料表名稱（例如個案資料表），或確認 config.js 已設定好 Supabase。';
+  } else if (!cloudOk) {
+    warn.style.display = 'block';
+    warn.innerHTML = '尚未建立 <b>print_templates</b> 資料表，目前套印功能暫存在這台電腦的瀏覽器。請按「複製建表 SQL」，到 Supabase 的 SQL Editor 貼上執行一次，之後設定就會存到雲端（換電腦也在）。';
+  } else {
+    warn.style.display = 'none';
+  }
+  if (showMsg) toast(`已偵測到 ${schema.tables.length} 個資料表（${source === 'openapi' ? '依資料庫結構' : source === 'sample' ? '依資料抽樣' : '無'}）`);
+  else setStatus(`已偵測到 ${schema.tables.length} 個資料表；已設定 ${templates.length} 個套印功能`);
+}
+
+function tableCols(name) { const t = schema.tables.find(x => x.name === name); return t ? t.columns : []; }
+function aliasOf(table, col) {
+  const k = `${table}.${col}`;
+  if (settings.aliases[k] !== undefined && settings.aliases[k] !== '') return settings.aliases[k];
+  return DEFAULT_ALIASES[col.toLowerCase()] || '';
+}
+function aliasList(table, col) { return aliasOf(table, col).split(/[,，、]/).map(s => s.trim()).filter(Boolean); }
+function fieldLabel(table, col) {
+  const a = aliasList(table, col)[0];
+  return a ? `${a}（${col}）` : col;
+}
+function fieldOptionsHtml(table, selected) {
+  let html = '<option value="">（不使用）</option>';
+  let found = false;
+  if (table) {
+    const cols = tableCols(table);
+    html += `<optgroup label="資料表：${esc(table)}">` + cols.map(c => {
+      const v = `${table}.${c.name}`;
+      if (v === selected) found = true;
+      return `<option value="${esc(v)}" ${v === selected ? 'selected' : ''}>${esc(fieldLabel(table, c.name))}</option>`;
+    }).join('') + '</optgroup>';
+  }
+  html += '<optgroup label="系統變數">' + SYS_FIELDS.map(f => {
+    const v = `sys.${f.col}`;
+    if (v === selected) found = true;
+    return `<option value="${v}" ${v === selected ? 'selected' : ''}>${esc(f.label)}</option>`;
+  }).join('') + '</optgroup>';
+  if (selected && !found) html += `<option value="${esc(selected)}" selected>${esc(selected)}（自訂變數）</option>`;
+  return html;
+}
+
+// =====================================================================
+// 套印功能儲存（雲端 print_templates；尚未建表時暫存本機）
+// =====================================================================
+async function loadTemplates() {
+  const client = ensureClient();
+  cloudOk = false;
+  if (client) {
+    try {
+      const { data, error } = await client.from(TEMPLATE_TABLE).select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: true });
+      if (!error && Array.isArray(data)) { templates = data; cloudOk = true; return; }
+    } catch (e) {}
+  }
+  try { templates = JSON.parse(localStorage.getItem(LOCAL_TPL_KEY) || '[]'); } catch (e) { templates = []; }
+}
+async function persistTemplate(rec) {
+  const client = ensureClient();
+  if (cloudOk && client) {
+    const { error } = await client.from(TEMPLATE_TABLE).upsert([rec], { onConflict: 'id' });
+    if (error) throw error;
+    return;
+  }
+  const arr = templates.filter(t => t.id !== rec.id).concat([rec]);
+  try { localStorage.setItem(LOCAL_TPL_KEY, JSON.stringify(arr)); } catch (e) { throw new Error('瀏覽器暫存空間不足，請先建立 print_templates 資料表'); }
+}
+async function removeTemplate(id) {
+  const client = ensureClient();
+  if (cloudOk && client) {
+    const { error } = await client.from(TEMPLATE_TABLE).delete().eq('id', id);
+    if (error) throw error;
+  } else {
+    try { localStorage.setItem(LOCAL_TPL_KEY, JSON.stringify(templates.filter(t => t.id !== id))); } catch (e) {}
+  }
+}
+function copySql() {
+  const sql = `create table if not exists public.print_templates (
+  id uuid primary key default gen_random_uuid(),
+  category text not null,
+  name text not null,
+  file_name text,
+  file_type text,
+  file_base64 text,
+  data_source jsonb default '{}'::jsonb,
+  mappings jsonb default '[]'::jsonb,
+  sort_order int default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.print_templates enable row level security;
+drop policy if exists "print_templates_all" on public.print_templates;
+create policy "print_templates_all" on public.print_templates for all using (true) with check (true);
+
+notify pgrst, 'reload schema';`;
+  navigator.clipboard.writeText(sql).then(() => toast('已複製建表 SQL，請貼到 Supabase 的 SQL Editor 執行')).catch(() => toast('無法自動複製，請到頁面原始碼複製 SQL', true));
+}
+
+// =====================================================================
+// 畫面：依首頁分類分區
+// =====================================================================
+function renderSections() {
+  document.getElementById('quickJump').innerHTML = CATEGORIES.map(c => `<a class="jump-pill ${c.jump}" href="#sec-${c.key}">${c.title}</a>`).join('');
+  document.getElementById('sections').innerHTML = CATEGORIES.map(c => {
+    const list = templates.filter(t => t.category === c.key);
+    const cards = list.map(t => {
+      const table = (t.data_source && t.data_source.table) || '';
+      const nVars = (t.mappings || []).filter(m => m.field).length;
+      return `
+        <div class="tpl-card">
+          <div class="tpl-name">${esc(t.name)}</div>
+          <div class="tpl-meta">
+            <span class="tpl-badge">${t.file_type === 'xlsx' ? 'Excel' : 'Word'}</span>
+            <span class="tpl-badge">${table ? '資料表：' + esc(table) : '不使用資料表'}</span><br>
+            來源檔：${esc(t.file_name || '')}<br>
+            已加入 ${nVars} 個變數${t.updated_at ? '｜更新：' + esc(String(t.updated_at).slice(0, 10)) : ''}
+          </div>
+          <div class="tpl-actions">
+            <button type="button" class="btn btn-primary btn-sm" onclick="openRun('${t.id}')">套印／匯出</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="reuploadTpl('${t.id}')">重新上傳新格式</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="editTpl('${t.id}')">編輯變數</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="downloadSource('${t.id}')">下載來源檔</button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteTpl('${t.id}')">刪除</button>
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="section-block ${c.cls}" id="sec-${c.key}">
+        <h2 class="section-title">
+          <span>${c.title} <span class="section-tag">${c.tag}</span></span>
+          <button type="button" class="btn btn-primary btn-sm" onclick="newTpl('${c.key}')">＋ 新增套印功能</button>
+        </h2>
+        ${list.length ? `<div class="card-grid">${cards}</div>` : '<div class="empty-hint">這個分類還沒有套印功能，按右上角「新增套印功能」上傳 Word 或 Excel 表格。</div>'}
+      </div>`;
+  }).join('');
+}
+
+// =====================================================================
+// Word / Excel 引擎
+// =====================================================================
+function parseXml(str) { return new DOMParser().parseFromString(str, 'application/xml'); }
+function serializeXml(doc) {
+  const s = new XMLSerializer().serializeToString(doc);
+  return /^\s*<\?xml/.test(s) ? s : XML_DECL + s;
+}
+function kids(el, name) { return Array.from(el.childNodes).filter(n => n.nodeType === 1 && n.localName === name); }
+
+// ---------- docx ----------
+function wText(el) { return Array.from(el.getElementsByTagNameNS(W_NS, 't')).map(t => t.textContent).join(''); }
+function wFirstRPr(p) {
+  const r = Array.from(p.getElementsByTagNameNS(W_NS, 'r'))[0];
+  return r ? (kids(r, 'rPr')[0] || null) : null;
+}
+function wInsideTc(p) { let n = p.parentNode; while (n && n.nodeType === 1) { if (n.localName === 'tc') return n; n = n.parentNode; } return null; }
+function wCellFirstP(tc) {
+  let p = kids(tc, 'p')[0];
+  if (!p) { p = tc.ownerDocument.createElementNS(W_NS, 'w:p'); tc.appendChild(p); }
+  return p;
+}
+function wMkRun(doc, text, rPr) {
+  const r = doc.createElementNS(W_NS, 'w:r');
+  if (rPr) r.appendChild(rPr.cloneNode(true));
+  const t = doc.createElementNS(W_NS, 'w:t');
+  t.setAttributeNS(XML_NS, 'xml:space', 'preserve');
+  t.textContent = text;
+  r.appendChild(t);
+  return r;
+}
+function wSetParagraphText(p, text) {
+  const doc = p.ownerDocument;
+  const runs = Array.from(p.childNodes).filter(n => n.nodeType === 1 && n.localName === 'r');
+  let first = runs.find(r => r.getElementsByTagNameNS(W_NS, 't').length > 0);
+  if (!first) { first = wMkRun(doc, '', null); p.appendChild(first); }
+  runs.forEach(r => { if (r !== first) Array.from(r.getElementsByTagNameNS(W_NS, 't')).forEach(t => { t.textContent = ''; }); });
+  Array.from(first.childNodes).forEach(n => { if (n.nodeType === 1 && (n.localName === 't' || n.localName === 'br')) first.removeChild(n); });
+  String(text).split('\n').forEach((part, i) => {
+    if (i > 0) first.appendChild(doc.createElementNS(W_NS, 'w:br'));
+    const t = doc.createElementNS(W_NS, 'w:t');
+    t.setAttributeNS(XML_NS, 'xml:space', 'preserve');
+    t.textContent = part;
+    first.appendChild(t);
+  });
+}
+function wTokenContext(p, tc, txt, idx) {
+  if (tc) {
+    const prev = tc.previousSibling && tc.previousSibling.nodeType === 1 ? tc.previousSibling : null;
+    let cur = prev; while (cur && cur.nodeType !== 1) cur = cur.previousSibling;
+    const t = cur ? wText(cur).trim() : '';
+    if (t) return t;
+  }
+  return txt.slice(0, idx).replace(/[：:\s]+$/, '').trim();
+}
+const TOKEN_RE = /\{\{([^{}]+)\}\}/g;
+function looksLikeLabel(t) {
+  if (!t || t.length > 40) return false;
+  if (/^[\d\s.,\-/:：()（）]+$/.test(t)) return false;
+  return true;
+}
+function analyzeDocxDoc(doc) {
+  const items = [];
+  let seq = 0;
+  const paras = Array.from(doc.getElementsByTagNameNS(W_NS, 'p'));
+  paras.forEach((p, pi) => {
+    const txt = wText(p);
+    const tc = wInsideTc(p);
+    let m, occ = 0;
+    const re = new RegExp(TOKEN_RE.source, 'g');
+    while ((m = re.exec(txt))) {
+      items.push({ id: 'i' + (seq++), type: 'token', pIdx: pi, occ: occ++, token: m[1].trim(), label: wTokenContext(p, tc, txt, m.index), loc: '已有變數' });
+    }
+    if (!/\{\{/.test(txt)) {
+      const bi = txt.search(/[_＿]{2,}/);
+      if (bi > 0) {
+        const label = txt.slice(0, bi).replace(/[：:\s]+$/, '').trim();
+        if (looksLikeLabel(label)) items.push({ id: 'i' + (seq++), type: 'slot', kind: 'blank', kinds: ['blank', 'append'], pIdx: pi, label, loc: '文字後面的底線' });
+      } else if (!tc && /[：:]\s*$/.test(txt) && looksLikeLabel(txt.trim().replace(/[：:]\s*$/, ''))) {
+        items.push({ id: 'i' + (seq++), type: 'slot', kind: 'append', kinds: ['append'], pIdx: pi, label: txt.trim(), loc: '段落' });
+      }
+    }
+  });
+  const tbls = Array.from(doc.getElementsByTagNameNS(W_NS, 'tbl'));
+  tbls.forEach((tbl, ti) => {
+    const rows = kids(tbl, 'tr');
+    rows.forEach((tr, ri) => {
+      const cells = kids(tr, 'tc');
+      cells.forEach((tc, ci) => {
+        const txt = wText(tc).trim();
+        if (!txt || /\{\{/.test(txt) || !looksLikeLabel(txt)) return;
+        if (/[_＿]{2,}/.test(txt)) return;
+        const kinds = [];
+        const next = cells[ci + 1];
+        if (next && wText(next).trim() === '') kinds.push('right');
+        const nextRow = rows[ri + 1];
+        const below = nextRow ? kids(nextRow, 'tc')[ci] : null;
+        if (below && wText(below).trim() === '') kinds.push('below');
+        if (/[：:]\s*$/.test(txt)) kinds.push('append');
+        if (!kinds.length) return;
+        items.push({ id: 'i' + (seq++), type: 'slot', kind: kinds[0], kinds, tIdx: ti, rIdx: ri, cIdx: ci, label: txt, loc: `表格${ti + 1}・第${ri + 1}列` });
+      });
+    });
+  });
+  return items;
+}
+function makeToken(field, fmt) { return `{{${field}${fmt && fmt !== 'raw' ? '|' + fmt : ''}}}`; }
+function applyDocxDoc(doc, items) {
+  const paras = Array.from(doc.getElementsByTagNameNS(W_NS, 'p'));
+  const tbls = Array.from(doc.getElementsByTagNameNS(W_NS, 'tbl'));
+  const tokenItems = items.filter(i => i.type === 'token').sort((a, b) => a.pIdx - b.pIdx || b.occ - a.occ);
+  items.filter(i => i.type === 'slot' && i.field).forEach(it => {
+    const tok = makeToken(it.field, it.fmt);
+    if (it.kind === 'blank') {
+      const p = paras[it.pIdx]; wSetParagraphText(p, wText(p).replace(/[_＿]{2,}/, tok));
+    } else if (it.pIdx !== undefined && it.tIdx === undefined) {
+      const p = paras[it.pIdx]; p.appendChild(wMkRun(doc, tok, wFirstRPr(p)));
+    } else {
+      const rows = kids(tbls[it.tIdx], 'tr');
+      const cells = kids(rows[it.rIdx], 'tc');
+      const labelTc = cells[it.cIdx];
+      const rPr = wFirstRPr(wCellFirstP(labelTc));
+      if (it.kind === 'right' && cells[it.cIdx + 1]) wCellFirstP(cells[it.cIdx + 1]).appendChild(wMkRun(doc, tok, rPr));
+      else if (it.kind === 'below' && rows[it.rIdx + 1] && kids(rows[it.rIdx + 1], 'tc')[it.cIdx]) wCellFirstP(kids(rows[it.rIdx + 1], 'tc')[it.cIdx]).appendChild(wMkRun(doc, tok, rPr));
+      else { const ps = kids(labelTc, 'p'); const lp = ps[ps.length - 1] || wCellFirstP(labelTc); lp.appendChild(wMkRun(doc, tok, rPr)); }
+    }
+  });
+  tokenItems.forEach(it => {
+    const p = paras[it.pIdx];
+    const newTok = it.field ? makeToken(it.field, it.fmt) : '';
+    let n = -1;
+    const text = wText(p).replace(new RegExp(TOKEN_RE.source, 'g'), m => { n++; return n === it.occ ? newTok : m; });
+    wSetParagraphText(p, text);
+  });
+}
+
+// ---------- xlsx ----------
+function colNum(letters) { let n = 0; for (const ch of letters) n = n * 26 + (ch.charCodeAt(0) - 64); return n; }
+function colLetter(n) { let s = ''; while (n > 0) { const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); } return s; }
+function parseRef(ref) { const m = /^([A-Z]+)(\d+)$/.exec(ref); return m ? { c: colNum(m[1]), r: parseInt(m[2], 10) } : null; }
+async function xlsxModel(zip) {
+  const wb = parseXml(await zip.file('xl/workbook.xml').async('string'));
+  const relXml = zip.file('xl/_rels/workbook.xml.rels');
+  const relMap = {};
+  if (relXml) {
+    Array.from(parseXml(await relXml.async('string')).getElementsByTagName('Relationship')).forEach(r => {
+      let t = r.getAttribute('Target') || '';
+      t = t.replace(/^\//, '').replace(/^xl\//, '');
+      relMap[r.getAttribute('Id')] = 'xl/' + t;
+    });
+  }
+  const sheets = Array.from(wb.getElementsByTagName('sheet')).map(s => ({ name: s.getAttribute('name'), path: relMap[s.getAttribute('r:id')] })).filter(s => s.path && zip.file(s.path));
+  const ss = [];
+  const ssFile = zip.file('xl/sharedStrings.xml');
+  if (ssFile) {
+    Array.from(parseXml(await ssFile.async('string')).getElementsByTagNameNS(S_NS, 'si')).forEach(si => {
+      ss.push(Array.from(si.getElementsByTagNameNS(S_NS, 't')).map(t => t.textContent).join(''));
+    });
+  }
+  return { sheets, ss };
+}
+function xCellText(c, ss) {
+  const t = c.getAttribute('t');
+  const v = kids(c, 'v')[0];
+  if (t === 's') return v ? (ss[parseInt(v.textContent, 10)] || '') : '';
+  if (t === 'inlineStr') return Array.from(c.getElementsByTagNameNS(S_NS, 't')).map(x => x.textContent).join('');
+  return v ? v.textContent : '';
+}
+function xHasContent(c, ss) { return !!c && (xCellText(c, ss) !== '' || kids(c, 'f').length > 0); }
+function xGrid(doc) {
+  const map = new Map();
+  const sd = doc.getElementsByTagNameNS(S_NS, 'sheetData')[0];
+  if (sd) kids(sd, 'row').forEach(row => kids(row, 'c').forEach(c => { const p = parseRef(c.getAttribute('r')); if (p) map.set(`${p.r},${p.c}`, c); }));
+  return map;
+}
+function xMerges(doc) {
+  return Array.from(doc.getElementsByTagNameNS(S_NS, 'mergeCell')).map(m => {
+    const [a, b] = (m.getAttribute('ref') || '').split(':');
+    const p1 = parseRef(a), p2 = parseRef(b || a);
+    return p1 && p2 ? { r1: p1.r, c1: p1.c, r2: p2.r, c2: p2.c } : null;
+  }).filter(Boolean);
+}
+function xSetCell(doc, ref, text) {
+  const p = parseRef(ref);
+  const sd = doc.getElementsByTagNameNS(S_NS, 'sheetData')[0];
+  let row = kids(sd, 'row').find(r => parseInt(r.getAttribute('r'), 10) === p.r);
+  if (!row) {
+    row = doc.createElementNS(S_NS, 'row');
+    row.setAttribute('r', String(p.r));
+    const after = kids(sd, 'row').find(r => parseInt(r.getAttribute('r'), 10) > p.r);
+    if (after) sd.insertBefore(row, after); else sd.appendChild(row);
+  }
+  let cell = kids(row, 'c').find(c => c.getAttribute('r') === ref);
+  if (!cell) {
+    cell = doc.createElementNS(S_NS, 'c');
+    cell.setAttribute('r', ref);
+    const after = kids(row, 'c').find(c => { const q = parseRef(c.getAttribute('r')); return q && q.c > p.c; });
+    if (after) row.insertBefore(cell, after); else row.appendChild(cell);
+  }
+  while (cell.firstChild) cell.removeChild(cell.firstChild);
+  cell.setAttribute('t', 'inlineStr');
+  const is = doc.createElementNS(S_NS, 'is');
+  const t = doc.createElementNS(S_NS, 't');
+  t.setAttributeNS(XML_NS, 'xml:space', 'preserve');
+  t.textContent = text;
+  is.appendChild(t);
+  cell.appendChild(is);
+}
+function analyzeXlsxSheet(doc, ss, sheetIdx, sheetName) {
+  const items = [];
+  let seq = 0;
+  const grid = xGrid(doc);
+  const merges = xMerges(doc);
+  const cells = Array.from(grid.values()).sort((a, b) => { const p = parseRef(a.getAttribute('r')), q = parseRef(b.getAttribute('r')); return p.r - q.r || p.c - q.c; });
+  cells.forEach(c => {
+    const ref = c.getAttribute('r');
+    const p = parseRef(ref);
+    const txt = xCellText(c, ss);
+    if (!txt) return;
+    if (c.getAttribute('t') && c.getAttribute('t') !== 's' && c.getAttribute('t') !== 'inlineStr' && c.getAttribute('t') !== 'str') return;
+    const loc = `${sheetName}!${ref}`;
+    let m, occ = 0;
+    const re = new RegExp(TOKEN_RE.source, 'g');
+    let hadToken = false;
+    while ((m = re.exec(txt))) {
+      hadToken = true;
+      let label = '';
+      const left = grid.get(`${p.r},${p.c - 1}`);
+      if (left) label = xCellText(left, ss).trim();
+      items.push({ id: `s${sheetIdx}_${seq++}`, type: 'token', sheet: sheetIdx, ref, occ: occ++, token: m[1].trim(), label, loc: `${loc}｜已有變數` });
+    }
+    if (hadToken || !looksLikeLabel(txt.trim())) return;
+    const mg = merges.find(x => x.r1 === p.r && x.c1 === p.c);
+    const endC = mg ? mg.c2 : p.c, endR = mg ? mg.r2 : p.r;
+    const kinds = [];
+    const rightRef = `${colLetter(endC + 1)}${p.r}`;
+    const belowRef = `${colLetter(p.c)}${endR + 1}`;
+    if (!xHasContent(grid.get(`${p.r},${endC + 1}`), ss)) kinds.push('right');
+    if (!xHasContent(grid.get(`${endR + 1},${p.c}`), ss)) kinds.push('below');
+    if (/[：:]\s*$/.test(txt)) kinds.push('append');
+    if (!kinds.length) return;
+    items.push({ id: `s${sheetIdx}_${seq++}`, type: 'slot', kind: kinds[0], kinds, sheet: sheetIdx, ref, rightRef, belowRef, label: txt.trim(), loc });
+  });
+  return items;
+}
+function applyXlsxSheet(doc, ss, items) {
+  items.filter(i => i.type === 'slot' && i.field).forEach(it => {
+    const tok = makeToken(it.field, it.fmt);
+    if (it.kind === 'right') xSetCell(doc, it.rightRef, tok);
+    else if (it.kind === 'below') xSetCell(doc, it.belowRef, tok);
+    else { const c = xGrid(doc).get(`${parseRef(it.ref).r},${parseRef(it.ref).c}`); xSetCell(doc, it.ref, (c ? xCellText(c, ss) : it.label) + tok); }
+  });
+  items.filter(i => i.type === 'token').sort((a, b) => a.ref.localeCompare(b.ref) || b.occ - a.occ).forEach(it => {
+    const p = parseRef(it.ref);
+    const c = xGrid(doc).get(`${p.r},${p.c}`);
+    if (!c) return;
+    const newTok = it.field ? makeToken(it.field, it.fmt) : '';
+    let n = -1;
+    const text = xCellText(c, ss).replace(new RegExp(TOKEN_RE.source, 'g'), m => { n++; return n === it.occ ? newTok : m; });
+    xSetCell(doc, it.ref, text);
+  });
+}
+
+// ---------- 分析／套用／填入 ----------
+function detectType(name) { return /\.xlsx$/i.test(name) ? 'xlsx' : /\.docx$/i.test(name) ? 'docx' : ''; }
+async function analyzeBytes(bytes, type) {
+  const zip = await JSZip.loadAsync(bytes);
+  let items = [];
+  if (type === 'docx') {
+    const f = zip.file('word/document.xml');
+    if (!f) throw new Error('這不是有效的 Word（.docx）檔案');
+    items = analyzeDocxDoc(parseXml(await f.async('string')));
+  } else {
+    if (!zip.file('xl/workbook.xml')) throw new Error('這不是有效的 Excel（.xlsx）檔案');
+    const model = await xlsxModel(zip);
+    for (let i = 0; i < model.sheets.length; i++) {
+      const doc = parseXml(await zip.file(model.sheets[i].path).async('string'));
+      items = items.concat(analyzeXlsxSheet(doc, model.ss, i, model.sheets[i].name));
+    }
+  }
+  return items;
+}
+async function buildTemplateBase64(bytes, type, items) {
+  const zip = await JSZip.loadAsync(bytes);
+  if (type === 'docx') {
+    const path = 'word/document.xml';
+    const doc = parseXml(await zip.file(path).async('string'));
+    applyDocxDoc(doc, items);
+    zip.file(path, serializeXml(doc));
+  } else {
+    const model = await xlsxModel(zip);
+    for (let i = 0; i < model.sheets.length; i++) {
+      const sub = items.filter(it => it.sheet === i);
+      if (!sub.length) continue;
+      const doc = parseXml(await zip.file(model.sheets[i].path).async('string'));
+      applyXlsxSheet(doc, model.ss, sub);
+      zip.file(model.sheets[i].path, serializeXml(doc));
+    }
+  }
+  return zip.generateAsync({ type: 'base64', compression: 'DEFLATE' });
+}
+
+function fmtDateParts(v) {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(v));
+  return m ? { y: +m[1], m: +m[2], d: +m[3] } : null;
+}
+function formatValue(v, fmt) {
+  if (v === null || v === undefined) return '';
+  let s = (typeof v === 'object') ? JSON.stringify(v) : String(v);
+  if (fmt === 'roc_slash' || fmt === 'roc_cn' || fmt === 'roc_year') {
+    const d = fmtDateParts(s);
+    if (!d) return s;
+    if (fmt === 'roc_year') return String(d.y - 1911);
+    if (fmt === 'roc_slash') return `${d.y - 1911}/${String(d.m).padStart(2, '0')}/${String(d.d).padStart(2, '0')}`;
+    return `${d.y - 1911}年${d.m}月${d.d}日`;
+  }
+  if (fmt === 'thousands') { const n = Number(s); return Number.isFinite(n) ? n.toLocaleString('en-US') : s; }
+  return s;
+}
+function sysValue(col) {
+  const n = new Date();
+  const y = n.getFullYear(), m = n.getMonth() + 1, d = n.getDate();
+  const p2 = x => String(x).padStart(2, '0');
+  return ({
+    today_roc_cn: `${y - 1911}年${m}月${d}日`, today_roc_slash: `${y - 1911}/${p2(m)}/${p2(d)}`,
+    roc_year: String(y - 1911), month: String(m), day: String(d), today_ad: `${y}-${p2(m)}-${p2(d)}`
+  })[col] ?? '';
+}
+function resolveToken(tok, rec) {
+  const [pathRaw, fmtRaw] = tok.split('|');
+  const path = pathRaw.trim();
+  const fmt = (fmtRaw || 'raw').trim();
+  if (path.startsWith('sys.')) return formatValue(sysValue(path.slice(4)), fmt);
+  const col = path.includes('.') ? path.split('.').slice(1).join('.') : path;
+  if (!rec) return '';
+  let v = rec[col];
+  if (v === undefined) { const k = Object.keys(rec).find(x => x.toLowerCase() === col.toLowerCase()); v = k ? rec[k] : ''; }
+  return formatValue(v, fmt);
+}
+async function fillTemplate(base64, type, rec) {
+  const zip = await JSZip.loadAsync(base64, { base64: true });
+  const sub = text => text.replace(new RegExp(TOKEN_RE.source, 'g'), (m, t) => resolveToken(t, rec));
+  if (type === 'docx') {
+    const parts = Object.keys(zip.files).filter(n => /^word\/(document|header\d*|footer\d*)\.xml$/.test(n));
+    for (const path of parts) {
+      const doc = parseXml(await zip.file(path).async('string'));
+      Array.from(doc.getElementsByTagNameNS(W_NS, 'p')).forEach(p => {
+        const txt = wText(p);
+        if (txt.includes('{{')) wSetParagraphText(p, sub(txt));
+      });
+      zip.file(path, serializeXml(doc));
+    }
+  } else {
+    const model = await xlsxModel(zip);
+    for (const sh of model.sheets) {
+      const doc = parseXml(await zip.file(sh.path).async('string'));
+      xGrid(doc).forEach(c => {
+        const txt = xCellText(c, model.ss);
+        if (txt.includes('{{')) xSetCell(doc, c.getAttribute('r'), sub(txt));
+      });
+      zip.file(sh.path, serializeXml(doc));
+    }
+  }
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+function b64ToBytes(b64) { const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+function downloadBlob(data, name, mime) {
+  const blob = new Blob([data], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function mimeOf(type) { return type === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'; }
+function safeName(s) { return String(s || '').replace(/[\\/:*?"<>|]/g, '_').trim().slice(0, 60) || '檔案'; }
+
+// =====================================================================
+// 新增／編輯套印功能
+// =====================================================================
+const KIND_LABEL = { right: '填在右側空白格', below: '填在下方空白格', append: '接在文字後面', blank: '取代底線' };
+
+function wizTableOptions(selected) {
+  return '<option value="">（不使用資料表，只用系統變數）</option>' +
+    schema.tables.map(t => `<option value="${esc(t.name)}" ${t.name === selected ? 'selected' : ''}>${esc(t.name)}（${t.columns.length} 欄）</option>`).join('');
+}
+function openWizardUi(title) {
+  document.getElementById('wizTitle').textContent = title;
+  document.getElementById('wizCategory').innerHTML = CATEGORIES.map(c => `<option value="${c.key}" ${c.key === wiz.category ? 'selected' : ''}>${c.title}</option>`).join('');
+  document.getElementById('wizName').value = wiz.name || '';
+  document.getElementById('wizTable').innerHTML = wizTableOptions(wiz.table);
+  document.getElementById('wizFile').value = '';
+  renderWizFileInfo();
+  renderMapTable();
+  document.getElementById('wizOverlay').style.display = 'flex';
+}
+function renderWizFileInfo() {
+  const el = document.getElementById('wizFileInfo');
+  el.textContent = wiz.fileName ? `目前檔案：${wiz.fileName}（${wiz.fileType === 'xlsx' ? 'Excel' : 'Word'}）` : '尚未選擇檔案';
+}
+function newTpl(category) {
+  wiz = { id: null, category, name: '', table: '', fileName: '', fileType: '', bytes: null, items: [], memory: [] };
+  openWizardUi('新增套印功能');
+}
+async function loadTplIntoWiz(t) {
+  wiz = { id: t.id, category: t.category, name: t.name, table: (t.data_source && t.data_source.table) || '', fileName: t.file_name, fileType: t.file_type, bytes: b64ToBytes(t.file_base64), items: [], memory: t.mappings || [], createdAt: t.created_at, sort: t.sort_order || 0 };
+  wiz.items = await analyzeBytes(wiz.bytes, wiz.fileType);
+  prefillTokenFields();
+  applyMemory();
+}
+async function editTpl(id) {
+  const t = templates.find(x => x.id === id);
+  if (!t) return;
+  try { await loadTplIntoWiz(t); openWizardUi('編輯變數：' + t.name); } catch (e) { toast('讀取來源檔失敗：' + (e.message || e), true); }
+}
+async function reuploadTpl(id) {
+  const t = templates.find(x => x.id === id);
+  if (!t) return;
+  wiz = { id: t.id, category: t.category, name: t.name, table: (t.data_source && t.data_source.table) || '', fileName: t.file_name, fileType: t.file_type, bytes: null, items: [], memory: t.mappings || [], createdAt: t.created_at, sort: t.sort_order || 0, reupload: true };
+  openWizardUi('重新上傳新格式：' + t.name);
+  document.getElementById('wizFile').click();
+}
+async function deleteTpl(id) {
+  const t = templates.find(x => x.id === id);
+  if (!t || !confirm(`確定要刪除套印功能「${t.name}」嗎？（來源檔也會一併刪除）`)) return;
+  try { await removeTemplate(id); templates = templates.filter(x => x.id !== id); renderSections(); toast('已刪除'); } catch (e) { toast('刪除失敗：' + (e.message || e), true); }
+}
+function downloadSource(id) {
+  const t = templates.find(x => x.id === id);
+  if (!t) return;
+  downloadBlob(b64ToBytes(t.file_base64), t.file_name || `${safeName(t.name)}.${t.file_type}`, mimeOf(t.file_type));
+}
+function closeWizard() { document.getElementById('wizOverlay').style.display = 'none'; wiz = null; }
+
+function prefillTokenFields() {
+  wiz.items.filter(i => i.type === 'token').forEach(it => {
+    const [path, fmt] = it.token.split('|');
+    it.field = path.trim();
+    it.fmt = (fmt || 'raw').trim();
+  });
+}
+function applyMemory() {
+  const used = new Set();
+  const mem = wiz.memory || [];
+  wiz.items.forEach(it => {
+    if (it.field) return;
+    const idx = mem.findIndex((m, i) => !used.has(i) && m.label === it.label && m.field);
+    if (idx < 0) return;
+    used.add(idx);
+    it.field = mem[idx].field;
+    it.fmt = mem[idx].fmt || 'raw';
+    if (it.type === 'slot' && mem[idx].kind && it.kinds.includes(mem[idx].kind)) it.kind = mem[idx].kind;
+  });
+}
+async function onWizFile(file) {
+  if (!file) return;
+  const type = detectType(file.name);
+  if (!type) { toast('請選擇 .docx 或 .xlsx 檔案（舊版 .doc／.xls 請先另存新格式）', true); return; }
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const items = await analyzeBytes(bytes, type);
+    wiz.bytes = bytes; wiz.fileName = file.name; wiz.fileType = type; wiz.items = items;
+    prefillTokenFields();
+    applyMemory();
+    if (!document.getElementById('wizName').value.trim()) document.getElementById('wizName').value = file.name.replace(/\.[^.]+$/, '');
+    renderWizFileInfo();
+    renderMapTable();
+    const mapped = wiz.items.filter(i => i.field).length;
+    toast(`已讀取「${file.name}」：找到 ${wiz.items.length} 個項目${wiz.reupload ? `，依原本設定自動帶回 ${mapped} 個欄位對應` : ''}`);
+  } catch (e) { toast('讀取檔案失敗：' + (e.message || e), true); }
+}
+function onWizTableChange() {
+  wiz.table = document.getElementById('wizTable').value;
+  wiz.items.forEach(it => { if (it.field && !it.field.startsWith('sys.') && it.type === 'slot') it.field = ''; });
+  renderMapTable();
+}
+function renderMapTable() {
+  const body = document.getElementById('mapBody');
+  if (!wiz.items.length) { body.innerHTML = '<tr><td colspan="5" class="empty-hint">請先上傳檔案</td></tr>'; updateWizSummary(); return; }
+  body.innerHTML = wiz.items.map((it, i) => {
+    const kindCell = it.type === 'slot'
+      ? `<select onchange="setItem(${i}, 'kind', this.value)">${it.kinds.map(k => `<option value="${k}" ${k === it.kind ? 'selected' : ''}>${KIND_LABEL[k]}</option>`).join('')}</select>`
+      : '<span class="tip">已有變數</span>';
+    const tok = it.field ? makeToken(it.field, it.fmt) : (it.type === 'token' ? '（將移除變數）' : '');
+    return `
+      <tr class="${it.field ? 'mapped' : ''}">
+        <td><b>${esc(it.label || '（無標籤）')}</b><div class="loc-note">${esc(it.loc || '')}${it.type === 'token' ? '｜' + esc('{{' + it.token + '}}') : ''}</div></td>
+        <td>${kindCell}</td>
+        <td><select onchange="setItem(${i}, 'field', this.value)">${fieldOptionsHtml(wiz.table, it.field || '')}</select></td>
+        <td><select onchange="setItem(${i}, 'fmt', this.value)">${FORMATS.map(f => `<option value="${f.v}" ${f.v === (it.fmt || 'raw') ? 'selected' : ''}>${f.label}</option>`).join('')}</select></td>
+        <td class="ph-preview">${esc(tok)}</td>
+      </tr>`;
+  }).join('');
+  updateWizSummary();
+}
+function setItem(i, key, val) {
+  const it = wiz.items[i];
+  it[key] = val;
+  if (key === 'field' && !it.fmt) it.fmt = 'raw';
+  renderMapTable();
+}
+function updateWizSummary() {
+  const n = wiz.items.filter(i => i.field).length;
+  const rm = wiz.items.filter(i => i.type === 'token' && !i.field).length;
+  document.getElementById('wizSummary').textContent = wiz.items.length ? `共 ${wiz.items.length} 個項目，已對應 ${n} 個欄位${rm ? `，將移除 ${rm} 個變數` : ''}` : '';
+}
+function normLabel(s) { return String(s || '').replace(/[：:\s　（）()]/g, '').toLowerCase(); }
+function autoMatchAll() {
+  if (!wiz.items.length) return;
+  const cands = [];
+  if (wiz.table) tableCols(wiz.table).forEach(c => cands.push({ field: `${wiz.table}.${c.name}`, names: [c.name, ...aliasList(wiz.table, c.name)].map(normLabel).filter(Boolean) }));
+  SYS_FIELDS.forEach(f => cands.push({ field: `sys.${f.col}`, names: f.col === 'today_roc_cn' ? ['今天日期', '填表日期', '日期'].map(normLabel) : [] }));
+  let hit = 0;
+  const usedField = new Set(wiz.items.filter(i => i.field).map(i => i.field + '|' + i.id));
+  wiz.items.forEach(it => {
+    if (it.type !== 'slot' || it.field) return;
+    const lab = normLabel(it.label);
+    if (!lab) return;
+    let best = cands.find(c => c.names.includes(lab)) || cands.find(c => c.names.some(n => n.length >= 2 && (lab.includes(n) || n.includes(lab) && lab.length >= 2)));
+    if (best) { it.field = best.field; it.fmt = it.fmt || 'raw'; hit++; }
+  });
+  renderMapTable();
+  toast(hit ? `已自動比對 ${hit} 個欄位，請檢查後再儲存` : '沒有比對到欄位。可到「資料表與欄位別名設定」補上中文別名，或手動選擇', !hit);
+}
+function clearAllMap() {
+  if (!wiz.items.length) return;
+  if (!confirm('確定要清除全部欄位對應嗎？（已有的變數也會被標記為移除）')) return;
+  wiz.items.forEach(it => { it.field = ''; });
+  renderMapTable();
+}
+async function saveWizard() {
+  const name = document.getElementById('wizName').value.trim();
+  const category = document.getElementById('wizCategory').value;
+  if (!name) { toast('請輸入功能名稱', true); return; }
+  if (!wiz.bytes) { toast('請先上傳 Word 或 Excel 檔案', true); return; }
+  const btn = document.getElementById('wizSaveBtn');
+  btn.disabled = true;
+  try {
+    const base64 = await buildTemplateBase64(wiz.bytes, wiz.fileType, wiz.items);
+    const memNew = wiz.items.filter(i => i.field && i.label).map(i => ({ label: i.label, kind: i.kind || '', field: i.field, fmt: i.fmt || 'raw' }));
+    const seen = new Set(memNew.map(m => m.label + '|' + m.field));
+    const memOld = (wiz.memory || []).filter(m => m.field && !seen.has(m.label + '|' + m.field) && !memNew.some(n => n.label === m.label));
+    const rec = {
+      id: wiz.id || uuid(), category, name,
+      file_name: wiz.fileName, file_type: wiz.fileType, file_base64: base64,
+      data_source: { table: document.getElementById('wizTable').value || '' },
+      mappings: memNew.concat(memOld).slice(0, 300),
+      sort_order: wiz.sort || templates.filter(t => t.category === category).length,
+      updated_at: new Date().toISOString()
+    };
+    if (wiz.createdAt) rec.created_at = wiz.createdAt;
+    await persistTemplate(rec);
+    const idx = templates.findIndex(t => t.id === rec.id);
+    if (idx >= 0) templates[idx] = { ...templates[idx], ...rec }; else templates.push(rec);
+    renderSections();
+    closeWizard();
+    toast(`已儲存「${name}」，加好變數的檔案已設為來源檔`);
+  } catch (e) {
+    toast('儲存失敗：' + (e.message || e), true);
+  } finally { btn.disabled = false; }
+}
+
+// =====================================================================
+// 套印／匯出
+// =====================================================================
+async function openRun(id) {
+  const t = templates.find(x => x.id === id);
+  if (!t) return;
+  const table = (t.data_source && t.data_source.table) || '';
+  runState = { tpl: t, table, rows: [], selected: new Set(), cols: [] };
+  document.getElementById('runTitle').textContent = `套印／匯出：${t.name}`;
+  document.getElementById('runSearch').value = '';
+  document.getElementById('runOverlay').style.display = 'flex';
+  if (!table) {
+    document.getElementById('runInfo').textContent = '這個功能不使用資料表，直接按「產生並下載」即可（只會填入系統變數，例如今天日期）。';
+    document.getElementById('runHead').innerHTML = '';
+    document.getElementById('runBody').innerHTML = '';
+    document.getElementById('runCount').textContent = '';
+    return;
+  }
+  document.getElementById('runInfo').textContent = `資料來源：${table}。勾選要套印的資料列。`;
+  document.getElementById('runBody').innerHTML = '<tr><td class="empty-hint">讀取資料中...</td></tr>';
+  const client = ensureClient();
+  if (!client) { document.getElementById('runBody').innerHTML = '<tr><td class="empty-hint">尚未連線資料庫</td></tr>'; return; }
+  try {
+    const { data, error } = await client.from(table).select('*').limit(2000);
+    if (error) throw error;
+    runState.rows = data || [];
+    const keys = runState.rows.length ? Object.keys(runState.rows[0]) : [];
+    const pref = keys.filter(k => aliasList(table, k).some(a => /姓名|名稱|課程|講師/.test(a)) || /name|title/i.test(k));
+    const rest = keys.filter(k => !/^(id|created_at|updated_at)$/i.test(k) && !pref.includes(k));
+    runState.cols = pref.concat(rest).slice(0, 5);
+    renderRunRows();
+  } catch (e) { document.getElementById('runBody').innerHTML = `<tr><td class="empty-hint" style="color:#dc2626;">讀取失敗：${esc(e.message || e)}</td></tr>`; }
+}
+function closeRun() { document.getElementById('runOverlay').style.display = 'none'; runState = null; }
+function runFiltered() {
+  const q = document.getElementById('runSearch').value.trim().toLowerCase();
+  if (!q) return runState.rows.map((r, i) => i);
+  return runState.rows.map((r, i) => i).filter(i => Object.values(runState.rows[i]).some(v => String(v ?? '').toLowerCase().includes(q)));
+}
+function renderRunRows() {
+  if (!runState || !runState.table) return;
+  const idxs = runFiltered();
+  document.getElementById('runHead').innerHTML = '<tr><th style="width:36px;"></th>' + runState.cols.map(c => `<th>${esc(aliasList(runState.table, c)[0] || c)}</th>`).join('') + '</tr>';
+  document.getElementById('runBody').innerHTML = idxs.length ? idxs.map(i => {
+    const r = runState.rows[i];
+    return `<tr><td><input type="checkbox" ${runState.selected.has(i) ? 'checked' : ''} onchange="runToggle(${i}, this.checked)"></td>${runState.cols.map(c => `<td>${esc(r[c] ?? '')}</td>`).join('')}</tr>`;
+  }).join('') : '<tr><td class="empty-hint" colspan="9">沒有符合的資料</td></tr>';
+  document.getElementById('runCount').textContent = `共 ${runState.rows.length} 筆，已勾選 ${runState.selected.size} 筆`;
+}
+function runToggle(i, on) { if (on) runState.selected.add(i); else runState.selected.delete(i); renderRunRows(); }
+function runSelectAll(on) { runFiltered().forEach(i => { if (on) runState.selected.add(i); else runState.selected.delete(i); }); renderRunRows(); }
+function recLabel(rec) {
+  const keys = Object.keys(rec);
+  const k = keys.find(x => /name|姓名|title/i.test(x)) || keys.find(x => !/^(id|created_at|updated_at)$/i.test(x));
+  return k ? safeName(rec[k]) : '資料';
+}
+async function runGenerate() {
+  const t = runState.tpl;
+  const btn = document.getElementById('runGoBtn');
+  btn.disabled = true;
+  try {
+    const ext = t.file_type;
+    if (!runState.table) {
+      const out = await fillTemplate(t.file_base64, ext, null);
+      downloadBlob(out, `${safeName(t.name)}.${ext}`, mimeOf(ext));
+      toast('已產生並下載');
+      return;
+    }
+    const picks = [...runState.selected].sort((a, b) => a - b).map(i => runState.rows[i]);
+    if (!picks.length) { toast('請先勾選要套印的資料列', true); return; }
+    if (picks.length === 1) {
+      const out = await fillTemplate(t.file_base64, ext, picks[0]);
+      downloadBlob(out, `${safeName(t.name)}_${recLabel(picks[0])}.${ext}`, mimeOf(ext));
+    } else {
+      const zip = new JSZip();
+      const used = {};
+      for (const rec of picks) {
+        const out = await fillTemplate(t.file_base64, ext, rec);
+        let base = `${safeName(t.name)}_${recLabel(rec)}`;
+        used[base] = (used[base] || 0) + 1;
+        if (used[base] > 1) base += `_${used[base]}`;
+        zip.file(`${base}.${ext}`, out);
+      }
+      const zbytes = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+      downloadBlob(zbytes, `${safeName(t.name)}_${picks.length}份.zip`, 'application/zip');
+    }
+    toast(`已產生 ${picks.length} 份並下載`);
+  } catch (e) { toast('產生失敗：' + (e.message || e), true); }
+  finally { btn.disabled = false; }
+}
+
+// =====================================================================
+// 資料表與欄位別名設定
+// =====================================================================
+let setDraft = null;
+function openSettings() {
+  setDraft = JSON.parse(JSON.stringify(settings));
+  renderSettings();
+  document.getElementById('setOverlay').style.display = 'flex';
+}
+function closeSettings() { document.getElementById('setOverlay').style.display = 'none'; setDraft = null; }
+function renderSettings() {
+  const box = document.getElementById('setTables');
+  if (!schema.tables.length) { box.innerHTML = '<div class="empty-hint">目前沒有偵測到資料表，請先在上方手動加入。</div>'; return; }
+  box.innerHTML = schema.tables.map(t => `
+    <details class="tbl-box">
+      <summary>${esc(t.name)}（${t.columns.length} 欄）${setDraft.manualTables.some(x => x.name === t.name) ? ' <span class="tpl-badge" style="background:#fef3c7;color:#92400e;">手動加入</span>' : ''}</summary>
+      <div class="tbl-inner">
+        ${t.columns.length ? `<table class="alias-table">${t.columns.map(c => `<tr><td style="width:34%;">${esc(c.name)}</td><td><input type="text" data-alias="${esc(t.name + '.' + c.name)}" value="${esc((setDraft.aliases[t.name + '.' + c.name] ?? '') || DEFAULT_ALIASES[c.name.toLowerCase()] || '')}" placeholder="中文別名，例如：姓名"></td></tr>`).join('')}</table>` : '<div class="tip">這個資料表目前沒有資料，偵測不到欄位。請在上方「新增資料表」填入欄位名稱。</div>'}
+        ${setDraft.manualTables.some(x => x.name === t.name) ? `<div style="margin-top:6px;"><button type="button" class="btn btn-danger btn-sm" onclick="removeManualTable('${esc(t.name)}')">移除這個手動加入的資料表</button></div>` : ''}
+      </div>
+    </details>`).join('');
+}
+function addManualTable() {
+  const name = document.getElementById('setNewTable').value.trim();
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) { toast('資料表名稱只能用英文字母、數字與底線', true); return; }
+  const cols = document.getElementById('setNewCols').value.split(/[,，、\s]+/).map(s => s.trim()).filter(Boolean);
+  const ex = setDraft.manualTables.find(t => t.name === name);
+  if (ex) ex.columns = [...new Set([...(ex.columns || []), ...cols])]; else setDraft.manualTables.push({ name, columns: cols });
+  document.getElementById('setNewTable').value = ''; document.getElementById('setNewCols').value = '';
+  settings.manualTables = JSON.parse(JSON.stringify(setDraft.manualTables));
+  persistSettings();
+  reloadSchema(false).then(() => { renderSettings(); toast(`已加入資料表 ${name}`); });
+}
+function removeManualTable(name) {
+  setDraft.manualTables = setDraft.manualTables.filter(t => t.name !== name);
+  settings.manualTables = JSON.parse(JSON.stringify(setDraft.manualTables));
+  persistSettings();
+  reloadSchema(false).then(renderSettings);
+}
+function saveSettings() {
+  document.querySelectorAll('#setTables [data-alias]').forEach(inp => {
+    const k = inp.getAttribute('data-alias');
+    const v = inp.value.trim();
+    const def = DEFAULT_ALIASES[k.split('.').slice(1).join('.').toLowerCase()] || '';
+    if (v && v !== def) setDraft.aliases[k] = v; else delete setDraft.aliases[k];
+  });
+  settings = setDraft;
+  persistSettings();
+  closeSettings();
+  toast('已儲存別名設定');
+}
+
+// =====================================================================
+// 初始化
+// =====================================================================
+(async function init() {
+  loadSettings();
+  ensureClient();
+  await loadTemplates();
+  renderSections();
+  await reloadSchema(false);
+})();
+</script>
+</body>
+</html>
