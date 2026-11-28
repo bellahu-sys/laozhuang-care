@@ -445,8 +445,9 @@
     <div class="quick-jump">
       <a href="#sec-personnel" class="jump-pill jump-1">一、人事資料</a>
       <a href="#sec-admin" class="jump-pill jump-2">二、行政與每日記錄</a>
-      <a href="#sec-course-print" class="jump-pill jump-3">三、課程與報表套印</a>
-      <a href="#sec-reimburse" class="jump-pill jump-4">四、核銷管理</a>
+      <a href="#sec-course" class="jump-pill jump-3">三、課程安排</a>
+      <a href="#sec-print" class="jump-pill jump-3">四、報表套印</a>
+      <a href="#sec-reimburse" class="jump-pill jump-4">五、核銷管理</a>
     </div>
   </div>
 
@@ -573,46 +574,42 @@
     </div>
   </div>
 
-  <div id="sec-course-print" class="section-block section-3">
+    <div id="sec-course" class="section-block section-3">
     <h2 class="section-title">
-      <span>三、課程安排與報表套印</span>
+      <span>三、課程安排</span>
       <span class="section-tag">靛紫藍專區</span>
     </h2>
-    <div class="course-print-tabs" role="tablist">
-      <button type="button" class="course-print-tab-btn active" onclick="switchCoursePrintTab('course', this)">課程安排</button>
-      <button type="button" class="course-print-tab-btn" onclick="switchCoursePrintTab('print', this)">報表套印</button>
+    <div class="card-grid">
+      <a href="年度課程安排行事曆.html" class="module-card">
+        <div>
+          <div class="module-name">年度排課行事曆</div>
+          <div class="module-desc">1-12 月跨月拖曳排課、各計畫排定日期總覽與一鍵複製。</div>
+        </div>
+        <span class="module-badge">課程安排</span>
+      </a>
+      <a href="課程活動表.html" class="module-card">
+        <div>
+          <div class="module-name">課程活動表</div>
+          <div class="module-desc">依年度／月份編排週一至週五課程活動表、講師與時間，支援資料庫儲存與列印。</div>
+        </div>
+        <span class="module-badge">課程安排</span>
+      </a>
+      <a href="講師鐘點費記錄.html" class="module-card highlight-fee">
+        <div>
+          <div class="module-name">講師鐘點費計算</div>
+          <div class="module-desc">講師鐘點費設定（薪資／核銷）、鐘點費計算、個人所得稅計算（講師／臨時人員）。</div>
+        </div>
+        <span class="module-badge fee-badge">課程安排</span>
+      </a>
     </div>
+  </div>
 
-    <!-- 1. 課程安排 -->
-    <div id="tab-course" class="course-print-panel active">
-      <div class="card-grid">
-        <a href="年度課程安排行事曆.html" class="module-card">
-          <div>
-            <div class="module-name">年度排課行事曆</div>
-            <div class="module-desc">1-12 月跨月拖曳排課、各計畫排定日期總覽與一鍵複製。</div>
-          </div>
-          <span class="module-badge">課程安排</span>
-        </a>
-        <a href="課程活動表.html" class="module-card">
-          <div>
-            <div class="module-name">課程活動表</div>
-            <div class="module-desc">依年度／月份編排週一至週五課程活動表、講師與時間，支援資料庫儲存與列印。</div>
-          </div>
-          <span class="module-badge">課程安排</span>
-        </a>
-        <a href="講師鐘點費記錄.html" class="module-card highlight-fee">
-          <div>
-            <div class="module-name">講師鐘點費計算</div>
-            <div class="module-desc">講師鐘點費設定（薪資／核銷）、鐘點費計算、個人所得稅計算（講師／臨時人員）。</div>
-          </div>
-          <span class="module-badge fee-badge">課程安排</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- 2. 報表套印 -->
-    <div id="tab-print" class="course-print-panel">
-      <div class="card-grid">
+  <div id="sec-print" class="section-block section-3">
+    <h2 class="section-title">
+      <span>四、報表套印</span>
+      <span class="section-tag">靛紫藍專區</span>
+    </h2>
+    <div class="card-grid">
         <a href="個案基本資料表套印.html" class="module-card">
           <div>
             <div class="module-name">個案基本資料表套印</div>
@@ -641,13 +638,11 @@
           </div>
           <span class="module-badge fee-badge">常來名單 ＋ 多格式列印</span>
         </a>
-      </div>
-    </div>
   </div>
 
   <div id="sec-reimburse" class="section-block section-4">
     <h2 class="section-title">
-      <span>四、核銷管理</span>
+      <span>五、核銷管理</span>
       <span class="section-tag">玫瑰酒紅專區</span>
     </h2>
     <div class="reimburse-tabs" role="tablist">
