@@ -310,6 +310,7 @@
   <a href="講師鐘點費核銷.html" class="active">2. 講師鐘點費核銷</a>
   <a href="長照講師核銷記錄.html">2. 長照核銷統計</a>
   <a href="長照與延緩核銷統計.html?plan=delay">3. 延緩核銷統計</a>
+  <a href="講師個人所得稅.html">講師個人所得稅</a>
 </div>
 
 
@@ -412,7 +413,6 @@
         <button type="button" class="btn btn-blue btn-sm" onclick="saveAllToCloud()">儲存至資料庫</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="copyLtcPeriodToClipboard()">複製長照表格數值</button>
         <button type="button" class="btn btn-outline btn-sm" onclick="copyDelayPeriodToClipboard()">複製延緩表格數值</button>
-        <button type="button" class="btn btn-outline btn-sm" onclick="copyTaxSummaryToClipboard()">複製所得稅彙總</button>
         <span class="copy-toast" id="summaryCopyToast"></span>
       </div>
     </h2>
@@ -423,7 +423,7 @@
         <div class="toolbar-group">
           <span class="ctrl-label" style="color:#9f1239;">長照核銷（分季／單月）：</span>
           <label class="ctrl-label" for="ltcPeriodSelect">季／單月：</label>
-          <select id="ltcPeriodSelect" onchange="renderLtcPeriodView(); renderTaxSummaryTable();">
+          <select id="ltcPeriodSelect" onchange="renderLtcPeriodView()">
             <option value="Q1">第1季（1–3月）</option>
             <option value="Q2">第2季（4–6月）</option>
             <option value="Q3">第3季（7–9月）</option>
@@ -462,7 +462,7 @@
         <div class="toolbar-group">
           <span class="ctrl-label" style="color:#9a3412;">延緩核銷（分期 1–3 期）：</span>
           <label class="ctrl-label" for="delayTermSelect">延緩期別：</label>
-          <select id="delayTermSelect" onchange="renderDelayPeriodView(); renderTaxSummaryTable();">
+          <select id="delayTermSelect" onchange="renderDelayPeriodView()">
             <option value="T1" selected>延緩第1期</option>
             <option value="T2">延緩第2期</option>
             <option value="T3">延緩第3期</option>
@@ -480,21 +480,7 @@
       <div id="delayPeriodSheetContainer"></div>
     </div>
 
-    <!-- 3. 講師核銷與個人所得稅彙總（由上方自動帶入） -->
-    <div style="margin-top:22px; padding-top:14px; border-top:2px solid var(--border);">
-      <div class="period-card-header" style="border-bottom:none; margin-bottom:6px;">
-        <span class="period-card-title" id="taxSummaryTitle">年度講師核銷與個人所得稅彙總</span>
-        <div class="toolbar-group no-print">
-          <div class="picker-dropdown-wrap">
-            <button type="button" class="btn btn-outline btn-sm" id="sumPickerBtn" onclick="togglePickerPanel(event, 'sumPickerPanel')">勾選講師 ▾</button>
-            <div class="picker-panel" id="sumPickerPanel" onclick="event.stopPropagation()"></div>
-          </div>
-        </div>
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="excel-table" id="taxSummaryTable"></table>
-      </div>
-    </div>
+    
   </section>
 </div>
 
@@ -694,7 +680,6 @@
   async function reloadCalendarDays(showMsg) {
     await loadCalendarDays(showMsg);
     renderLtcPeriodView();
-    renderTaxSummaryTable();
   }
 
   function getLinkedCellData(blk, colKey, instName) {
@@ -746,7 +731,6 @@
     }
     renderLtcPeriodView();
     renderDelayPeriodView();
-    renderTaxSummaryTable();
   }
 
   function restoreCalendarDays(periodKey, colKey, instName) {
@@ -767,7 +751,6 @@
       });
     });
     renderLtcPeriodView();
-    renderTaxSummaryTable();
     setStatus(`已將「${blk.title}」${cnt} 格手動天數還原為行事曆天數（請按「儲存至資料庫」保存）`);
   }
 
@@ -785,18 +768,16 @@
       });
     });
     renderDelayPeriodView();
-    renderTaxSummaryTable();
     setStatus(`已將「${blk.title}」${cnt} 格手動堂數還原為預設 ${DELAY_DEFAULT_SESSIONS} 堂（請按「儲存至資料庫」保存）`);
   }
 
   // ===== 各表格獨立「勾選講師」 =====
-  const pickerState = { ltc: { custom: false, set: [] }, delay: { custom: false, set: [] }, sum: { custom: false, set: [] } };
-  const PICKER_IDS = { ltc: ['ltcPickerPanel', 'ltcPickerBtn'], delay: ['delayPickerPanel', 'delayPickerBtn'], sum: ['sumPickerPanel', 'sumPickerBtn'] };
+  const pickerState = { ltc: { custom: false, set: [] }, delay: { custom: false, set: [] } };
+  const PICKER_IDS = { ltc: ['ltcPickerPanel', 'ltcPickerBtn'], delay: ['delayPickerPanel', 'delayPickerBtn'] };
 
   function pickerBlocks(key) {
     if (key === 'ltc') return [getLtcPeriodDef()];
-    if (key === 'delay') return [getDelayPeriodDef()];
-    return [LTC_PERIOD_DEFS.Q1, LTC_PERIOD_DEFS.Q2, LTC_PERIOD_DEFS.Q3, LTC_PERIOD_DEFS.Q4, DELAY_TERM_DEFS.T1, DELAY_TERM_DEFS.T2, DELAY_TERM_DEFS.T3];
+    return [getDelayPeriodDef()];
   }
 
   // 預設：上方基準設定中，該計畫有設定費用的講師
@@ -839,8 +820,7 @@
 
   function rerenderForPicker(key) {
     if (key === 'ltc') renderLtcPeriodView();
-    else if (key === 'delay') renderDelayPeriodView();
-    else renderTaxSummaryTable();
+    else renderDelayPeriodView();
   }
 
   function onPickerToggle(key, name, checked) {
@@ -1145,7 +1125,6 @@
     renderGeneratedValueTable();
     renderLtcPeriodView();
     renderDelayPeriodView();
-    renderTaxSummaryTable();
   }
 
   function resetCurrentMonthOverride() {
@@ -1158,7 +1137,6 @@
     renderGeneratedValueTable();
     renderLtcPeriodView();
     renderDelayPeriodView();
-    renderTaxSummaryTable();
     setStatus(`已清除 ${currentYear} 年 ${rateScope.replace('M', '')} 月變動設定，恢復為整年基準`);
   }
 
@@ -1189,7 +1167,6 @@
     renderGeneratedValueTable();
     renderLtcPeriodView();
     renderDelayPeriodView();
-    renderTaxSummaryTable();
   }
 
   function renderRateBenchmarkTable() {
@@ -1616,113 +1593,9 @@
     });
   }
 
-  function renderTaxSummaryTable() {
-    const tbl = document.getElementById('taxSummaryTable');
-    const titleEl = document.getElementById('taxSummaryTitle');
-    if (!tbl) return;
 
-    const allBlocks = pickerBlocks('sum');
-    renderPickerPanel('sum');
-    const teachers = getPickedTeachers('sum');
 
-    if (titleEl) {
-      titleEl.textContent = `${currentYear}年度講師核銷與個人所得稅彙總（長照分季＋延緩 1–3 期，由上方核銷金額自動帶入）`;
-    }
 
-    if (teachers.length === 0) {
-      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:14px; color:#64748b;">尚無勾選講師，請點選右上方「勾選講師」</td></tr></tbody>';
-      return;
-    }
-
-    const headerCols = teachers.map(n => `<th>${escapeHtml(n)}</th>`).join('');
-    const instTotals = {};
-    const instSessions = {};
-    teachers.forEach(n => { instTotals[n] = 0; instSessions[n] = 0; });
-
-    const bodyRows = allBlocks.map(blk => {
-      const prefix = blk.program === 'DELAY' ? '【延緩】' : '【長照】';
-      const cells = teachers.map(instName => {
-        let sumAmt = 0;
-        let sumSess = 0;
-        blk.cols.forEach(colKey => {
-          const cell = getLinkedCellData(blk, colKey, instName);
-          sumAmt += Number(cell.amount || 0);
-          sumSess += Number(cell.sessions || 0);
-        });
-        instTotals[instName] += sumAmt;
-        instSessions[instName] += sumSess;
-        return `<td class="num-col">${fmtNum(sumAmt)}</td>`;
-      }).join('');
-      return `
-        <tr>
-          <td style="font-weight:bold;">${escapeHtml(prefix + blk.title)}</td>
-          ${cells}
-        </tr>
-      `;
-    }).join('');
-
-    const sessionRow = `
-      <tr class="sub-total-row">
-        <td class="center-col">累計上課堂數</td>
-        ${teachers.map(n => `<td class="num-col">${fmtNum(instSessions[n])}</td>`).join('')}
-      </tr>
-    `;
-
-    const totalRow = `
-      <tr class="total-row">
-        <td class="center-col">合計</td>
-        ${teachers.map(n => `<td class="num-col">${fmtNum(instTotals[n])}</td>`).join('')}
-      </tr>
-    `;
-
-    tbl.innerHTML = `
-      <thead>
-        <tr>
-          <th style="width:195px;">期別／項目</th>
-          ${headerCols}
-        </tr>
-      </thead>
-      <tbody>
-        ${bodyRows}
-        ${sessionRow}
-        ${totalRow}
-      </tbody>
-    `;
-  }
-
-  function copyTaxSummaryToClipboard() {
-    const allBlocks = pickerBlocks('sum');
-    const teachers = getPickedTeachers('sum');
-    const lines = [`${currentYear}年度講師核銷與個人所得稅彙總\t${teachers.join('\t')}`];
-    const totals = {};
-    const sessions = {};
-    teachers.forEach(n => { totals[n] = 0; sessions[n] = 0; });
-
-    allBlocks.forEach(blk => {
-      const prefix = blk.program === 'DELAY' ? '【延緩】' : '【長照】';
-      const vals = teachers.map(instName => {
-        let sumAmt = 0;
-        let sumSess = 0;
-        blk.cols.forEach(colKey => {
-          const cell = getLinkedCellData(blk, colKey, instName);
-          sumAmt += Number(cell.amount || 0);
-          sumSess += Number(cell.sessions || 0);
-        });
-        totals[instName] += sumAmt;
-        sessions[instName] += sumSess;
-        return sumAmt;
-      });
-      lines.push(`${prefix}${blk.title}\t${vals.join('\t')}`);
-    });
-    lines.push(`累計上課堂數\t${teachers.map(n => sessions[n]).join('\t')}`);
-    lines.push(`合計\t${teachers.map(n => totals[n]).join('\t')}`);
-
-    navigator.clipboard?.writeText(lines.join('\n')).then(() => {
-      showToast('summaryCopyToast', '已複製所得稅彙總數值');
-    }).catch(() => {
-      showToast('summaryCopyToast', '已準備所得稅彙總數值');
-    });
-  }
 
   function renderAllSections() {
     populateRenameSelect();
@@ -1731,14 +1604,12 @@
     renderGeneratedValueTable();
     renderLtcPeriodView();
     renderDelayPeriodView();
-    renderTaxSummaryTable();
   }
 
   async function onYearChange(val) {
     currentYear = parseInt(val, 10) || 115;
     pickerState.ltc = { custom: false, set: [] };
     pickerState.delay = { custom: false, set: [] };
-    pickerState.sum = { custom: false, set: [] };
     ensureYearStore(currentYear);
     loadSelectedTeachersForYear();
     await reloadAllFromCloud(true);
