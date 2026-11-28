@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>個人所得稅 ｜ 老庄社區照顧關懷據點</title>
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #4338ca;
+      --primary-dark: #3730a3;
+      --primary-soft: #eef2ff;
+      --bg: #eef2f6;
+      --border: #c7d2fe;
+      --text: #1e293b;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; font-family: "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+
+    nav.topbar {
+      background-color: #2c5e4f; color: #fff; padding: 12px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      position: relative; z-index: 500;
+    }
+    .brand { font-weight: bold; font-size: 1.15rem; color: #fff; text-decoration: none; }
+    .nav-menu { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .nav-item { position: relative; }
+    .nav-btn {
+      color: #fff; text-decoration: none; padding: 7px 13px; border-radius: 5px;
+      font-size: 0.95rem; background: rgba(255,255,255,0.12); border: none;
+      cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .nav-btn:hover, .nav-item:hover .nav-btn, .nav-btn.active { background: rgba(255,255,255,0.28); }
+    .dropdown-content {
+      display: none; position: absolute; top: 100%; left: 0; min-width: 280px;
+      background: #ffffff; border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+      border: 1px solid #cbd5e1; padding: 6px 0; z-index: 600;
+    }
+    .nav-item:hover .dropdown-content { display: block; }
+    .dropdown-content a {
+      display: block; padding: 9px 15px; color: #1e293b; text-decoration: none;
+      font-size: 0.93rem; border-bottom: 1px solid #f1f5f9;
+    }
+    .dropdown-content a:last-child { border-bottom: none; }
+    .dropdown-content a:hover { background: var(--primary-soft); color: var(--primary); font-weight: bold; }
+    .dropdown-divider { font-size: 0.78rem; color: #64748b; padding: 5px 15px 3px 15px; font-weight: bold; background: #f8fafc; }
+
+    .section-subnav {
+      background: var(--primary-soft);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 450;
+      box-shadow: 0 2px 5px rgba(67, 56, 202, 0.08);
+    }
+    .section-subnav-label {
+      font-size: 0.84rem;
+      font-weight: bold;
+      color: var(--primary-dark);
+      margin-right: 4px;
+    }
+    .section-subnav a {
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: bold;
+      padding: 5px 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--primary-dark);
+      transition: all 0.14s ease;
+    }
+    .section-subnav a:hover {
+      background: #e0e7ff;
+      border-color: var(--primary);
+    }
+    .section-subnav a.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 2px 6px rgba(67, 56, 202, 0.22);
+    }
+
+    .container {
+      max-width: 1420px; margin: 20px auto 50px auto; background: #fff;
+      padding: 22px 24px; border-radius: 12px; box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+      border: 1px solid var(--border); border-left: 6px solid var(--primary);
+    }
+    .header-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; border-bottom: 2px solid var(--primary);
+      padding-bottom: 12px; margin-bottom: 16px;
+    }
+    h1 { color: var(--primary-dark); font-size: 1.32rem; margin: 0; }
+
+    .toolbar-row {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      background: var(--primary-soft); border: 1px solid var(--border);
+      padding: 10px 14px; border-radius: 8px; margin-bottom: 14px;
+    }
+    .toolbar-group { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; position: relative; }
+    label.ctrl-label { font-weight: bold; font-size: 0.9rem; color: #334155; }
+
+    select, input[type="text"], input[type="number"] {
+      padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 6px;
+      font-size: 0.9rem; background: #fff; color: var(--text);
+    }
+
+    .btn {
+      padding: 7px 12px; border: none; border-radius: 6px; font-weight: bold;
+      cursor: pointer; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 4px;
+      transition: background 0.15s ease;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-blue { background: #2563eb; color: #fff; }
+    .btn-blue:hover { background: #1d4ed8; }
+    .btn-teal { background: #0f766e; color: #fff; }
+    .btn-teal:hover { background: #115e59; }
+    .btn-outline { background: #fff; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
+    .btn-sm { padding: 5px 10px; font-size: 0.83rem; }
+
+    .section-card {
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 20px; background: #fff;
+    }
+
+    .excel-table {
+      width: 100%; border-collapse: collapse; font-size: 0.9rem; background: #fff;
+    }
+    .excel-table th {
+      background: #e0e7ff; color: #312e81; font-weight: bold;
+      border: 1px solid #94a3b8; padding: 7px 8px; text-align: center;
+      white-space: nowrap;
+    }
+    .excel-table td {
+      border: 1px solid #94a3b8; padding: 6px 8px; vertical-align: middle;
+    }
+    .excel-table td.num-col { text-align: right; font-variant-numeric: tabular-nums; }
+    .excel-table td.center-col { text-align: center; }
+    .excel-table tr.total-row td {
+      background: #c7d2fe; font-weight: bold; font-size: 0.95rem; color: #312e81;
+    }
+    .excel-table tr.sub-total-row td {
+      background: #eef2ff; font-weight: bold; color: #3730a3;
+    }
+    .excel-table input.cell-edit {
+      width: 92px; text-align: right; padding: 3px 6px; font-size: 0.86rem;
+      border: 1px solid #cbd5e1; border-radius: 4px; font-variant-numeric: tabular-nums;
+    }
+
+    .picker-dropdown-wrap { position: relative; display: inline-block; z-index: 350; }
+    .picker-panel {
+      display: none; position: absolute; top: calc(100% + 4px); right: 0;
+      min-width: 320px; max-height: 390px; overflow-y: auto;
+      background: #fff; border: 1px solid #94a3b8; border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18); padding: 10px; z-index: 450;
+    }
+    .picker-panel.open { display: block; }
+    .picker-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 6px; border-radius: 5px; font-size: 0.88rem; font-weight: bold; gap: 6px;
+    }
+    .picker-item:hover { background: var(--primary-soft); }
+    .picker-item label { display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1; margin: 0; }
+    .picker-tag-btn {
+      font-size: 0.74rem; padding: 2px 7px; border-radius: 999px;
+      border: 1px solid #cbd5e1; background: #f8fafc; color: #334155; cursor: pointer; font-weight: bold;
+    }
+    .picker-tag-btn.bogong-on {
+      background: #fef3c7; border-color: #d97706; color: #92400e;
+    }
+
+    .period-card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 8px; margin-bottom: 10px;
+      padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;
+    }
+    .period-card-title { font-weight: bold; font-size: 1.02rem; color: #0f172a; }
+    .copy-toast { font-size: 0.82rem; color: #0f766e; font-weight: bold; }
+
+    @media print {
+      nav.topbar, .section-subnav, .no-print { display: none !important; }
+      body { background: #fff; }
+      .container { max-width: 100%; margin: 0; padding: 0; border: none; box-shadow: none; }
+      .section-card { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<script>
+  if (typeof STATION_PASSCODE !== 'undefined' && sessionStorage.getItem('care_auth') !== 'true' && localStorage.getItem('care_auth') !== 'true') {
+    const pwd = prompt('請輸入老庄據點系統通行密碼：');
+    if (pwd === STATION_PASSCODE) {
+      sessionStorage.setItem('care_auth', 'true');
+      localStorage.setItem('care_auth', 'true');
+    } else {
+      document.body.innerHTML = '<h2 style="text-align:center;margin-top:80px;">密碼錯誤</h2>';
+    }
+  }
+</script>
+
+<nav class="topbar no-print">
+  <a href="index.html" class="brand">老庄社區照顧關懷據點 ｜ 雲端系統</a>
+  <div class="nav-menu">
+    <div class="nav-item"><a href="index.html" class="nav-btn">系統首頁</a></div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">人事資料 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">人事資料管理</div>
+        <a href="個案資料管理.html">個案資料管理</a>
+        <a href="個案清單.html">個案名冊查詢與服務狀況</a>
+        <a href="講師資料.html">講師資料管理</a>
+        <a href="臨時人員資料.html">臨時人員資料管理</a>
+        <a href="志工資料管理.html">志工資料管理</a>
+        <div class="dropdown-divider">人事記錄</div>
+        <a href="電話問安管理.html">電話問安記錄</a>
+        <a href="延緩前測管理.html">延緩課程前測記錄</a>
+        <a href="聯絡電話.html">聯絡電話</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">行政類與每日記錄 ▾</button>
+      <div class="dropdown-content">
+        <a href="每日工作檢核表.html">每日工作檢核表</a>
+        <a href="零用金管理中心.html">零用金清點記錄</a>
+        <a href="每日菜單管理.html">每日菜單管理</a>
+        <a href="公文編號記錄.html">公文編號記錄</a>
+        <a href="資料庫臨時記錄.html">資料庫臨時記錄</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">報表套印 ▾</button>
+      <div class="dropdown-content">
+        <a href="報表套印設定.html">報表套印設定</a>
+        <a href="月報表套印中心.html">簽到表套印</a>
+        <a href="個案基本資料表套印.html">個案基本資料表套印</a>
+        <a href="健康管理表套印.html">長輩健康管理表套印</a>
+        <a href="常來名冊報表.html">常來個案名冊與報表</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn active">課程安排 ▾</button>
+      <div class="dropdown-content">
+        <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+        <a href="課程活動表.html">課程活動表</a>
+        <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+        <a href="個人所得稅.html">個人所得稅</a>
+      </div>
+    </div>
+    <div class="nav-item">
+      <button type="button" class="nav-btn">核銷管理 ▾</button>
+      <div class="dropdown-content">
+        <div class="dropdown-divider">關懷核銷</div>
+        <a href="關懷核銷食材費.html">關懷核銷食材費</a>
+        <a href="每月業務費記錄.html">每月業務費</a>
+        <a href="專職人員薪資記錄.html">專職人員薪資記錄</a>
+        <a href="臨時人員時數記錄.html">臨時人員時數記錄</a>
+        <a href="關懷每季核銷統計.html">關懷核銷統計</a>
+        <a href="關懷核銷檢核表.html">關懷核銷檢核表</a>
+        <div class="dropdown-divider">長照與延緩核銷（同一計畫）</div>
+        <a href="長照與延緩核銷統計.html">長照與延緩經費收支</a>
+        <a href="長照核銷食材費.html">長照核銷食材費</a>
+        <a href="講師鐘點費核銷.html">講師鐘點費核銷</a>
+        <a href="長照講師核銷記錄.html">長照核銷統計</a>
+        <a href="長照核銷檢核表.html">長照核銷檢核表</a>
+        <a href="延緩核銷材料費.html">延緩核銷材料費</a>
+        <a href="延緩核銷統計.html">延緩核銷統計</a>
+        <a href="延緩核銷檢核表.html">延緩核銷檢核表</a>
+        <div class="dropdown-divider">其他計畫核銷</div>
+        <a href="多元核銷記錄.html">多元核銷記錄表單</a>
+        <a href="多元核銷檢核表.html">多元核銷檢核表</a>
+        <a href="伯公核銷記錄.html">伯公核銷記錄表單</a>
+        <a href="伯公核銷檢核表.html">伯公核銷檢核表</a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="section-subnav no-print" aria-label="課程安排快速切換：">
+  <span class="section-subnav-label">課程安排快速切換：</span>
+  <a href="年度課程安排行事曆.html">年度排課行事曆</a>
+  <a href="課程活動表.html">課程活動表</a>
+  <a href="講師鐘點費記錄.html">講師鐘點費計算</a>
+  <a href="個人所得稅.html" class="active">個人所得稅</a>
+</div>
+
+<div class="container">
+  <div class="header-bar">
+    <h1>個人所得稅彙總</h1>
+    <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span id="statusText" style="font-size:0.86rem; font-weight:bold; color:#0f766e;"></span>
+      <button type="button" class="btn btn-outline btn-sm" onclick="window.print()">列印</button>
+    </div>
+  </div>
+
+  <div class="toolbar-row no-print">
+    <div class="toolbar-group">
+      <label class="ctrl-label" for="globalYearSelect">年度：</label>
+      <select id="globalYearSelect" onchange="onYearChange(this.value)">
+        <option value="115">115 年</option>
+        <option value="116">116 年</option>
+        <option value="117">117 年</option>
+      </select>
+    </div>
+
+    <div class="toolbar-group" style="margin-left:auto;">
+      <button type="button" class="btn btn-teal btn-sm" onclick="reloadAllFromCloud(true)">重新帶入來源資料</button>
+      <button type="button" class="btn btn-outline btn-sm" onclick="copyAllTaxTablesToClipboard()">複製所得稅彙總</button>
+      <button type="button" class="btn btn-blue btn-sm" onclick="saveTaxSummaryToCloud()">儲存至資料庫</button>
+      <span class="copy-toast" id="summaryCopyToast"></span>
+    </div>
+  </div>
+
+  <!-- 表格一：核銷講師所得稅彙總 -->
+  <section class="section-card">
+    <div class="period-card-header" style="border-bottom:none; margin-bottom:6px;">
+      <span class="period-card-title" id="taxSummaryTitle">115年度個人所得稅彙總</span>
+      <div class="toolbar-group no-print">
+        <div class="picker-dropdown-wrap">
+          <button type="button" class="btn btn-outline btn-sm" id="sumPickerBtn" onclick="togglePickerPanel(event, 'sumPickerPanel')">勾選講師 ▾</button>
+          <div class="picker-panel" id="sumPickerPanel" onclick="event.stopPropagation()"></div>
+        </div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="excel-table" id="taxSummaryTable"></table>
+    </div>
+  </section>
+
+  <!-- 表格二（第二列／第二張表）：伯公計畫講師個人所得稅 -->
+  <section class="section-card">
+    <div class="period-card-header" style="border-bottom:none; margin-bottom:6px;">
+      <span class="period-card-title" id="bogongTaxTitle">115年度伯公計畫講師個人所得稅</span>
+      <div class="toolbar-group no-print">
+        <div class="picker-dropdown-wrap">
+          <button type="button" class="btn btn-outline btn-sm" id="bogongPickerBtn" onclick="togglePickerPanel(event, 'bogongPickerPanel')">選擇第二列伯公講師 ▾</button>
+          <div class="picker-panel" id="bogongPickerPanel" onclick="event.stopPropagation()"></div>
+        </div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="excel-table" id="bogongTaxTable"></table>
+    </div>
+  </section>
+
+  <!-- 表格三：廚房臨時人員個人所得稅 -->
+  <section class="section-card">
+    <div class="period-card-header" style="border-bottom:none; margin-bottom:6px;">
+      <span class="period-card-title" id="tempTaxTitle">115年度廚房臨時人員個人所得稅</span>
+      <div class="toolbar-group no-print">
+        <input type="text" id="newTempStaffName" placeholder="新增臨時人員姓名" style="width:140px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="addTempStaffPerson()">＋ 新增人員</button>
+        <div class="picker-dropdown-wrap">
+          <button type="button" class="btn btn-outline btn-sm" id="tempPickerBtn" onclick="togglePickerPanel(event, 'tempPickerPanel')">勾選臨時人員 ▾</button>
+          <div class="picker-panel" id="tempPickerPanel" onclick="event.stopPropagation()"></div>
+        </div>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="excel-table" id="tempStaffTaxTable"></table>
+    </div>
+  </section>
+</div>
+
+<script>
+  let supabaseClient = null;
+  if (typeof SUPABASE_URL !== 'undefined' && typeof SUPABASE_ANON_KEY !== 'undefined' && window.supabase) {
+    try {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch (e) {}
+  }
+
+  let currentYear = 115;
+  let masterInstructors = [];
+  const DEFAULT_PLANS = ['長照課程', '多元課程', '延緩1期', '延緩2期', '伯公課程', '樂齡-活躍老化'];
+  let plans = [...DEFAULT_PLANS];
+
+  const INITIAL_SEED_RATES = {
+    '林熙鈴': { '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩2期': { mode: 'per_hour', rate: 2400, hours: 1 }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '張國堂': { '長照課程': { mode: 'per_hour', rate: 2000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '鄧美續': { '長照課程': { mode: 'per_hour', rate: 1600, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 2000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '蔡牡連': { '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 2400, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '吳佩珊': { '長照課程': { mode: 'per_hour', rate: 1500, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '黃仲慧': { '長照課程': { mode: 'per_hour', rate: 1000, hours: 1 }, '多元課程': { mode: 'per_hour', rate: 3000, hours: 1 }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'none', rate: '', hours: '' }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '詹益誠': { '長照課程': { mode: 'none', rate: '', hours: '' }, '多元課程': { mode: 'none', rate: '', hours: '' }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 2000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '吳貴英': { '長照課程': { mode: 'none', rate: '', hours: '' }, '多元課程': { mode: 'none', rate: '', hours: '' }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 4000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } },
+    '詹細珍': { '長照課程': { mode: 'none', rate: '', hours: '' }, '多元課程': { mode: 'none', rate: '', hours: '' }, '延緩1期': { mode: 'none', rate: '', hours: '' }, '延緩2期': { mode: 'none', rate: '', hours: '' }, '伯公課程': { mode: 'per_hour', rate: 4000, hours: 1 }, '樂齡-活躍老化': { mode: 'none', rate: '', hours: '' } }
+  };
+
+  // 對照《講師鐘點費+所得稅統計.xlsx》預設值（115年度）
+  const EXCEL_SEED_115 = {
+    mainTeachers: ['林熙鈴', '張國堂', '鄧美續', '蔡牡連', '吳佩珊', '黃仲慧'],
+    mainAmounts: {
+      'LTC_Q1': { '林熙鈴': 12000, '張國堂': 24000, '鄧美續': 14000, '蔡牡連': 0, '吳佩珊': 11000, '黃仲慧': 0 },
+      'LTC_Q2': { '林熙鈴': 11000, '張國堂': 26000, '鄧美續': 26000, '蔡牡連': 0, '吳佩珊': 10000, '黃仲慧': 0 },
+      'LTC_Q3': { '林熙鈴': 0, '張國堂': 26000, '鄧美續': 12800, '蔡牡連': 12000, '吳佩珊': 8000, '黃仲慧': 3000 },
+      'LTC_Q4': { '林熙鈴': 0, '張國堂': 0, '鄧美續': 0, '蔡牡連': 0, '吳佩珊': 0, '黃仲慧': 0 },
+      'DELAY_T1': { '林熙鈴': 28800, '張國堂': 0, '鄧美續': 0, '蔡牡連': 0, '吳佩珊': 0, '黃仲慧': 0 },
+      'DELAY_T2': { '林熙鈴': 0, '張國堂': 0, '鄧美續': 0, '蔡牡連': 0, '吳佩珊': 0, '黃仲慧': 0 },
+      'MULTI': { '林熙鈴': 30000, '張國堂': 30000, '鄧美續': 31200, '蔡牡連': 31200, '吳佩珊': 30000, '黃仲慧': 0 },
+      'BOGONG_MAIN': { '林熙鈴': 0, '張國堂': 0, '鄧美續': 10000, '蔡牡連': 0, '吳佩珊': 0, '黃仲慧': 0 }
+    },
+    bogongTeachers: ['詹益誠', '吳貴英', '詹細珍'],
+    bogongAmounts: {
+      '詹益誠': 10000,
+      '吳貴英': 20000,
+      '詹細珍': 20000
+    },
+    tempStaff: ['陳遠香', '邱鳳廷', '張瑞合', '邱和妹', '施汶里', '徐邱鳳嬌'],
+    tempAmounts: {
+      'CARE_Q1': { '陳遠香': 33516, '邱鳳廷': 33516, '張瑞合': 0, '邱和妹': 0, '施汶里': 0, '徐邱鳳嬌': 0 },
+      'CARE_Q2': { '陳遠香': 0, '邱鳳廷': 0, '張瑞合': 35868, '邱和妹': 0, '施汶里': 35868, '徐邱鳳嬌': 0 },
+      'CARE_7_8': { '陳遠香': 0, '邱鳳廷': 0, '張瑞合': 0, '邱和妹': 25284, '施汶里': 12936, '徐邱鳳嬌': 12348 },
+      'CARE_9': { '陳遠香': 0, '邱鳳廷': 0, '張瑞合': 0, '邱和妹': 7644, '施汶里': 0, '徐邱鳳嬌': 7644 },
+      'CARE_Q4': { '陳遠香': 0, '邱鳳廷': 0, '張瑞合': 0, '邱和妹': 0, '施汶里': 0, '徐邱鳳嬌': 0 }
+    }
+  };
+
+  let yearRateData = {};
+  let claimData = {};
+  let calendarDays = {};
+  let calendarLoaded = false;
+  const DELAY_DEFAULT_SESSIONS = 12;
+
+  const MAIN_TAX_ROWS = [
+    { key: 'LTC_Q1', program: 'LTC', periodKey: 'Q1', label: '長照1-3月', defaultPlan: '長照課程', cols: ['1月', '2月', '3月'] },
+    { key: 'LTC_Q2', program: 'LTC', periodKey: 'Q2', label: '長照4-6月', defaultPlan: '長照課程', cols: ['4月', '5月', '6月'] },
+    { key: 'LTC_Q3', program: 'LTC', periodKey: 'Q3', label: '長照7-9月', defaultPlan: '長照課程', cols: ['7月', '8月', '9月'] },
+    { key: 'LTC_Q4', program: 'LTC', periodKey: 'Q4', label: '長照10-12月', defaultPlan: '長照課程', cols: ['10月', '11月', '12月'] },
+    { key: 'DELAY_T1', program: 'DELAY', periodKey: 'T1', label: '延緩1期', defaultPlan: '延緩1期', cols: ['第1期'] },
+    { key: 'DELAY_T2', program: 'DELAY', periodKey: 'T2', label: '延緩2期', defaultPlan: '延緩2期', cols: ['第2期'] },
+    { key: 'MULTI', program: 'MULTI', periodKey: 'M_ALL', label: '多元', defaultPlan: '多元課程', cols: [] },
+    { key: 'BOGONG_MAIN', program: 'BOGONG', periodKey: 'B_MAIN', label: '伯公', defaultPlan: '伯公課程', cols: [] }
+  ];
+
+  const TEMP_TAX_ROWS = [
+    { key: 'CARE_Q1', label: '關懷1-3月' },
+    { key: 'CARE_Q2', label: '關懷4-6月' },
+    { key: 'CARE_7_8', label: '關懷7-8月' },
+    { key: 'CARE_9', label: '關懷9月' },
+    { key: 'CARE_Q4', label: '關懷10-12月' }
+  ];
+
+  const MONTH_COL_TO_SCOPE = {
+    '1月': 'M01', '2月': 'M02', '3月': 'M03',
+    '4月': 'M04', '5月': 'M05', '6月': 'M06',
+    '7月': 'M07', '8月': 'M08', '9月': 'M09',
+    '10月': 'M10', '11月': 'M11', '12月': 'M12'
+  };
+
+  // 勾選狀態：
+  // - sum: 主表顯示講師（預設為非伯公專屬講師，也可全選／自訂）
+  // - bogong: 第二列／第二張表格「伯公計畫講師」（預設為詹益誠、吳貴英、詹細珍，也可從勾選選單調整要由第二列呈現的講師）
+  // - temp: 廚房臨時人員名單
+  const pickerState = {
+    sum: { custom: false, set: [] },
+    bogong: { custom: false, set: [] },
+    temp: { custom: false, set: [] }
+  };
+
+  // 手動覆寫／自訂數值儲存
+  let manualMainAmt = {};     // `${rowKey}__${instName}` -> number
+  let manualMainSess = {};    // `${rowKey}__${instName}` -> number
+  let manualBogongAmt = {};   // `${instName}` -> number
+  let manualBogongSess = {};  // `${instName}` -> number
+  let manualTempAmt = {};     // `${rowKey}__${staffName}` -> number
+  let customTempNames = [];
+
+  function fmtNum(n) {
+    const num = Number(n || 0);
+    return Number.isFinite(num) ? num.toLocaleString('en-US') : '0';
+  }
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+  function escapeAttr(s) {
+    return String(s || '').replace(/"/g, '&quot;');
+  }
+  function setStatus(msg, isErr = false) {
+    const el = document.getElementById('statusText');
+    if (el) {
+      el.style.color = isErr ? '#dc2626' : '#0f766e';
+      el.textContent = msg;
+    }
+  }
+  function showToast(id, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.textContent = ''; }, 2600);
+  }
+  function togglePickerPanel(ev, panelId) {
+    if (ev) ev.stopPropagation();
+    const panel = document.getElementById(panelId);
+    const willOpen = panel && !panel.classList.contains('open');
+    document.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('open'));
+    if (panel && willOpen) panel.classList.add('open');
+  }
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.picker-panel').forEach(p => p.classList.remove('open'));
+  });
+
+  function sortByMaster(arr) {
+    const orderMap = new Map(masterInstructors.map((m, idx) => [m.name, idx]));
+    return [...new Set(arr)].sort((a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999));
+  }
+
+  function ensureYearStore(yr) {
+    if (!yearRateData[yr]) {
+      yearRateData[yr] = { yearDefault: JSON.parse(JSON.stringify(INITIAL_SEED_RATES)), months: {} };
+    }
+    if (!claimData[yr]) {
+      claimData[yr] = {};
+    }
+  }
+
+  function getRateRule(yr, scopeKey, instName, planName) {
+    ensureYearStore(yr);
+    const yStore = yearRateData[yr];
+    if (scopeKey && scopeKey !== 'YEAR' && yStore.months && yStore.months[scopeKey] && yStore.months[scopeKey][instName] && yStore.months[scopeKey][instName][planName]) {
+      return { ...yStore.months[scopeKey][instName][planName], isOverride: true };
+    }
+    const base = (yStore.yearDefault && yStore.yearDefault[instName] && yStore.yearDefault[instName][planName])
+      ? yStore.yearDefault[instName][planName]
+      : { mode: 'per_hour', rate: '', hours: 1 };
+    return { ...base, isOverride: false };
+  }
+
+  function setRateRule(yr, scopeKey, instName, planName, ruleObj) {
+    ensureYearStore(yr);
+    const yStore = yearRateData[yr];
+    const cleanRule = {
+      mode: ruleObj.mode === 'none' ? 'none' : 'per_hour',
+      rate: ruleObj.mode === 'none' ? '' : (ruleObj.rate === '' || ruleObj.rate === null || ruleObj.rate === undefined ? '' : Number(ruleObj.rate)),
+      hours: ruleObj.mode === 'none' ? '' : (ruleObj.hours === '' || ruleObj.hours === null || ruleObj.hours === undefined || Number(ruleObj.hours) <= 0 ? 1 : Number(ruleObj.hours))
+    };
+    if (scopeKey === 'YEAR') {
+      if (!yStore.yearDefault[instName]) yStore.yearDefault[instName] = {};
+      yStore.yearDefault[instName][planName] = cleanRule;
+    } else {
+      if (!yStore.months[scopeKey]) yStore.months[scopeKey] = {};
+      if (!yStore.months[scopeKey][instName]) yStore.months[scopeKey][instName] = {};
+      yStore.months[scopeKey][instName][planName] = cleanRule;
+    }
+  }
+
+  function calcSingleSessionAmount(rule) {
+    if (!rule || rule.mode === 'none') return 0;
+    const r = Number(rule.rate || 0);
+    const h = (rule.hours !== '' && rule.hours !== null && rule.hours !== undefined && Number(rule.hours) > 0) ? Number(rule.hours) : 1;
+    return Math.round(r * h);
+  }
+
+  function normalizeColKey(rawCol) {
+    const s = String(rawCol || '').trim();
+    if (s.endsWith('講師')) return s.slice(0, -2);
+    return s;
+  }
+
+  function getCalendarDays(instName, colKey) {
+    const m = parseInt(String(colKey), 10);
+    if (!Number.isFinite(m)) return 0;
+    return Number((calendarDays[instName] && calendarDays[instName][m]) || 0);
+  }
+
+  async function loadCalendarDays() {
+    calendarDays = {};
+    calendarLoaded = false;
+    if (!supabaseClient) return;
+    const adYear = currentYear + 1911;
+    try {
+      let all = [];
+      let from = 0;
+      const step = 1000;
+      while (true) {
+        const { data, error } = await supabaseClient
+          .from('course_schedules')
+          .select('course_date, plan_type, course_name, instructor_name')
+          .gte('course_date', `${adYear}-01-01`)
+          .lte('course_date', `${adYear}-12-31`)
+          .order('course_date', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + step - 1);
+        if (error) throw error;
+        all = all.concat(data || []);
+        if (!data || data.length < step) break;
+        from += step;
+      }
+      const masterNames = masterInstructors.map(m => m.name);
+      const sets = {};
+      all.forEach(r => {
+        if (!r.course_date) return;
+        const pType = String(r.plan_type || '').trim();
+        if (pType === '提醒') return;
+        const isLtcPlan = pType.includes('長照');
+        const isCarePlan = pType === '關懷';
+        if (!isLtcPlan && !isCarePlan) return;
+
+        const month = parseInt(String(r.course_date).split('-')[1], 10);
+        const names = [];
+        const raw = String(r.instructor_name || '').trim();
+        if (raw) {
+          raw.split(/[、,，;；\/\s]+/).map(x => x.trim()).filter(Boolean).forEach(tok => {
+            const hit = masterNames.find(n => n === tok) || masterNames.find(n => tok.includes(n) || (tok.length >= 2 && n.includes(tok)));
+            if (hit) names.push(hit);
+          });
+        } else {
+          const cn = String(r.course_name || '');
+          const hit = masterNames.find(n => cn.includes(n));
+          if (hit) names.push(hit);
+        }
+
+        names.forEach(nm => {
+          if (isCarePlan && !isLtcPlan) {
+            const scopeKey = `M${String(month).padStart(2, '0')}`;
+            const rule = getRateRule(currentYear, scopeKey, nm, '長照課程');
+            if (calcSingleSessionAmount(rule) <= 0) return;
+          }
+          if (!sets[nm]) sets[nm] = {};
+          if (!sets[nm][month]) sets[nm][month] = new Set();
+          sets[nm][month].add(r.course_date);
+        });
+      });
+      Object.keys(sets).forEach(nm => {
+        calendarDays[nm] = {};
+        Object.keys(sets[nm]).forEach(m => { calendarDays[nm][m] = sets[nm][m].size; });
+      });
+      calendarLoaded = true;
+    } catch (e) {
+      calendarLoaded = false;
+    }
+  }
+
+  function setClaimEntry(yr, periodKey, colKey, instName, entry) {
+    ensureYearStore(yr);
+    claimData[yr][`${periodKey}__${colKey}__${instName}`] = entry;
+  }
+
+  function computeMainRowCell(rowDef, instName) {
+    const manualKey = `${rowDef.key}__${instName}`;
+    let hasClaimAmt = false;
+    let claimSum = 0;
+    let claimSess = 0;
+
+    if (rowDef.cols && rowDef.cols.length > 0 && claimData[currentYear]) {
+      rowDef.cols.forEach(colKey => {
+        const entry = claimData[currentYear][`${rowDef.periodKey}__${colKey}__${instName}`];
+        if (entry && entry.amount !== undefined && entry.amount !== null) {
+          hasClaimAmt = true;
+          claimSum += Number(entry.amount || 0);
+          claimSess += Number(entry.sessions || 0);
+        }
+      });
+    }
+
+    const seedRow = (currentYear === 115 && EXCEL_SEED_115.mainAmounts[rowDef.key])
+      ? EXCEL_SEED_115.mainAmounts[rowDef.key][instName]
+      : undefined;
+
+    let autoAmt = 0;
+    if (hasClaimAmt && claimSum > 0) {
+      autoAmt = claimSum;
+    } else if (seedRow !== undefined && seedRow !== null) {
+      autoAmt = Number(seedRow || 0);
+    } else if (hasClaimAmt) {
+      autoAmt = claimSum;
+    }
+
+    const finalAmt = (manualMainAmt[manualKey] !== undefined) ? Number(manualMainAmt[manualKey] || 0) : autoAmt;
+    const finalSess = (manualMainSess[manualKey] !== undefined) ? Number(manualMainSess[manualKey] || 0) : claimSess;
+
+    return { amount: finalAmt, sessions: finalSess };
+  }
+
+  function computeBogongCell(instName) {
+    const seedAmt = (currentYear === 115 && EXCEL_SEED_115.bogongAmounts[instName] !== undefined)
+      ? Number(EXCEL_SEED_115.bogongAmounts[instName] || 0)
+      : 0;
+    const rule = getRateRule(currentYear, 'YEAR', instName, '伯公課程');
+    const unitAmt = calcSingleSessionAmount(rule);
+    const autoAmt = seedAmt > 0 ? seedAmt : (unitAmt > 0 ? unitAmt : 0);
+    const finalAmt = (manualBogongAmt[instName] !== undefined) ? Number(manualBogongAmt[instName] || 0) : autoAmt;
+    const finalSess = (manualBogongSess[instName] !== undefined) ? Number(manualBogongSess[instName] || 0) : 0;
+    return { amount: finalAmt, sessions: finalSess };
+  }
+
+  function computeTempCell(rowKey, staffName) {
+    const k = `${rowKey}__${staffName}`;
+    if (manualTempAmt[k] !== undefined) return Number(manualTempAmt[k] || 0);
+    if (currentYear === 115 && EXCEL_SEED_115.tempAmounts[rowKey] && EXCEL_SEED_115.tempAmounts[rowKey][staffName] !== undefined) {
+      return Number(EXCEL_SEED_115.tempAmounts[rowKey][staffName] || 0);
+    }
+    return 0;
+  }
+
+  function autoBogongTeachers() {
+    if (currentYear === 115) return [...EXCEL_SEED_115.bogongTeachers];
+    return masterInstructors
+      .filter(m => calcSingleSessionAmount(getRateRule(currentYear, 'YEAR', m.name, '伯公課程')) > 0)
+      .map(m => m.name);
+  }
+
+  function autoMainTeachers() {
+    const bogongSet = new Set(getBogongTeachers());
+    if (currentYear === 115) {
+      return EXCEL_SEED_115.mainTeachers.filter(n => !bogongSet.has(n));
+    }
+    return masterInstructors
+      .map(m => m.name)
+      .filter(name => !bogongSet.has(name) && MAIN_TAX_ROWS.some(r => computeMainRowCell(r, name).amount > 0));
+  }
+
+  function autoTempStaff() {
+    const base = currentYear === 115 ? [...EXCEL_SEED_115.tempStaff] : [];
+    return [...new Set([...base, ...customTempNames])];
+  }
+
+  function getMainTeachers() {
+    const bogongSet = new Set(getBogongTeachers());
+    if (pickerState.sum.custom) {
+      return sortByMaster(pickerState.sum.set.filter(n => !bogongSet.has(n)));
+    }
+    return sortByMaster(autoMainTeachers());
+  }
+
+  function getBogongTeachers() {
+    if (pickerState.bogong.custom) {
+      return sortByMaster(pickerState.bogong.set);
+    }
+    return sortByMaster(autoBogongTeachers());
+  }
+
+  function getTempStaffList() {
+    const all = autoTempStaff();
+    if (pickerState.temp.custom) {
+      return all.filter(n => pickerState.temp.set.includes(n));
+    }
+    return all;
+  }
+
+  function renderMainTeacherPicker() {
+    const panel = document.getElementById('sumPickerPanel');
+    const btn = document.getElementById('sumPickerBtn');
+    const picked = getMainTeachers();
+    const bogongSet = new Set(getBogongTeachers());
+    if (btn) btn.textContent = `勾選講師 (${picked.length}) ▾`;
+    if (!panel) return;
+
+    const quickBar = `
+      <div style="display:flex; gap:6px; padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0;">
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="onMainPickerAll(true)">全選</button>
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="onMainPickerAll(false)">全不選</button>
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="onMainPickerAuto()">預設</button>
+      </div>`;
+
+    const items = masterInstructors.map(m => {
+      const isBogong = bogongSet.has(m.name);
+      const checked = !isBogong && picked.includes(m.name);
+      return `
+        <div class="picker-item">
+          <label>
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="onMainPickerToggle('${escapeAttr(m.name)}', this.checked)">
+            <span>${escapeHtml(m.name)}</span>
+          </label>
+          <button type="button" class="picker-tag-btn ${isBogong ? 'bogong-on' : ''}" onclick="toggleTeacherBogongSecondTable('${escapeAttr(m.name)}')">
+            ${isBogong ? '第二列伯公 ✓' : '移至第二列伯公'}
+          </button>
+        </div>`;
+    }).join('');
+    panel.innerHTML = quickBar + items;
+  }
+
+  function renderBogongTeacherPicker() {
+    const panel = document.getElementById('bogongPickerPanel');
+    const btn = document.getElementById('bogongPickerBtn');
+    const picked = getBogongTeachers();
+    if (btn) btn.textContent = `勾選伯公講師 (${picked.length}) ▾`;
+    if (!panel) return;
+
+    const quickBar = `
+      <div style="display:flex; gap:6px; padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0;">
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="onBogongPickerAll(true)">全選</button>
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="onBogongPickerAll(false)">全不選</button>
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="onBogongPickerAuto()">預設</button>
+      </div>`;
+
+    const items = masterInstructors.map(m => {
+      const checked = picked.includes(m.name);
+      return `
+        <div class="picker-item">
+          <label>
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="onBogongPickerToggle('${escapeAttr(m.name)}', this.checked)">
+            <span>${escapeHtml(m.name)}</span>
+          </label>
+          <span style="font-size:0.75rem; color:#64748b;">(${escapeHtml(m.status || '服務中')})</span>
+        </div>`;
+    }).join('');
+    panel.innerHTML = quickBar + items;
+  }
+
+  function renderTempStaffPicker() {
+    const panel = document.getElementById('tempPickerPanel');
+    const btn = document.getElementById('tempPickerBtn');
+    const all = autoTempStaff();
+    const picked = getTempStaffList();
+    if (btn) btn.textContent = `勾選臨時人員 (${picked.length}) ▾`;
+    if (!panel) return;
+
+    const quickBar = `
+      <div style="display:flex; gap:6px; padding-bottom:8px; margin-bottom:8px; border-bottom:1px solid #e2e8f0;">
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="onTempPickerAll(true)">全選</button>
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="onTempPickerAll(false)">全不選</button>
+        <button type="button" class="btn btn-outline btn-sm" style="flex:1; justify-content:center;" onclick="onTempPickerAuto()">預設</button>
+      </div>`;
+
+    const items = all.map(name => {
+      const checked = picked.includes(name);
+      return `
+        <div class="picker-item">
+          <label>
+            <input type="checkbox" ${checked ? 'checked' : ''} onchange="onTempPickerToggle('${escapeAttr(name)}', this.checked)">
+            <span>${escapeHtml(name)}</span>
+          </label>
+        </div>`;
+    }).join('');
+    panel.innerHTML = quickBar + items;
+  }
+
+  function onMainPickerToggle(name, checked) {
+    const st = pickerState.sum;
+    if (!st.custom) { st.set = autoMainTeachers(); st.custom = true; }
+    if (checked) {
+      if (!st.set.includes(name)) st.set.push(name);
+      if (pickerState.bogong.custom) {
+        pickerState.bogong.set = pickerState.bogong.set.filter(n => n !== name);
+      }
+    } else {
+      st.set = st.set.filter(n => n !== name);
+    }
+    renderAllTables();
+  }
+
+  function onMainPickerAll(selectAll) {
+    const bogongSet = new Set(getBogongTeachers());
+    pickerState.sum.custom = true;
+    pickerState.sum.set = selectAll ? masterInstructors.map(m => m.name).filter(n => !bogongSet.has(n)) : [];
+    renderAllTables();
+  }
+
+  function onMainPickerAuto() {
+    pickerState.sum = { custom: false, set: [] };
+    renderAllTables();
+  }
+
+  function toggleTeacherBogongSecondTable(name) {
+    const curBogong = getBogongTeachers();
+    const isNowBogong = curBogong.includes(name);
+    pickerState.bogong.custom = true;
+    if (isNowBogong) {
+      pickerState.bogong.set = curBogong.filter(n => n !== name);
+    } else {
+      pickerState.bogong.set = sortByMaster([...curBogong, name]);
+      if (pickerState.sum.custom) {
+        pickerState.sum.set = pickerState.sum.set.filter(n => n !== name);
+      }
+    }
+    renderAllTables();
+  }
+
+  function onBogongPickerToggle(name, checked) {
+    const st = pickerState.bogong;
+    if (!st.custom) { st.set = autoBogongTeachers(); st.custom = true; }
+    if (checked) {
+      if (!st.set.includes(name)) st.set.push(name);
+      if (pickerState.sum.custom) {
+        pickerState.sum.set = pickerState.sum.set.filter(n => n !== name);
+      }
+    } else {
+      st.set = st.set.filter(n => n !== name);
+    }
+    renderAllTables();
+  }
+
+  function onBogongPickerAll(selectAll) {
+    pickerState.bogong.custom = true;
+    pickerState.bogong.set = selectAll ? masterInstructors.map(m => m.name) : [];
+    renderAllTables();
+  }
+
+  function onBogongPickerAuto() {
+    pickerState.bogong = { custom: false, set: [] };
+    renderAllTables();
+  }
+
+  function onTempPickerToggle(name, checked) {
+    const st = pickerState.temp;
+    if (!st.custom) { st.set = autoTempStaff(); st.custom = true; }
+    if (checked) {
+      if (!st.set.includes(name)) st.set.push(name);
+    } else {
+      st.set = st.set.filter(n => n !== name);
+    }
+    renderTempStaffTable();
+  }
+
+  function onTempPickerAll(selectAll) {
+    pickerState.temp.custom = true;
+    pickerState.temp.set = selectAll ? autoTempStaff() : [];
+    renderTempStaffTable();
+  }
+
+  function onTempPickerAuto() {
+    pickerState.temp = { custom: false, set: [] };
+    renderTempStaffTable();
+  }
+
+  function addTempStaffPerson() {
+    const inp = document.getElementById('newTempStaffName');
+    const nm = (inp?.value || '').trim();
+    if (!nm) return;
+    if (!customTempNames.includes(nm)) customTempNames.push(nm);
+    if (pickerState.temp.custom && !pickerState.temp.set.includes(nm)) {
+      pickerState.temp.set.push(nm);
+    }
+    inp.value = '';
+    renderTempStaffTable();
+  }
+
+  function onMainCellEdit(rowKey, instName, type, rawVal) {
+    const cleaned = String(rawVal || '').replace(/,/g, '').trim();
+    const num = cleaned === '' ? 0 : (Number.isFinite(Number(cleaned)) ? Number(cleaned) : 0);
+    if (type === 'amt') {
+      manualMainAmt[`${rowKey}__${instName}`] = num;
+    } else {
+      manualMainSess[`${rowKey}__${instName}`] = num;
+    }
+    renderTaxSummaryTable();
+  }
+
+  function onBogongCellEdit(instName, type, rawVal) {
+    const cleaned = String(rawVal || '').replace(/,/g, '').trim();
+    const num = cleaned === '' ? 0 : (Number.isFinite(Number(cleaned)) ? Number(cleaned) : 0);
+    if (type === 'amt') {
+      manualBogongAmt[instName] = num;
+    } else {
+      manualBogongSess[instName] = num;
+    }
+    renderBogongTaxTable();
+  }
+
+  function onTempCellEdit(rowKey, staffName, rawVal) {
+    const cleaned = String(rawVal || '').replace(/,/g, '').trim();
+    const num = cleaned === '' ? 0 : (Number.isFinite(Number(cleaned)) ? Number(cleaned) : 0);
+    manualTempAmt[`${rowKey}__${staffName}`] = num;
+    renderTempStaffTable();
+  }
+
+  function renderTaxSummaryTable() {
+    const tbl = document.getElementById('taxSummaryTable');
+    const titleEl = document.getElementById('taxSummaryTitle');
+    if (!tbl) return;
+
+    const teachers = getMainTeachers();
+    if (titleEl) {
+      titleEl.textContent = `${currentYear}年度個人所得稅彙總`;
+    }
+
+    if (teachers.length === 0) {
+      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:14px; color:#64748b;">尚無勾選講師，請點選右上方「勾選講師」</td></tr></tbody>';
+      return;
+    }
+
+    const headerCols = teachers.map(n => `<th>${escapeHtml(n)}</th>`).join('');
+    const instTotals = {};
+    const instSessions = {};
+    teachers.forEach(n => { instTotals[n] = 0; instSessions[n] = 0; });
+
+    const bodyRows = MAIN_TAX_ROWS.map(rowDef => {
+      const cells = teachers.map(instName => {
+        const c = computeMainRowCell(rowDef, instName);
+        instTotals[instName] += Number(c.amount || 0);
+        instSessions[instName] += Number(c.sessions || 0);
+        return `
+          <td class="num-col">
+            <input type="text" inputmode="decimal" class="cell-edit" value="${escapeAttr(String(c.amount))}" onchange="onMainCellEdit('${escapeAttr(rowDef.key)}', '${escapeAttr(instName)}', 'amt', this.value)">
+          </td>`;
+      }).join('');
+      return `
+        <tr>
+          <td style="font-weight:bold;">${escapeHtml(rowDef.label)}</td>
+          ${cells}
+        </tr>
+      `;
+    }).join('');
+
+    const sumRow = `
+      <tr class="total-row">
+        <td class="center-col">核銷金額</td>
+        ${teachers.map(n => `<td class="num-col">${fmtNum(instTotals[n])}</td>`).join('')}
+      </tr>
+    `;
+
+    const sessRow = `
+      <tr class="sub-total-row">
+        <td class="center-col">上課次數</td>
+        ${teachers.map(n => `<td class="num-col">${fmtNum(instSessions[n])}</td>`).join('')}
+      </tr>
+    `;
+
+    tbl.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:165px;">期別／項目</th>
+          ${headerCols}
+        </tr>
+      </thead>
+      <tbody>
+        ${bodyRows}
+        ${sumRow}
+        ${sessRow}
+      </tbody>
+    `;
+  }
+
+  function renderBogongTaxTable() {
+    const tbl = document.getElementById('bogongTaxTable');
+    const titleEl = document.getElementById('bogongTaxTitle');
+    if (!tbl) return;
+
+    const bogongTeachers = getBogongTeachers();
+    if (titleEl) {
+      titleEl.textContent = `${currentYear}年度伯公計畫講師個人所得稅（第二列呈現）`;
+    }
+
+    if (bogongTeachers.length === 0) {
+      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:14px; color:#64748b;">尚未勾選第二列伯公講師，請點選右上方「勾選伯公講師」</td></tr></tbody>';
+      return;
+    }
+
+    const headerCols = bogongTeachers.map(n => `<th>${escapeHtml(n)}</th>`).join('');
+    const amtCells = bogongTeachers.map(n => {
+      const c = computeBogongCell(n);
+      return `
+        <td class="num-col">
+          <input type="text" inputmode="decimal" class="cell-edit" value="${escapeAttr(String(c.amount))}" onchange="onBogongCellEdit('${escapeAttr(n)}', 'amt', this.value)">
+        </td>`;
+    }).join('');
+
+    const claimRow = `
+      <tr class="total-row">
+        <td class="center-col">核銷金額</td>
+        ${bogongTeachers.map(n => `<td class="num-col">${fmtNum(computeBogongCell(n).amount)}</td>`).join('')}
+      </tr>
+    `;
+
+    const sessRow = `
+      <tr class="sub-total-row">
+        <td class="center-col">上課次數</td>
+        ${bogongTeachers.map(n => {
+          const s = computeBogongCell(n).sessions;
+          return `<td class="num-col"><input type="text" inputmode="decimal" class="cell-edit" value="${escapeAttr(String(s))}" onchange="onBogongCellEdit('${escapeAttr(n)}', 'sess', this.value)"></td>`;
+        }).join('')}
+      </tr>
+    `;
+
+    tbl.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:165px;">項目</th>
+          ${headerCols}
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:bold;">伯公</td>
+          ${amtCells}
+        </tr>
+        ${claimRow}
+        ${sessRow}
+      </tbody>
+    `;
+  }
+
+  function renderTempStaffTable() {
+    const tbl = document.getElementById('tempStaffTaxTable');
+    const titleEl = document.getElementById('tempTaxTitle');
+    if (!tbl) return;
+
+    const staffList = getTempStaffList();
+    if (titleEl) {
+      titleEl.textContent = `${currentYear}年度廚房臨時人員`;
+    }
+
+    if (staffList.length === 0) {
+      tbl.innerHTML = '<tbody><tr><td class="center-col" style="padding:14px; color:#64748b;">尚無勾選廚房臨時人員，請點選右上方「勾選臨時人員」</td></tr></tbody>';
+      return;
+    }
+
+    const headerCols = staffList.map(n => `<th>${escapeHtml(n)}</th>`).join('');
+    const totals = {};
+    staffList.forEach(n => { totals[n] = 0; });
+
+    const bodyRows = TEMP_TAX_ROWS.map(r => {
+      const cells = staffList.map(stName => {
+        const val = computeTempCell(r.key, stName);
+        totals[stName] += Number(val || 0);
+        return `
+          <td class="num-col">
+            <input type="text" inputmode="decimal" class="cell-edit" value="${escapeAttr(String(val))}" onchange="onTempCellEdit('${escapeAttr(r.key)}', '${escapeAttr(stName)}', this.value)">
+          </td>`;
+      }).join('');
+      return `
+        <tr>
+          <td style="font-weight:bold;">${escapeHtml(r.label)}</td>
+          ${cells}
+        </tr>
+      `;
+    }).join('');
+
+    const totalRow = `
+      <tr class="total-row">
+        <td class="center-col">核銷金額</td>
+        ${staffList.map(n => `<td class="num-col">${fmtNum(totals[n])}</td>`).join('')}
+      </tr>
+    `;
+
+    tbl.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:165px;">${currentYear}年度廚房臨時人員</th>
+          ${headerCols}
+        </tr>
+      </thead>
+      <tbody>
+        ${bodyRows}
+        ${totalRow}
+      </tbody>
+    `;
+  }
+
+  function renderAllTables() {
+    renderMainTeacherPicker();
+    renderBogongTeacherPicker();
+    renderTempStaffPicker();
+    renderTaxSummaryTable();
+    renderBogongTaxTable();
+    renderTempStaffTable();
+  }
+
+  function copyAllTaxTablesToClipboard() {
+    const mainTeachers = getMainTeachers();
+    const bogongTeachers = getBogongTeachers();
+    const tempStaff = getTempStaffList();
+    const lines = [];
+
+    lines.push(`${currentYear}年度個人所得稅彙總	${mainTeachers.join('	')}`);
+    const mTotals = {};
+    const mSess = {};
+    mainTeachers.forEach(n => { mTotals[n] = 0; mSess[n] = 0; });
+    MAIN_TAX_ROWS.forEach(r => {
+      const vals = mainTeachers.map(n => {
+        const c = computeMainRowCell(r, n);
+        mTotals[n] += c.amount;
+        mSess[n] += c.sessions;
+        return c.amount;
+      });
+      lines.push(`${r.label}	${vals.join('	')}`);
+    });
+    lines.push(`核銷金額	${mainTeachers.map(n => mTotals[n]).join('	')}`);
+    lines.push(`上課次數	${mainTeachers.map(n => mSess[n]).join('	')}`);
+
+    lines.push('');
+    lines.push(`${currentYear}年度伯公計畫講師個人所得稅	${bogongTeachers.join('	')}`);
+    lines.push(`伯公	${bogongTeachers.map(n => computeBogongCell(n).amount).join('	')}`);
+    lines.push(`核銷金額	${bogongTeachers.map(n => computeBogongCell(n).amount).join('	')}`);
+    lines.push(`上課次數	${bogongTeachers.map(n => computeBogongCell(n).sessions).join('	')}`);
+
+    lines.push('');
+    lines.push(`${currentYear}年度廚房臨時人員	${tempStaff.join('	')}`);
+    const tTotals = {};
+    tempStaff.forEach(n => { tTotals[n] = 0; });
+    TEMP_TAX_ROWS.forEach(r => {
+      const vals = tempStaff.map(n => {
+        const v = computeTempCell(r.key, n);
+        tTotals[n] += v;
+        return v;
+      });
+      lines.push(`${r.label}	${vals.join('	')}`);
+    });
+    lines.push(`核銷金額	${tempStaff.map(n => tTotals[n]).join('	')}`);
+
+    navigator.clipboard?.writeText(lines.join('
+')).then(() => {
+      showToast('summaryCopyToast', '已複製完整個人所得稅彙總');
+    }).catch(() => {
+      showToast('summaryCopyToast', '已準備完整個人所得稅彙總');
+    });
+  }
+
+  async function saveTaxSummaryToCloud() {
+    if (!supabaseClient) {
+      setStatus('尚未連線至 Supabase 資料庫，請確認 config.js 設定', true);
+      return;
+    }
+    try {
+      const mainTeachers = getMainTeachers();
+      const bogongTeachers = getBogongTeachers();
+      const tempStaff = getTempStaffList();
+      const payload = [];
+
+      MAIN_TAX_ROWS.forEach(r => {
+        mainTeachers.forEach(instName => {
+          const c = computeMainRowCell(r, instName);
+          payload.push({
+            roc_year: currentYear,
+            section_group: 'MAIN_INSTRUCTOR',
+            row_key: r.key,
+            row_label: r.label,
+            person_name: instName,
+            amount: Number(c.amount || 0),
+            sessions: Number(c.sessions || 0),
+            is_selected: true,
+            updated_at: new Date().toISOString()
+          });
+        });
+      });
+
+      bogongTeachers.forEach(instName => {
+        const c = computeBogongCell(instName);
+        payload.push({
+          roc_year: currentYear,
+          section_group: 'BOGONG_INSTRUCTOR',
+          row_key: 'BOGONG_SECOND',
+          row_label: '伯公',
+          person_name: instName,
+          amount: Number(c.amount || 0),
+          sessions: Number(c.sessions || 0),
+          is_selected: true,
+          updated_at: new Date().toISOString()
+        });
+      });
+
+      TEMP_TAX_ROWS.forEach(r => {
+        tempStaff.forEach(staffName => {
+          const val = computeTempCell(r.key, staffName);
+          payload.push({
+            roc_year: currentYear,
+            section_group: 'TEMP_STAFF',
+            row_key: r.key,
+            row_label: r.label,
+            person_name: staffName,
+            amount: Number(val || 0),
+            sessions: 0,
+            is_selected: true,
+            updated_at: new Date().toISOString()
+          });
+        });
+      });
+
+      const { error: delErr } = await supabaseClient
+        .from('personal_income_tax_records')
+        .delete()
+        .eq('roc_year', currentYear);
+      if (delErr) throw delErr;
+
+      if (payload.length > 0) {
+        const { error: insErr } = await supabaseClient
+          .from('personal_income_tax_records')
+          .insert(payload);
+        if (insErr) throw insErr;
+      }
+
+      setStatus(`已儲存 ${currentYear} 年度個人所得稅資料至資料庫（personal_income_tax_records）`);
+    } catch (e) {
+      setStatus('儲存至資料庫失敗（請確認已執行 personal_income_tax_records 建表 SQL）：' + (e.message || e), true);
+    }
+  }
+
+  async function loadInstructorsFromHr() {
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient
+          .from('instructors')
+          .select('id, staff_number, name, status, hire_type')
+          .order('staff_number', { ascending: true })
+          .order('id', { ascending: true });
+        if (!error && Array.isArray(data) && data.length > 0) {
+          masterInstructors = data
+            .filter(r => r.name && r.name.trim() !== '')
+            .map(r => ({
+              name: r.name.trim(),
+              status: r.status || '服務中',
+              hire_type: r.hire_type || ''
+            }));
+          return;
+        }
+      } catch (e) {}
+    }
+    masterInstructors = Object.keys(INITIAL_SEED_RATES).map(name => ({ name, status: '服務中', hire_type: '' }));
+  }
+
+  async function reloadAllFromCloud(showMsg = true) {
+    ensureYearStore(currentYear);
+    yearRateData[currentYear] = { yearDefault: JSON.parse(JSON.stringify(INITIAL_SEED_RATES)), months: {} };
+    claimData[currentYear] = {};
+    manualMainAmt = {};
+    manualMainSess = {};
+    manualBogongAmt = {};
+    manualBogongSess = {};
+    manualTempAmt = {};
+    customTempNames = [];
+
+    if (showMsg) setStatus(`正在帶入 ${currentYear} 年度個人所得稅來源資料...`);
+
+    if (supabaseClient) {
+      try {
+        const { data: rateRows, error: rErr } = await supabaseClient
+          .from('instructor_reimburse_rate_configs')
+          .select('*');
+        if (!rErr && Array.isArray(rateRows) && rateRows.length > 0) {
+          rateRows.forEach(row => {
+            if (row.roc_year !== undefined && row.roc_year !== null && Number(row.roc_year) !== currentYear) return;
+            const scKey = (row.scope_key || 'YEAR').trim() || 'YEAR';
+            const inst = (row.instructor_name || '').trim();
+            let plan = (row.plan_name || '').trim();
+            if (plan === '關懷課程') plan = '長照課程';
+            if (!inst || !plan) return;
+            if (!plans.includes(plan)) plans.push(plan);
+            const isNone = row.pay_mode === 'none' || (row.rate === null && row.hours === null);
+            setRateRule(currentYear, scKey, inst, plan, {
+              mode: isNone ? 'none' : 'per_hour',
+              rate: (row.rate !== null && row.rate !== undefined) ? Number(row.rate) : '',
+              hours: (row.hours !== null && row.hours !== undefined) ? Number(row.hours) : 1
+            });
+          });
+        }
+      } catch (e) {}
+
+      try {
+        const { data: claimRows, error: cErr } = await supabaseClient
+          .from('instructor_reimburse_claims')
+          .select('*')
+          .eq('roc_year', currentYear);
+        if (!cErr && Array.isArray(claimRows) && claimRows.length > 0) {
+          claimRows.forEach(r => {
+            const inst = (r.instructor_name || '').trim();
+            const pKey = (r.period_key || '').trim();
+            const cKey = normalizeColKey(r.col_key);
+            if (!inst || !pKey || !cKey) return;
+            setClaimEntry(currentYear, pKey, cKey, inst, {
+              sessions: Number(r.sessions || 0),
+              amount: Number(r.amount || 0)
+            });
+          });
+        }
+      } catch (e) {}
+
+      try {
+        const { data: taxRows, error: tErr } = await supabaseClient
+          .from('personal_income_tax_records')
+          .select('*')
+          .eq('roc_year', currentYear);
+        if (!tErr && Array.isArray(taxRows) && taxRows.length > 0) {
+          const loadedMainSet = new Set();
+          const loadedBogongSet = new Set();
+          const loadedTempSet = new Set();
+
+          taxRows.forEach(r => {
+            const grp = String(r.section_group || '').trim();
+            const rk = String(r.row_key || '').trim();
+            const pn = String(r.person_name || '').trim();
+            if (!pn) return;
+            if (grp === 'MAIN_INSTRUCTOR') {
+              loadedMainSet.add(pn);
+              manualMainAmt[`${rk}__${pn}`] = Number(r.amount || 0);
+              manualMainSess[`${rk}__${pn}`] = Number(r.sessions || 0);
+            } else if (grp === 'BOGONG_INSTRUCTOR') {
+              loadedBogongSet.add(pn);
+              manualBogongAmt[pn] = Number(r.amount || 0);
+              manualBogongSess[pn] = Number(r.sessions || 0);
+            } else if (grp === 'TEMP_STAFF') {
+              loadedTempSet.add(pn);
+              if (!EXCEL_SEED_115.tempStaff.includes(pn) && !customTempNames.includes(pn)) {
+                customTempNames.push(pn);
+              }
+              manualTempAmt[`${rk}__${pn}`] = Number(r.amount || 0);
+            }
+          });
+
+          if (loadedMainSet.size > 0) {
+            pickerState.sum = { custom: true, set: [...loadedMainSet] };
+          }
+          if (loadedBogongSet.size > 0) {
+            pickerState.bogong = { custom: true, set: [...loadedBogongSet] };
+          }
+          if (loadedTempSet.size > 0) {
+            pickerState.temp = { custom: true, set: [...loadedTempSet] };
+          }
+        }
+      } catch (e) {}
+    }
+
+    await loadCalendarDays();
+    renderAllTables();
+    if (showMsg) {
+      setStatus(`已帶入 ${currentYear} 年度個人所得稅資料`);
+    }
+  }
+
+  async function onYearChange(val) {
+    currentYear = parseInt(val, 10) || 115;
+    pickerState.sum = { custom: false, set: [] };
+    pickerState.bogong = { custom: false, set: [] };
+    pickerState.temp = { custom: false, set: [] };
+    ensureYearStore(currentYear);
+    await reloadAllFromCloud(true);
+  }
+
+  (async function init() {
+    const yearSel = document.getElementById('globalYearSelect');
+    if (yearSel) yearSel.value = String(currentYear);
+    await loadInstructorsFromHr();
+    await reloadAllFromCloud(true);
+  })();
+</script>
+
+</body>
+</html>
