@@ -100,6 +100,14 @@
     .tbl-box > summary { padding: 9px 12px; cursor: pointer; font-weight: bold; background: #f8fafc; border-radius: 8px; }
     .tbl-box[open] > summary { border-bottom: 1px solid #e2e8f0; border-radius: 8px 8px 0 0; }
     .tbl-inner { padding: 8px 12px; }
+    .ex-layout { display: grid; grid-template-columns: 290px 1fr; gap: 12px; align-items: start; }
+    .ex-list { border: 1px solid #e2e8f0; border-radius: 8px; max-height: 52vh; overflow-y: auto; }
+    .ex-item { padding: 8px 11px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
+    .ex-item:hover { background: #f8fafc; }
+    .ex-item.active { background: #e0f2fe; border-left: 4px solid #0284c7; }
+    .ex-hit { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #bae6fd; background: #f0f9ff; border-radius: 8px; margin-bottom: 6px; }
+    #wizSuggest { margin-top: 8px; font-size: 0.84rem; color: #0369a1; line-height: 1.9; }
+    @media (max-width: 800px) { .ex-layout { grid-template-columns: 1fr; } }
     #toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 3000; background: #0f766e; color: #fff; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 6px 20px rgba(0,0,0,0.3); display: none; max-width: 90vw; }
     #toast.err { background: #dc2626; }
   </style>
@@ -204,6 +212,7 @@
     </p>
     <div class="hero-actions">
       <button type="button" class="btn btn-outline" onclick="reloadSchema(true)">重新偵測資料表</button>
+      <button type="button" class="btn btn-outline" onclick="openExplorer()">資料表探索（我的資料在哪個資料表？）</button>
       <button type="button" class="btn btn-outline" onclick="openSettings()">資料表與欄位別名設定</button>
       <button type="button" class="btn btn-outline" onclick="copySql()">複製建表 SQL</button>
     </div>
@@ -225,13 +234,15 @@
           <select id="wizCategory"></select>
         </label>
         <label>功能名稱
-          <input type="text" id="wizName" placeholder="例如：個案基本資料表、簽到表 01">
+          <input type="text" id="wizName" placeholder="例如：個案基本資料表、簽到表 01" onchange="renderWizSuggest()">
         </label>
         <label>資料來源（資料庫資料表）
           <select id="wizTable" onchange="onWizTableChange()"></select>
+          <button type="button" class="btn btn-outline btn-sm" style="align-self:flex-start;" onclick="openExplorer()">我不知道要選哪個資料表</button>
         </label>
       </div>
-      <div class="file-line">
+      <div id="wizSuggest"></div>
+      <div class="file-line" style="margin-top:8px;">
         <input type="file" id="wizFile" accept=".docx,.xlsx" onchange="onWizFile(this.files[0])">
         <span id="wizFileInfo">尚未選擇檔案</span>
       </div>
@@ -279,6 +290,26 @@
       <span class="tip">選一筆會下載單一檔案；選多筆會把每筆各產生一個檔案，打包成 .zip 下載。</span>
       <button type="button" class="btn btn-outline" onclick="closeRun()">取消</button>
       <button type="button" class="btn btn-primary" id="runGoBtn" onclick="runGenerate()">產生並下載</button>
+    </div>
+  </div>
+</div>
+
+<!-- 資料表探索 -->
+<div class="overlay" id="exOverlay" style="z-index:2100;">
+  <div class="modal">
+    <div class="modal-head"><span>資料表探索：我的資料在哪個資料表？</span><button type="button" class="btn btn-outline btn-sm" onclick="closeExplorer()">關閉</button></div>
+    <div class="modal-body">
+      <div class="sub-title" style="margin-top:0;"><span>方法一：輸入一個資料庫裡一定有的內容，反查它在哪個資料表</span></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+        <input type="text" id="exTerm" placeholder="例如：某位長輩的姓名、某位講師的姓名" style="flex:1; min-width:260px;" onkeydown="if(event.key==='Enter'){exSearch();}">
+        <button type="button" class="btn btn-primary" onclick="exSearch()">搜尋</button>
+      </div>
+      <div id="exResult" style="margin-bottom:10px;"></div>
+      <div class="sub-title"><span>方法二：逐一查看每個資料表的欄位與前 5 筆資料</span></div>
+      <div class="ex-layout">
+        <div class="ex-list" id="exList"></div>
+        <div id="exDetail"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -503,7 +534,8 @@ async function reloadSchema(showMsg) {
       }
     } catch (e) {}
   }
-  const wanted = new Set([...SEED_TABLES, ...settings.manualTables.map(t => t.name)]);
+  tableUsage = await scanSystemPages(!!showMsg);
+  const wanted = new Set([...SEED_TABLES, ...Object.keys(tableUsage), ...settings.manualTables.map(t => t.name)]);
   if (source === 'none') {
     if (client) {
       for (const name of wanted) {
@@ -515,14 +547,13 @@ async function reloadSchema(showMsg) {
       if (tables.size) source = 'sample';
     }
   } else if (client) {
-    // OpenAPI 取得的資料表欄位已完整；手動加入的資料表若不在其中則補抽樣
-    for (const t of settings.manualTables) {
-      if (!tables.has(t.name)) {
-        try {
-          const { data, error } = await client.from(t.name).select('*').limit(1);
-          if (!error && Array.isArray(data)) tables.set(t.name, data.length ? Object.keys(data[0]).map(c => ({ name: c, type: '' })) : []);
-        } catch (e) {}
-      }
+    // OpenAPI 取得的資料表欄位已完整；系統頁面用到或手動加入的資料表若不在其中則補抽樣
+    for (const name of wanted) {
+      if (tables.has(name)) continue;
+      try {
+        const { data, error } = await client.from(name).select('*').limit(1);
+        if (!error && Array.isArray(data)) tables.set(name, data.length ? Object.keys(data[0]).map(c => ({ name: c, type: '' })) : []);
+      } catch (e) {}
     }
   }
   // 手動欄位補充（資料表沒資料時）
@@ -540,15 +571,211 @@ async function reloadSchema(showMsg) {
   const warn = document.getElementById('warnBox');
   if (schema.tables.length === 0) {
     warn.style.display = 'block';
-    warn.innerHTML = '偵測不到任何資料表。請按「資料表與欄位別名設定」手動加入資料表名稱（例如個案資料表），或確認 config.js 已設定好 Supabase。';
+    warn.innerHTML = '偵測不到任何資料表。請按「資料表探索」或「資料表與欄位別名設定」，手動加入資料表名稱（例如個案資料表），並確認 config.js 已設定好 Supabase。';
   } else if (!cloudOk) {
     warn.style.display = 'block';
     warn.innerHTML = '尚未建立 <b>print_templates</b> 資料表，目前套印功能暫存在這台電腦的瀏覽器。請按「複製建表 SQL」，到 Supabase 的 SQL Editor 貼上執行一次，之後設定就會存到雲端（換電腦也在）。';
   } else {
     warn.style.display = 'none';
   }
-  if (showMsg) toast(`已偵測到 ${schema.tables.length} 個資料表（${source === 'openapi' ? '依資料庫結構' : source === 'sample' ? '依資料抽樣' : '無'}）`);
+  if (showMsg) toast(`已偵測到 ${schema.tables.length} 個資料表（${source === 'openapi' ? '依資料庫結構' : source === 'sample' ? '依資料抽樣' : '無'}），系統頁面實際使用其中 ${Object.keys(tableUsage).filter(n => schema.tables.some(t => t.name === n)).length} 個`);
   else setStatus(`已偵測到 ${schema.tables.length} 個資料表；已設定 ${templates.length} 個套印功能`);
+}
+
+// =====================================================================
+// 系統頁面掃描：找出各個頁面實際使用的資料表（幫你判斷要選哪個資料表）
+// =====================================================================
+let tableUsage = {};   // { 資料表: [{href, label}] }
+const USAGE_CACHE_KEY = 'laozhuang_print_usage_v1';
+async function scanSystemPages(force) {
+  if (!force) {
+    try { const c = JSON.parse(sessionStorage.getItem(USAGE_CACHE_KEY) || 'null'); if (c && c.usage) return c.usage; } catch (e) {}
+  }
+  const seen = new Map();
+  document.querySelectorAll('nav a[href]').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    if (!/\.html$/i.test(href) || /^(index|報表套印設定)\.html$/i.test(href)) return;
+    if (!seen.has(href)) seen.set(href, (a.textContent || '').trim());
+  });
+  const usage = {};
+  const queue = [...seen.entries()];
+  const re = /\.from\(\s*['"`]([A-Za-z0-9_]+)['"`]\s*\)/g;
+  async function worker() {
+    while (queue.length) {
+      const [href, label] = queue.shift();
+      try {
+        const r = await fetch(href, { cache: 'no-store' });
+        if (!r.ok) continue;
+        const txt = await r.text();
+        const names = new Set();
+        let m;
+        re.lastIndex = 0;
+        while ((m = re.exec(txt))) names.add(m[1]);
+        names.forEach(n => { (usage[n] = usage[n] || []).push({ href, label }); });
+      } catch (e) {}
+    }
+  }
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  try { sessionStorage.setItem(USAGE_CACHE_KEY, JSON.stringify({ usage })); } catch (e) {}
+  return usage;
+}
+function tableModules(name) { return [...new Set((tableUsage[name] || []).map(u => u.label))]; }
+function tableHint(name) { const m = tableModules(name); return m.length ? '用於：' + m.slice(0, 3).join('、') : ''; }
+
+// =====================================================================
+// 資料表探索：看每個資料表的欄位與內容、用資料內容反查資料表
+// =====================================================================
+let exState = { table: '' };
+function openExplorer() {
+  document.getElementById('exOverlay').style.display = 'flex';
+  renderExplorerList();
+  if (!exState.table && schema.tables.length) selectExTable(schema.tables[0].name);
+  else if (exState.table) selectExTable(exState.table);
+  else document.getElementById('exDetail').innerHTML = '<div class="empty-hint">目前沒有偵測到任何資料表。請按「資料表與欄位別名設定」手動加入資料表名稱。</div>';
+}
+function closeExplorer() { document.getElementById('exOverlay').style.display = 'none'; }
+function renderExplorerList() {
+  const box = document.getElementById('exList');
+  if (!schema.tables.length) { box.innerHTML = '<div class="empty-hint">尚無資料表</div>'; return; }
+  box.innerHTML = schema.tables.map(t => {
+    const zh = tableZh(t.name);
+    const hint = tableHint(t.name);
+    return `<div class="ex-item ${t.name === exState.table ? 'active' : ''}" onclick="selectExTable('${esc(t.name)}')">
+      <b>${esc(zh || t.name)}</b>
+      <div class="tip">${esc(t.name)}・${t.columns.length} 欄${hint ? '<br>' + esc(hint) : ''}</div>
+    </div>`;
+  }).join('');
+}
+async function selectExTable(name) {
+  exState.table = name;
+  renderExplorerList();
+  const detail = document.getElementById('exDetail');
+  const t = schema.tables.find(x => x.name === name);
+  if (!t) return;
+  detail.innerHTML = '<div class="empty-hint">讀取資料表內容中...</div>';
+  let count = '?';
+  let rows = [];
+  let err = '';
+  const client = ensureClient();
+  if (client) {
+    try {
+      const c = await client.from(name).select('*', { count: 'exact', head: true });
+      if (!c.error && c.count !== null && c.count !== undefined) count = c.count;
+    } catch (e) {}
+    try {
+      const { data, error } = await client.from(name).select('*').limit(5);
+      if (error) err = error.message || String(error);
+      else rows = data || [];
+    } catch (e) { err = e.message || String(e); }
+  }
+  if (exState.table !== name) return;
+  const cols = rows.length ? Object.keys(rows[0]) : t.columns.map(c => c.name);
+  const usage = tableModules(name);
+  detail.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+      <div>
+        <div style="font-size:1.05rem; font-weight:bold; color:#0369a1;">${esc(tableZh(name) || name)} <span class="tip">（${esc(name)}）</span></div>
+        <div class="tip">共 ${esc(count)} 筆資料・${t.columns.length} 個欄位</div>
+      </div>
+      ${wiz ? `<button type="button" class="btn btn-primary" onclick="useExTable('${esc(name)}')">選用這個資料表</button>` : ''}
+    </div>
+    ${usage.length ? `<div class="tip" style="margin-top:6px;">系統中使用這個資料表的頁面：${usage.map(esc).join('、')}</div>` : ''}
+    ${err ? `<div class="tip" style="color:#dc2626; margin-top:6px;">讀取內容失敗：${esc(err)}</div>` : ''}
+    <div class="sub-title"><span>前 5 筆資料（可用來確認是不是你要的資料）</span></div>
+    <div class="map-wrap" style="max-height:34vh;">
+      <table class="rec-table">
+        <thead><tr>${cols.map(c => `<th>${esc(colZh(c) || c)}<div class="loc-note">${esc(c)}</div></th>`).join('')}</tr></thead>
+        <tbody>${rows.length ? rows.map(r => `<tr>${cols.map(c => `<td>${esc(typeof r[c] === 'object' && r[c] !== null ? JSON.stringify(r[c]).slice(0, 40) : String(r[c] ?? '').slice(0, 40))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cols.length || 1}" class="empty-hint">這個資料表目前沒有資料（或沒有讀取權限）</td></tr>`}</tbody>
+      </table>
+    </div>`;
+}
+function useExTable(name) {
+  if (!wiz) return;
+  document.getElementById('wizTable').innerHTML = wizTableOptions(name);
+  document.getElementById('wizTable').value = name;
+  onWizTableChange();
+  renderWizSuggest();
+  closeExplorer();
+  toast(`已選用資料表「${tableZh(name) || name}」`);
+}
+async function exSearch() {
+  const term = document.getElementById('exTerm').value.trim();
+  const out = document.getElementById('exResult');
+  if (!term) { out.innerHTML = '<div class="tip">請輸入一個你確定資料庫裡有的內容，例如某位長輩的姓名。</div>'; return; }
+  const client = ensureClient();
+  if (!client) { out.innerHTML = '<div class="tip" style="color:#dc2626;">尚未連線資料庫</div>'; return; }
+  const hits = [];
+  const lower = term.toLowerCase();
+  for (let i = 0; i < schema.tables.length; i++) {
+    const t = schema.tables[i];
+    out.innerHTML = `<div class="tip">搜尋中 ${i + 1} / ${schema.tables.length}：${esc(t.name)}...</div>`;
+    try {
+      const { data, error } = await client.from(t.name).select('*').limit(1000);
+      if (error || !Array.isArray(data)) continue;
+      let cnt = 0;
+      const ex = [];
+      data.forEach(row => {
+        for (const k of Object.keys(row)) {
+          const v = row[k];
+          if (v !== null && v !== undefined && typeof v !== 'object' && String(v).toLowerCase().includes(lower)) {
+            cnt++;
+            if (ex.length < 3) ex.push(`${colZh(k) || k}：${String(v).slice(0, 30)}`);
+            break;
+          }
+        }
+      });
+      if (cnt) hits.push({ name: t.name, cnt, ex });
+    } catch (e) {}
+  }
+  hits.sort((a, b) => b.cnt - a.cnt);
+  out.innerHTML = hits.length
+    ? `<div class="tip" style="margin-bottom:6px;">「${esc(term)}」出現在以下資料表（每個資料表最多搜尋前 1000 筆）：</div>` + hits.map(h => `
+        <div class="ex-hit">
+          <div><b>${esc(tableZh(h.name) || h.name)}</b> <span class="tip">（${esc(h.name)}）找到 ${h.cnt} 筆</span><div class="tip">${h.ex.map(esc).join('｜')}</div></div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="selectExTable('${esc(h.name)}')">查看內容</button>
+            ${wiz ? `<button type="button" class="btn btn-primary btn-sm" onclick="useExTable('${esc(h.name)}')">選用</button>` : ''}
+          </div>
+        </div>`).join('')
+    : `<div class="tip" style="color:#b45309;">所有已偵測的資料表裡都找不到「${esc(term)}」。可能資料表沒被偵測到，請到「資料表與欄位別名設定」手動加入資料表名稱。</div>`;
+}
+
+// ---- 上傳檔案後，依標籤與名稱建議資料表 ----
+function scoreTables() {
+  const labels = wiz.items.filter(i => i.type === 'slot').map(i => normLabel(i.label)).filter(Boolean);
+  const nameText = normLabel(`${document.getElementById('wizName').value} ${wiz.fileName || ''}`);
+  return schema.tables.map(t => {
+    const groups = t.columns.map(c => [c.name, ...aliasList(t.name, c.name), colZh(c.name)].map(normLabel).filter(Boolean));
+    let match = 0;
+    labels.forEach(l => {
+      if (groups.some(ns => ns.some(x => x === l || (x.length >= 2 && l.length >= 2 && (l.includes(x) || x.includes(l)))))) match++;
+    });
+    const ctx = [tableZh(t.name), ...tableModules(t.name)].join(' ');
+    let bonus = 0;
+    for (let i = 0; i < nameText.length - 1; i++) { if (ctx.includes(nameText.slice(i, i + 2))) { bonus = 1; break; } }
+    return { name: t.name, match, bonus, score: match * 2 + bonus };
+  }).filter(s => s.score > 0).sort((a, b) => b.score - a.score).slice(0, 3);
+}
+function renderWizSuggest() {
+  const el = document.getElementById('wizSuggest');
+  if (!el || !wiz) return;
+  let html;
+  if (!schema.tables.length) {
+    html = '<span style="color:#b45309;">尚未偵測到任何資料表，請按「我不知道要選哪個資料表」或「資料表與欄位別名設定」處理。</span>';
+  } else {
+  const list = scoreTables();
+  html = list.length
+    ? '建議資料表（依文件標籤與功能名稱比對）：' + list.map(s => `<button type="button" class="btn btn-outline btn-sm" onclick="pickSuggest('${esc(s.name)}')">${esc(tableZh(s.name) || s.name)}｜比對到 ${s.match} 個標籤${s.bonus ? '，名稱相符' : ''}</button>`).join(' ')
+    : '找不到明顯符合的資料表。請按「我不知道要選哪個資料表」查看各資料表內容，或輸入一個已知的資料內容反查。';
+  }
+  if (el.dataset.html === html) return;   // 內容沒變就不重畫，避免剛好吃掉使用者的點擊
+  el.dataset.html = html;
+  el.innerHTML = html;
+}
+function pickSuggest(name) {
+  document.getElementById('wizTable').value = name;
+  onWizTableChange();
+  autoMatchAll();
 }
 
 function tableCols(name) { const t = schema.tables.find(x => x.name === name); return t ? t.columns : []; }
@@ -1062,7 +1289,8 @@ function wizTableOptions(selected) {
   return '<option value="">（不使用資料表，只用系統變數）</option>' +
     schema.tables.map(t => {
       const zh = tableZh(t.name);
-      const label = zh ? `${zh}（${t.name}・${t.columns.length} 欄）` : `${t.name}（${t.columns.length} 欄）`;
+      const hint = tableHint(t.name);
+      const label = (zh ? `${zh}（${t.name}・${t.columns.length} 欄）` : `${t.name}（${t.columns.length} 欄）`) + (hint ? `｜${hint}` : '');
       return `<option value="${esc(t.name)}" ${t.name === selected ? 'selected' : ''}>${esc(label)}</option>`;
     }).join('');
 }
@@ -1074,6 +1302,7 @@ function openWizardUi(title) {
   document.getElementById('wizFile').value = '';
   renderWizFileInfo();
   renderMapTable();
+  renderWizSuggest();
   document.getElementById('wizOverlay').style.display = 'flex';
 }
 function renderWizFileInfo() {
@@ -1147,6 +1376,7 @@ async function onWizFile(file) {
     if (!document.getElementById('wizName').value.trim()) document.getElementById('wizName').value = file.name.replace(/\.[^.]+$/, '');
     renderWizFileInfo();
     renderMapTable();
+    renderWizSuggest();
     const mapped = wiz.items.filter(i => i.field).length;
     toast(`已讀取「${file.name}」：找到 ${wiz.items.length} 個項目${wiz.reupload ? `，依原本設定自動帶回 ${mapped} 個欄位對應` : ''}`);
   } catch (e) { toast('讀取檔案失敗：' + (e.message || e), true); }
