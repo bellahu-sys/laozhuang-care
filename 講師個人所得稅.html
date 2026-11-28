@@ -852,6 +852,11 @@
     ];
   }
 
+  function loadSelectedTeachersForYear() {
+    if (pickerState.sum.custom) return;
+    pickerState.sum.set = autoTeachersForSummary();
+  }
+
   async function reloadAllFromCloud(showMsg = true) {
     ensureYearStore(currentYear);
     yearRateData[currentYear] = { yearDefault: JSON.parse(JSON.stringify(INITIAL_SEED_RATES)), months: {} };
